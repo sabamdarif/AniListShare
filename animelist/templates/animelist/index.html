@@ -28,7 +28,9 @@
                 <div class="tab-wrapper" data-cat-id="{{ cat.id }}">
                     <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
                     <button class="edit-cat-btn"
-                            onclick="renameCategory({{ cat.id }}, '{{ cat.name|escapejs }}')">
+                            data-cat-id="{{ cat.id }}"
+                            data-cat-name="{{ cat.name }}"
+                            onclick="renameCategory(this.dataset.catId, this.dataset.catName)">
                         <i class="fa-solid fa-pen"></i>
                     </button>
                 </div>
@@ -162,3 +164,4 @@
         <script src="{% static 'animelist/app.js' %}"></script>
     </body>
 </html>
+
