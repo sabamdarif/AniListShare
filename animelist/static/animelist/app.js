@@ -302,7 +302,7 @@ function setupAutocomplete() {
                 const data = await resp.json();
                 if (data.results.length === 0) { results.classList.remove('show'); return; }
                 results.innerHTML = data.results.map(r => `
-          <div class="autocomplete-item" data-mal-id="${r.mal_id}" data-title="${(r.title || '').replace(/"/g, '&quot;')}" data-image="${r.image_url || ''}">
+          <div class="autocomplete-item" data-mal-id="${r.mal_id}" data-title="${(r.title || '').replace(/"/g, '&quot;')}" data-english="${(r.title_english || '').replace(/"/g, '&quot;')}" data-image="${r.image_url || ''}">
             <img src="${r.image_url || ''}" alt="" onerror="this.style.display='none'">
             <div class="ac-info">
               <div class="ac-title">${r.title}</div>
@@ -313,7 +313,17 @@ function setupAutocomplete() {
                 results.classList.add('show');
                 results.querySelectorAll('.autocomplete-item').forEach(item => {
                     item.addEventListener('click', () => {
-                        input.value = item.dataset.title;
+                        const jpTitle = item.dataset.title.toLowerCase();
+                        const enTitle = item.dataset.english.toLowerCase();
+                        const query = input.value.trim().toLowerCase();
+
+                        // Select the english title if it's a closer match to the user's query, otherwise fallback to japanese
+                        if (item.dataset.english && enTitle.includes(query) && !jpTitle.includes(query)) {
+                            input.value = item.dataset.english;
+                        } else {
+                            input.value = item.dataset.title;
+                        }
+
                         document.getElementById('thumbnailInput').value = item.dataset.image;
                         updateThumbnailPreview();
                         document.getElementById('malIdInput').value = item.dataset.malId;
