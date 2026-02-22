@@ -50,19 +50,31 @@ function buildSeasonBadges(animeId, seasons) {
           100,
           Math.max(0, (s.episodes_watched / s.episodes_total) * 100),
         );
-        progressAttr = ` style="--progress: ${pct}%;"`;
+        progressAttr = `--progress: ${pct}%;`;
         progressText = ` <span class="season-progress">(${s.episodes_watched}/${s.episodes_total})</span>`;
         classes += " has-progress";
       } else if (s.episodes_watched !== null) {
         progressText = ` <span class="season-progress">(${s.episodes_watched}/?)</span>`;
       }
 
-      // Add onclick handler for the quick-edit modal
       const w = s.episodes_watched !== null ? s.episodes_watched : "";
       const t = s.episodes_total !== null ? s.episodes_total : "";
-      const onClickAttr = ` onclick="openQuickSeasonModal(${animeId}, ${s.id}, '${s.label.replace(/'/g, "\\'")}', '${w}', '${t}')"`;
+      const safeLabel = s.label
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/"/g, "&quot;");
+      const safeComment = s.comment
+        ? s.comment
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/"/g, "&quot;")
+        : "";
+      const onClickAttr = ` onclick="openQuickSeasonModal(${animeId}, ${s.id}, '${safeLabel}', '${w}', '${t}', '${safeComment}')"`;
 
-      return `<span class="${classes}"${commentAttr}${progressAttr}${onClickAttr} title="Click to quick-edit progress">${s.label}${progressText}</span>`;
+      return `<div style="display: inline-flex; flex-direction: column; align-items: center; vertical-align: top; margin: 2px 3px; max-width: 90px;">
+        <span class="${classes}" style="margin: 0; width: 100%; justify-content: center; ${progressAttr}"${commentAttr}${onClickAttr} title="Click to quick-edit progress">${s.label}${progressText}</span>
+        ${s.comment ? `<span class="text-muted" style="font-size: 0.65rem; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;" title="${safeComment}">${s.comment}</span>` : ""}
+      </div>`;
     })
     .join("");
 }
@@ -74,7 +86,10 @@ function buildTableRow(anime, idx) {
   return `<tr data-id="${anime.id}">
     <td class="col-num drag-handle" title="Drag to reorder">${idx + 1}</td>
     <td class="col-thumb">${thumb}</td>
-    <td class="col-name">${anime.name}</td>
+    <td class="col-name">
+      <div class="anime-title" style="font-weight: 500;">${anime.name}</div>
+      ${anime.reason ? `<div class="anime-reason text-muted" style="font-size: 0.75rem; margin-top: 4px;">${anime.reason}</div>` : ""}
+    </td>
     <td class="col-seasons">${buildSeasonBadges(anime.id, anime.seasons)}</td>
     <td class="col-lang">${anime.language || "—"}</td>
     <td class="col-stars">${renderStars(anime.stars)}</td>
@@ -236,7 +251,14 @@ function closeQuickSeasonModal() {
 let quickEditAnimeId = null;
 let quickEditSeasonId = null;
 
-function openQuickSeasonModal(animeId, seasonId, label, watched, total) {
+function openQuickSeasonModal(
+  animeId,
+  seasonId,
+  label,
+  watched,
+  total,
+  comment,
+) {
   quickEditAnimeId = animeId;
   quickEditSeasonId = seasonId;
   const panel = document.querySelector(
@@ -249,6 +271,7 @@ function openQuickSeasonModal(animeId, seasonId, label, watched, total) {
   document.getElementById("qsLabel").textContent = "Edit " + label;
   document.getElementById("qsTotalInput").value = total;
   document.getElementById("qsWatchedInput").value = watched;
+  document.getElementById("qsCommentInput").value = comment || "";
 
   document.getElementById("quickSeasonModalOverlay").classList.add("open");
 }
@@ -266,11 +289,12 @@ async function saveQuickSeason() {
   const tStr = document.getElementById("qsTotalInput").value.trim();
   const w = wStr !== "" ? parseInt(wStr, 10) : null;
   const t = tStr !== "" ? parseInt(tStr, 10) : null;
+  const cStr = document.getElementById("qsCommentInput").value.trim();
 
   // Create a deep copy of seasons, find target, update it
   const seasonsPayload = anime.seasons.map((s) => ({
     label: s.label,
-    comment: s.comment,
+    comment: s.id === quickEditSeasonId ? cStr : s.comment,
     episodes_watched: s.id === quickEditSeasonId ? w : s.episodes_watched,
     episodes_total: s.id === quickEditSeasonId ? t : s.episodes_total,
   }));
