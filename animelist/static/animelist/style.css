@@ -332,16 +332,33 @@ a {
 }
 
 .season-badge {
-  display: inline-block;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
   margin: 2px 3px;
   background: var(--primary);
   color: var(--text);
-  border-radius: 4px;
-  font-size: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: default;
   position: relative;
+  overflow: hidden;
+}
+
+.season-badge.has-progress {
+  background: linear-gradient(
+    to right,
+    var(--accent2) var(--progress, 0%),
+    var(--primary) var(--progress, 0%)
+  );
+}
+
+.season-progress {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  font-weight: 600;
 }
 
 .season-badge[data-comment]:not([data-comment=""]):hover::before {
@@ -596,8 +613,25 @@ select.form-input {
   margin-bottom: 6px;
 }
 
-.season-row input {
-  flex: 1;
+.season-row input.season-label {
+  flex: 1.5;
+}
+
+.season-row input.season-comment {
+  flex: 2;
+}
+
+.season-row .season-ep {
+  width: 50px;
+  flex: 0 0 auto;
+  text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.season-row .ep-sep {
+  color: var(--text-muted);
+  font-weight: bold;
 }
 
 .season-row .remove-season {
@@ -722,4 +756,3 @@ select.form-input {
     max-width: none;
   }
 }
-

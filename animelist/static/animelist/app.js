@@ -31,13 +31,38 @@ function renderStars(n, max = 10) {
   return html;
 }
 
-function buildSeasonBadges(seasons) {
+function buildSeasonBadges(animeId, seasons) {
   return seasons
     .map((s) => {
-      const c = s.comment
+      let progressAttr = "";
+      let progressText = "";
+      let classes = "season-badge";
+      let commentAttr = s.comment
         ? ` data-comment="${s.comment.replace(/"/g, "&quot;")}"`
         : ' data-comment=""';
-      return `<span class="season-badge"${c}>${s.label}</span>`;
+
+      if (
+        s.episodes_watched !== null &&
+        s.episodes_total !== null &&
+        s.episodes_total > 0
+      ) {
+        const pct = Math.min(
+          100,
+          Math.max(0, (s.episodes_watched / s.episodes_total) * 100),
+        );
+        progressAttr = ` style="--progress: ${pct}%;"`;
+        progressText = ` <span class="season-progress">(${s.episodes_watched}/${s.episodes_total})</span>`;
+        classes += " has-progress";
+      } else if (s.episodes_watched !== null) {
+        progressText = ` <span class="season-progress">(${s.episodes_watched}/?)</span>`;
+      }
+
+      // Add onclick handler for the quick-edit modal
+      const w = s.episodes_watched !== null ? s.episodes_watched : "";
+      const t = s.episodes_total !== null ? s.episodes_total : "";
+      const onClickAttr = ` onclick="openQuickSeasonModal(${animeId}, ${s.id}, '${s.label.replace(/'/g, "\\'")}', '${w}', '${t}')"`;
+
+      return `<span class="${classes}"${commentAttr}${progressAttr}${onClickAttr} title="Click to quick-edit progress">${s.label}${progressText}</span>`;
     })
     .join("");
 }
@@ -50,7 +75,7 @@ function buildTableRow(anime, idx) {
     <td class="col-num drag-handle" title="Drag to reorder">${idx + 1}</td>
     <td class="col-thumb">${thumb}</td>
     <td class="col-name">${anime.name}</td>
-    <td class="col-seasons">${buildSeasonBadges(anime.seasons)}</td>
+    <td class="col-seasons">${buildSeasonBadges(anime.id, anime.seasons)}</td>
     <td class="col-lang">${anime.language || "—"}</td>
     <td class="col-stars">${renderStars(anime.stars)}</td>
     <td class="col-actions">
@@ -188,7 +213,9 @@ function openEditModal(animeId) {
   const sc = document.getElementById("seasonsContainer");
   sc.innerHTML = "";
   if (anime.seasons.length > 0) {
-    anime.seasons.forEach((s) => addSeasonRow(s.label, s.comment));
+    anime.seasons.forEach((s) =>
+      addSeasonRow(s.label, s.episodes_watched, s.episodes_total, s.comment),
+    );
   } else {
     addSeasonRow();
   }
@@ -202,14 +229,113 @@ function closeModal() {
   document.getElementById("autocompleteResults").classList.remove("show");
 }
 
-function addSeasonRow(label = "", comment = "") {
+function closeQuickSeasonModal() {
+  document.getElementById("quickSeasonModalOverlay").classList.remove("open");
+}
+
+let quickEditAnimeId = null;
+let quickEditSeasonId = null;
+
+function openQuickSeasonModal(animeId, seasonId, label, watched, total) {
+  quickEditAnimeId = animeId;
+  quickEditSeasonId = seasonId;
+  const panel = document.querySelector(
+    `.category-panel[data-cat-id="${currentCategoryId}"]`,
+  );
+  const anime = panel._animeData.find((a) => a.id === animeId);
+  if (!anime) return;
+
+  // Set modal fields
+  document.getElementById("qsLabel").textContent = "Edit " + label;
+  document.getElementById("qsTotalInput").value = total;
+  document.getElementById("qsWatchedInput").value = watched;
+
+  document.getElementById("quickSeasonModalOverlay").classList.add("open");
+}
+
+async function saveQuickSeason() {
+  if (!quickEditAnimeId || !quickEditSeasonId) return;
+
+  const panel = document.querySelector(
+    `.category-panel[data-cat-id="${currentCategoryId}"]`,
+  );
+  const anime = panel._animeData.find((a) => a.id === quickEditAnimeId);
+  if (!anime) return;
+
+  const wStr = document.getElementById("qsWatchedInput").value.trim();
+  const tStr = document.getElementById("qsTotalInput").value.trim();
+  const w = wStr !== "" ? parseInt(wStr, 10) : null;
+  const t = tStr !== "" ? parseInt(tStr, 10) : null;
+
+  // Create a deep copy of seasons, find target, update it
+  const seasonsPayload = anime.seasons.map((s) => ({
+    label: s.label,
+    comment: s.comment,
+    episodes_watched: s.id === quickEditSeasonId ? w : s.episodes_watched,
+    episodes_total: s.id === quickEditSeasonId ? t : s.episodes_total,
+  }));
+
+  const body = {
+    category_id: parseInt(anime.category_id || currentCategoryId, 10), // fallback
+    name: anime.name,
+    thumbnail_url: anime.thumbnail_url || "",
+    mal_id: anime.mal_id,
+    language: anime.language || "",
+    stars: anime.stars,
+    reason: anime.reason || "",
+    seasons: seasonsPayload,
+  };
+
+  const resp = await fetch(`/api/anime/${anime.id}/`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (resp.ok) {
+    closeQuickSeasonModal();
+    showToast("Progress Saved!");
+    await loadCategory(currentCategoryId);
+  } else {
+    showToast("Failed to save progress.");
+  }
+}
+
+function processQuickComplete() {
+  const tInput = document.getElementById("qsTotalInput");
+  const wInput = document.getElementById("qsWatchedInput");
+  if (tInput.value) {
+    wInput.value = tInput.value;
+  }
+}
+
+function processCompleteButton(btn) {
+  const row = btn.closest(".season-row");
+  const tInput = row.querySelector(".season-ep.total");
+  const wInput = row.querySelector(".season-ep.watched");
+  if (tInput.value) {
+    wInput.value = tInput.value;
+  }
+}
+
+function addSeasonRow(label = "", watched = "", total = "", comment = "") {
   const sc = document.getElementById("seasonsContainer");
   const row = document.createElement("div");
   row.className = "season-row";
+
+  const w = watched !== null ? watched : "";
+  const t = total !== null ? total : "";
+
   row.innerHTML = `
     <input type="text" class="form-input season-label" placeholder="e.g. S1, OVA" value="${label.replace(/"/g, "&quot;")}">
+    <div class="ep-inputs-wrapper">
+      <input type="number" class="form-input season-ep watched" placeholder="Watched" value="${w}" min="0">
+      <span class="ep-sep">/</span>
+      <input type="number" class="form-input season-ep total" placeholder="Total" value="${t}" min="1">
+      <button type="button" class="btn btn-accent btn-sm btn-complete" onclick="processCompleteButton(this)" title="Mark Complete"><i class="fa-solid fa-check-double"></i></button>
+    </div>
     <input type="text" class="form-input season-comment" placeholder="Comment (optional)" value="${comment.replace(/"/g, "&quot;")}">
-    <button type="button" class="remove-season" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>`;
+    <button type="button" class="remove-season" onclick="this.parentElement.remove()" title="Remove Season"><i class="fa-solid fa-xmark"></i></button>`;
   sc.appendChild(row);
 }
 
@@ -219,7 +345,17 @@ async function saveAnime() {
   document.querySelectorAll(".season-row").forEach((row) => {
     const label = row.querySelector(".season-label").value.trim();
     const comment = row.querySelector(".season-comment").value.trim();
-    if (label) seasons.push({ label, comment });
+    const w = row.querySelector(".season-ep.watched").value.trim();
+    const t = row.querySelector(".season-ep.total").value.trim();
+
+    if (label) {
+      seasons.push({
+        label,
+        comment,
+        episodes_watched: w !== "" ? parseInt(w, 10) : null,
+        episodes_total: t !== "" ? parseInt(t, 10) : null,
+      });
+    }
   });
 
   const starsVal = document.getElementById("starsInput").value;

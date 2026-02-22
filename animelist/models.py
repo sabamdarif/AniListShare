@@ -37,6 +37,8 @@ class Season(models.Model):
     anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name="seasons")
     label = models.CharField(max_length=200)
     comment = models.TextField(blank=True, default="")
+    episodes_watched = models.IntegerField(null=True, blank=True)
+    episodes_total = models.IntegerField(null=True, blank=True)
     order = models.IntegerField(default=0)
 
     class Meta:

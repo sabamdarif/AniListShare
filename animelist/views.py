@@ -44,6 +44,8 @@ def api_anime_list(request):
                         "id": s.id,
                         "label": s.label,
                         "comment": s.comment,
+                        "episodes_watched": s.episodes_watched,
+                        "episodes_total": s.episodes_total,
                         "order": s.order,
                     }
                     for s in a.seasons.all()
@@ -92,6 +94,8 @@ def api_anime_create(request):
                 anime=anime,
                 label=s["label"].strip(),
                 comment=s.get("comment", ""),
+                episodes_watched=s.get("episodes_watched") if s.get("episodes_watched") not in [None, ""] else None,
+                episodes_total=s.get("episodes_total") if s.get("episodes_total") not in [None, ""] else None,
                 order=i,
             )
 
@@ -125,12 +129,13 @@ def api_anime_update(request, anime_id):
         anime.stars = stars
 
     new_category_id = body.get("category_id")
-    if new_category_id and new_category_id != anime.category_id:
+    if new_category_id:
         try:
-            new_cat = Category.objects.get(id=new_category_id)
-            anime.category = new_cat
-            anime.order = Anime.objects.filter(category=new_cat).count()
-        except Category.DoesNotExist:
+            if int(new_category_id) != anime.category_id:
+                new_cat = Category.objects.get(id=int(new_category_id))
+                anime.category = new_cat
+                anime.order = Anime.objects.filter(category=new_cat).count()
+        except (ValueError, TypeError, Category.DoesNotExist):
             pass
 
     anime.save()
@@ -143,6 +148,8 @@ def api_anime_update(request, anime_id):
                     anime=anime,
                     label=s["label"].strip(),
                     comment=s.get("comment", ""),
+                    episodes_watched=s.get("episodes_watched") if s.get("episodes_watched") not in [None, ""] else None,
+                    episodes_total=s.get("episodes_total") if s.get("episodes_total") not in [None, ""] else None,
                     order=i,
                 )
 

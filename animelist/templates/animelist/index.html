@@ -160,6 +160,43 @@
                 </div>
             </div>
         </div>
+        <div class="modal-overlay" id="quickSeasonModalOverlay">
+            <div class="modal" style="max-width:320px;">
+                <div class="modal-header">
+                    <h2 id="qsLabel">Edit Season</h2>
+                    <button class="modal-close" onclick="closeQuickSeasonModal()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input type="number"
+                               id="qsWatchedInput"
+                               class="form-input"
+                               placeholder="Watched"
+                               min="0">
+                        <span class="ep-sep">/</span>
+                        <input type="number"
+                               id="qsTotalInput"
+                               class="form-input"
+                               placeholder="Total"
+                               min="1">
+                        <button type="button"
+                                class="btn btn-accent btn-sm"
+                                onclick="processQuickComplete()"
+                                title="Mark Complete">
+                            <i class="fa-solid fa-check-double"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div style="display:flex;gap:8px;margin-left:auto">
+                        <button class="btn btn-ghost" onclick="closeQuickSeasonModal()">Cancel</button>
+                        <button class="btn btn-accent" onclick="saveQuickSeason()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="toast" id="toast"></div>
         <script src="{% static 'animelist/app.js' %}"></script>
     </body>
