@@ -361,6 +361,18 @@ a {
   font-weight: 600;
 }
 
+.lang-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  margin: 2px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .season-badge[data-comment]:not([data-comment=""]):hover::before {
   content: attr(data-comment);
   position: absolute;
@@ -435,7 +447,7 @@ a {
   border-radius: 12px;
   width: 90%;
   max-width: 580px;
-  max-height: 85vh;
+  max-height: 95vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--border);
@@ -756,3 +768,4 @@ select.form-input {
     max-width: none;
   }
 }
+

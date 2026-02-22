@@ -91,7 +91,16 @@ function buildTableRow(anime, idx) {
       ${anime.reason ? `<div class="anime-reason text-muted" style="font-size: 0.75rem; margin-top: 4px;">${anime.reason}</div>` : ""}
     </td>
     <td class="col-seasons">${buildSeasonBadges(anime.id, anime.seasons)}</td>
-    <td class="col-lang">${anime.language || "—"}</td>
+    <td class="col-lang">
+      ${
+        anime.language
+          ? anime.language
+              .split(",")
+              .map((lang) => `<span class="lang-badge">${lang.trim()}</span>`)
+              .join("")
+          : '<span class="text-muted">—</span>'
+      }
+    </td>
     <td class="col-stars">${renderStars(anime.stars)}</td>
     <td class="col-actions">
       <div class="actions-cell">
@@ -176,6 +185,20 @@ function updateThumbnailPreview() {
   }
 }
 
+function updateLanguagePreview() {
+  const input = document.getElementById("languageInput").value.trim();
+  const preview = document.getElementById("languagePreview");
+  if (!input) {
+    preview.innerHTML = "";
+    return;
+  }
+
+  const langs = input.split(",").filter((l) => l.trim() !== "");
+  preview.innerHTML = langs
+    .map((lang) => `<span class="lang-badge">${lang.trim()}</span>`)
+    .join("");
+}
+
 function setStars(val) {
   const input = document.getElementById("starsInput");
   const stars = document.querySelectorAll(".interactive-stars .star");
@@ -198,6 +221,8 @@ function openAddModal() {
   document.getElementById("animeIdField").value = "";
   document.getElementById("thumbnailInput").value = "";
   updateThumbnailPreview();
+  document.getElementById("languageInput").value = "";
+  updateLanguagePreview();
   document.getElementById("categorySelect").value = currentCategoryId || "";
   document.getElementById("seasonsContainer").innerHTML = "";
   document.getElementById("deleteSection").style.display = "none";
@@ -222,6 +247,7 @@ function openEditModal(animeId) {
   document.getElementById("categorySelect").value =
     anime.category_id || currentCategoryId;
   document.getElementById("languageInput").value = anime.language || "";
+  updateLanguagePreview();
   setStars(anime.stars);
   document.getElementById("reasonInput").value = anime.reason || "";
 
