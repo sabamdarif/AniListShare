@@ -53,10 +53,10 @@ Open http://localhost:8000/
 
 ## Migration Script Flags
 
-| Flag | Description |
-|---|---|
+| Flag        | Description                                   |
+| ----------- | --------------------------------------------- |
 | `--limit N` | Import only N entries per sheet (for testing) |
-| `--clear` | Delete all existing data before importing |
+| `--clear`   | Delete all existing data before importing     |
 
 ## Admin Panel
 

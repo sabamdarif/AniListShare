@@ -5,54 +5,93 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
-                ('order', models.IntegerField(default=0)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=200)),
+                ("order", models.IntegerField(default=0)),
             ],
             options={
-                'verbose_name_plural': 'categories',
-                'ordering': ['order'],
+                "verbose_name_plural": "categories",
+                "ordering": ["order"],
             },
         ),
         migrations.CreateModel(
-            name='Anime',
+            name="Anime",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=500)),
-                ('thumbnail_url', models.URLField(blank=True, default='', max_length=1000)),
-                ('mal_id', models.IntegerField(blank=True, null=True)),
-                ('language', models.CharField(blank=True, default='', max_length=200)),
-                ('stars', models.IntegerField(blank=True, null=True)),
-                ('order', models.IntegerField(default=0)),
-                ('reason', models.TextField(blank=True, default='')),
-                ('extra_notes', models.TextField(blank=True, default='')),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='anime_entries', to='animelist.category')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=500)),
+                (
+                    "thumbnail_url",
+                    models.URLField(blank=True, default="", max_length=1000),
+                ),
+                ("mal_id", models.IntegerField(blank=True, null=True)),
+                ("language", models.CharField(blank=True, default="", max_length=200)),
+                ("stars", models.IntegerField(blank=True, null=True)),
+                ("order", models.IntegerField(default=0)),
+                ("reason", models.TextField(blank=True, default="")),
+                ("extra_notes", models.TextField(blank=True, default="")),
+                (
+                    "category",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="anime_entries",
+                        to="animelist.category",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order'],
+                "ordering": ["order"],
             },
         ),
         migrations.CreateModel(
-            name='Season',
+            name="Season",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('label', models.CharField(max_length=200)),
-                ('comment', models.TextField(blank=True, default='')),
-                ('order', models.IntegerField(default=0)),
-                ('anime', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='seasons', to='animelist.anime')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("label", models.CharField(max_length=200)),
+                ("comment", models.TextField(blank=True, default="")),
+                ("order", models.IntegerField(default=0)),
+                (
+                    "anime",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="seasons",
+                        to="animelist.anime",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order'],
+                "ordering": ["order"],
             },
         ),
     ]
