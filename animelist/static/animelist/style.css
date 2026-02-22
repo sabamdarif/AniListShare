@@ -687,6 +687,25 @@ select.form-input {
     color 0.15s,
     transform 0.1s;
   line-height: 1;
+  position: relative;
+}
+
+.interactive-stars .star:hover::after {
+  content: attr(data-val) "/10";
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
 }
 
 .interactive-stars .star:hover,
