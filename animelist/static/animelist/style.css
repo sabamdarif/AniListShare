@@ -284,7 +284,7 @@ a {
 }
 
 .anime-table .col-thumb {
-  width: 50px;
+  width: 110px;
 }
 
 .anime-table .col-name {
@@ -310,18 +310,18 @@ a {
 }
 
 .thumb {
-  width: 40px;
-  height: 56px;
+  width: 80px;
+  height: 112px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--surface2);
   border: 1px solid var(--border);
 }
 
 .thumb-placeholder {
-  width: 40px;
-  height: 56px;
-  border-radius: 4px;
+  width: 80px;
+  height: 112px;
+  border-radius: 6px;
   background: var(--surface2);
   border: 1px solid var(--border);
   display: flex;
@@ -505,8 +505,8 @@ select.form-input {
 }
 
 .thumbnail-editor img {
-  width: 45px;
-  height: 65px;
+  width: 75px;
+  height: 105px;
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid var(--border);
@@ -560,8 +560,8 @@ select.form-input {
 }
 
 .autocomplete-item img {
-  width: 36px;
-  height: 50px;
+  width: 54px;
+  height: 75px;
   object-fit: cover;
   border-radius: 4px;
   flex-shrink: 0;
@@ -722,3 +722,4 @@ select.form-input {
     max-width: none;
   }
 }
+
