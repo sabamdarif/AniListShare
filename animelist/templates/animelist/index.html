@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Anime List</title>
+    <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>My Anime List</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="addCategory()">+ Category</button>
+            <button class="btn btn-accent" onclick="openAddModal()">+ Add Anime</button>
+        </div>
+    </div>
+
+    <div class="tabs-bar">
+        {% for cat in categories %}
+        <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
+        {% endfor %}
+    </div>
+
+    <div class="container">
+        {% for cat in categories %}
+        <div class="category-panel" data-cat-id="{{ cat.id }}">
+            <table class="anime-table">
+                <thead>
+                    <tr>
+                        <th class="col-num">#</th>
+                        <th class="col-thumb"></th>
+                        <th class="col-name">Name</th>
+                        <th class="col-seasons">Seasons</th>
+                        <th class="col-lang">Language</th>
+                        <th class="col-stars">Stars</th>
+                        <th class="col-actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <p>Loading…</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Anime</h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="animeForm" onsubmit="event.preventDefault();saveAnime()">
+                    <input type="hidden" id="animeIdField">
+                    <input type="hidden" id="malIdInput">
+                    <input type="hidden" id="thumbnailInput">
+
+                    <div class="form-group autocomplete-wrapper">
+                        <label>Name</label>
+                        <input type="text" id="nameInput" class="form-input" placeholder="Search anime name…"
+                            autocomplete="off">
+                        <div class="autocomplete-results" id="autocompleteResults"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="categorySelect" class="form-input">
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Seasons Completed</label>
+                        <div class="seasons-editor" id="seasonsContainer"></div>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="addSeasonRow()"
+                            style="margin-top:4px">+ Add Season</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Language</label>
+                        <input type="text" id="languageInput" class="form-input" placeholder="e.g. Eng, Hin, Jap">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="star-input">
+                            <label>Stars (0-10)</label>
+                            <input type="number" id="starsInput" class="form-input" min="0" max="10" placeholder="—">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes / Reason</label>
+                        <input type="text" id="reasonInput" class="form-input" placeholder="Optional">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div id="deleteSection" style="display:none">
+                    <button class="btn btn-danger btn-sm" onclick="deleteAnime()">Delete</button>
+                </div>
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                    <button class="btn btn-accent" onclick="saveAnime()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="{% static 'animelist/app.js' %}"></script>
+</body>
+
+</html>
