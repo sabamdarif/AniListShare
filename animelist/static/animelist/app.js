@@ -600,8 +600,124 @@ function setupInteractiveStars() {
   });
 }
 
+let localSearchTimeout;
+function setupLocalSearch() {
+  const input = document.getElementById("localSearchInput");
+  const results = document.getElementById("localSearchResults");
+  const wrapper = document.getElementById("localSearchWrapper");
+
+  if (!input || !results || !wrapper) return;
+
+  function performSearch() {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) {
+      results.classList.remove("show");
+      return;
+    }
+
+    // Collect all loaded anime from DOM dataset
+    const allAnime = [];
+    document.querySelectorAll(".category-panel").forEach((panel) => {
+      if (panel._animeData) {
+        panel._animeData.forEach((a) => {
+          allAnime.push({
+            ...a,
+            catId: panel.dataset.catId,
+          });
+        });
+      }
+    });
+
+    if (allAnime.length === 0) {
+      results.innerHTML =
+        '<div class="autocomplete-item"><div class="ac-info"><div class="ac-title text-muted">No data loaded yet</div></div></div>';
+      results.classList.add("show");
+      return;
+    }
+
+    // Fuzzy search: simple inclusion test across name, english title (if available)
+    const matches = allAnime.filter((a) => {
+      const nameMatch = a.name && a.name.toLowerCase().includes(q);
+      const enMatch =
+        a.title_english && a.title_english.toLowerCase().includes(q);
+      const malMatch = a.mal_title && a.mal_title.toLowerCase().includes(q);
+      return nameMatch || enMatch || malMatch;
+    });
+
+    if (matches.length === 0) {
+      results.innerHTML =
+        '<div class="autocomplete-item"><div class="ac-info"><div class="ac-title text-muted">No matches found</div></div></div>';
+      results.classList.add("show");
+      return;
+    }
+
+    results.innerHTML = matches
+      .slice(0, 10)
+      .map(
+        (r) => `
+      <div class="autocomplete-item local-search-item" data-id="${r.id}" data-cat-id="${r.catId}">
+        <img src="${r.thumbnail_url || ""}" alt="" onerror="this.style.display='none'">
+        <div class="ac-info">
+          <div class="ac-title">${r.name.replace(/"/g, "&quot;")}</div>
+          <div class="ac-sub">${r.language || "—"} · ${r.stars !== null ? r.stars + "/10" : "Unrated"}</div>
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+
+    results.classList.add("show");
+
+    results.querySelectorAll(".local-search-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const catId = item.dataset.catId;
+        const animeId = item.dataset.id;
+
+        // Switch to the correct tab if needed
+        if (currentCategoryId !== catId) {
+          switchTab(catId);
+        }
+
+        results.classList.remove("show");
+        input.value = "";
+
+        // Wait a small tick for the DOM to be visible if we just switched tabs
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-id="${animeId}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // Add highlight animation class
+            row.classList.remove("highlighted-row");
+            // Trigger reflow to restart animation if it was already playing
+            void row.offsetWidth;
+            row.classList.add("highlighted-row");
+
+            // Remove class after animation finishes so it can be retriggered later
+            setTimeout(() => row.classList.remove("highlighted-row"), 2000);
+          }
+        }, 100);
+      });
+    });
+  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(localSearchTimeout);
+    localSearchTimeout = setTimeout(performSearch, 200);
+  });
+
+  input.addEventListener("focus", performSearch);
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#localSearchWrapper")) {
+      results.classList.remove("show");
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupAutocomplete();
+  setupLocalSearch();
   setupInteractiveStars();
   const firstTab = document.querySelector(".tab");
   if (firstTab) {

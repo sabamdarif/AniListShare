@@ -13,6 +13,15 @@
     <body>
         <div class="header">
             <h1>My Anime List</h1>
+            <div class="header-search autocomplete-wrapper" id="localSearchWrapper">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text"
+                       id="localSearchInput"
+                       class="form-input"
+                       placeholder="Search your list..."
+                       autocomplete="off">
+                <div class="autocomplete-results" id="localSearchResults"></div>
+            </div>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="addCategory()">
                     <i class="fa-solid fa-folder-plus"></i>

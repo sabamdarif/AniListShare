@@ -64,6 +64,34 @@ a {
   letter-spacing: 0.5px;
 }
 
+.header-search {
+  flex: 1;
+  max-width: 400px;
+  position: relative;
+  margin: 0 16px;
+}
+
+.header-search .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.header-search input {
+  padding-left: 36px;
+  background: var(--surface2);
+  border-color: var(--border);
+  border-radius: 20px;
+}
+
+.header-search input:focus {
+  background: var(--bg);
+}
+
 .header-actions {
   display: flex;
   gap: 8px;
@@ -258,8 +286,31 @@ a {
 }
 
 .anime-table tbody tr {
-  transition: background 0.15s;
+  transition:
+    background 0.15s,
+    box-shadow 0.3s;
   border-bottom: 1px solid var(--border);
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: var(--surface2);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  50% {
+    background-color: var(--primary);
+    box-shadow: inset 0 0 10px 4px var(--accent);
+  }
+
+  100% {
+    background-color: var(--surface2);
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
+.anime-table tbody tr.highlighted-row {
+  animation: highlight-pulse 2s ease-out;
 }
 
 .anime-table tbody tr:hover {
