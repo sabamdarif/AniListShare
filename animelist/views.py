@@ -199,6 +199,25 @@ def api_anime_reorder(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def api_anime_reorder_bulk(request):
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    anime_ids = body.get('anime_ids', [])
+    if not isinstance(anime_ids, list):
+        return JsonResponse({'error': 'anime_ids must be a list'}, status=400)
+
+    # Note: normally we might check if they belong to same category
+    for i, a_id in enumerate(anime_ids):
+        Anime.objects.filter(id=a_id).update(order=i)
+
+    return JsonResponse({'message': 'Reordered'})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def api_category_create(request):
     try:
         body = json.loads(request.body)
@@ -212,6 +231,28 @@ def api_category_create(request):
     max_order = Category.objects.count()
     cat = Category.objects.create(name=name, order=max_order)
     return JsonResponse({'id': cat.id, 'name': cat.name, 'message': 'Created'})
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def api_category_update(request, category_id):
+    try:
+        category = Category.objects.get(id=category_id)
+    except Category.DoesNotExist:
+        return JsonResponse({'error': 'Category not found'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    name = body.get('name', '').strip()
+    if not name:
+        return JsonResponse({'error': 'name required'}, status=400)
+
+    category.name = name
+    category.save()
+    return JsonResponse({'message': 'Category updated'})
 
 
 @csrf_exempt

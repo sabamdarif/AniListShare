@@ -7,21 +7,21 @@
 }
 
 :root {
-    --bg: #1a1f2e;
-    --surface: #242b3d;
-    --surface2: #2d3548;
-    --border: #3a4258;
-    --text: #e0e4ec;
-    --text-muted: #8b93a8;
+    --bg: #0f0f0f;
+    --surface: #171717;
+    --surface2: #262626;
+    --border: #404040;
+    --text: #f5f5f5;
+    --text-muted: #a3a3a3;
     --accent: #9AB87A;
     --accent2: #708b75;
-    --primary: #444b6e;
-    --primary-light: #5a6389;
+    --primary: #404040;
+    --primary-light: #525252;
     --danger: #c75050;
     --danger-hover: #e05555;
     --star: #e8b84b;
     --radius: 8px;
-    --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 html {
@@ -75,6 +75,7 @@ a {
     transition: all 0.2s;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
 }
 
@@ -148,6 +149,7 @@ a {
     border-bottom: 2px solid var(--border);
     padding: 0 24px;
     display: flex;
+    align-items: center;
     gap: 0;
     overflow-x: auto;
     scrollbar-width: thin;
@@ -176,6 +178,53 @@ a {
     color: var(--accent);
     border-bottom-color: var(--accent);
     font-weight: 600;
+}
+
+.tab-wrapper {
+    display: flex;
+    align-items: center;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-wrapper.active {
+    border-bottom-color: var(--accent);
+}
+
+.tab-wrapper.active .tab {
+    border-bottom-color: transparent;
+}
+
+.edit-cat-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.tab-wrapper.active .edit-cat-btn {
+    display: inline-flex;
+}
+
+.edit-cat-btn:hover {
+    color: var(--text);
+}
+
+.drag-handle {
+    cursor: grab;
+    width: 40px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    user-select: none;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
 }
 
 .container {
@@ -227,7 +276,7 @@ a {
     width: 40px;
     text-align: center;
     color: var(--text-muted);
-    font-size: 0.8rem
+    font-size: 0.8rem;
 }
 
 .anime-table .col-thumb {
@@ -289,12 +338,6 @@ a {
     font-weight: 500;
     cursor: default;
     position: relative;
-}
-
-.season-badge[data-comment]:not([data-comment=""])::after {
-    content: '💬';
-    font-size: 0.55rem;
-    margin-left: 3px;
 }
 
 .season-badge[data-comment]:not([data-comment=""]):hover::before {
@@ -451,6 +494,27 @@ select.form-input {
     cursor: pointer
 }
 
+.thumbnail-editor {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.thumbnail-editor img {
+    width: 45px;
+    height: 65px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: none;
+    background: var(--surface2);
+}
+
+.thumbnail-editor input {
+    flex: 1;
+}
+
 .autocomplete-wrapper {
     position: relative
 }
@@ -553,6 +617,54 @@ select.form-input {
 
 .star-input input {
     width: 70px
+}
+
+.interactive-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface2);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.interactive-stars .star {
+    color: var(--border);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.15s, transform 0.1s;
+    line-height: 1;
+}
+
+.interactive-stars .star:hover,
+.interactive-stars .star.hover {
+    color: #ffd700;
+    transform: scale(1.1);
+}
+
+.interactive-stars .star.active {
+    color: var(--star);
+}
+
+.interactive-stars .stars-clear {
+    margin-left: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.interactive-stars .stars-clear:hover {
+    background: var(--danger);
+    color: white;
 }
 
 .toast {

@@ -8,6 +8,8 @@ urlpatterns = [
     path('api/anime/<int:anime_id>/', views.api_anime_update, name='api_anime_update'),
     path('api/anime/<int:anime_id>/delete/', views.api_anime_delete, name='api_anime_delete'),
     path('api/anime/reorder/', views.api_anime_reorder, name='api_anime_reorder'),
+    path('api/anime/reorder_bulk/', views.api_anime_reorder_bulk, name='api_anime_reorder_bulk'),
     path('api/category/create/', views.api_category_create, name='api_category_create'),
+    path('api/category/<int:category_id>/update/', views.api_category_update, name='api_category_update'),
     path('api/mal-search/', views.api_mal_search, name='api_mal_search'),
 ]

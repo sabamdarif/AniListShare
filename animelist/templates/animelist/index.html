@@ -6,6 +6,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Anime List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
 </head>
 
@@ -14,14 +16,19 @@
     <div class="header">
         <h1>My Anime List</h1>
         <div class="header-actions">
-            <button class="btn btn-primary" onclick="addCategory()">+ Category</button>
-            <button class="btn btn-accent" onclick="openAddModal()">+ Add Anime</button>
+            <button class="btn btn-primary" onclick="addCategory()"><i class="fa-solid fa-folder-plus"></i>
+                Category</button>
+            <button class="btn btn-accent" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Anime</button>
         </div>
     </div>
 
     <div class="tabs-bar">
         {% for cat in categories %}
-        <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
+        <div class="tab-wrapper" data-cat-id="{{ cat.id }}">
+            <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
+            <button class="edit-cat-btn" onclick="renameCategory({{ cat.id }}, '{{ cat.name|escapejs }}')"><i
+                    class="fa-solid fa-pen"></i></button>
+        </div>
         {% endfor %}
     </div>
 
@@ -58,19 +65,28 @@
         <div class="modal">
             <div class="modal-header">
                 <h2 id="modalTitle">Add Anime</h2>
-                <button class="modal-close" onclick="closeModal()">×</button>
+                <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <form id="animeForm" onsubmit="event.preventDefault();saveAnime()">
                     <input type="hidden" id="animeIdField">
                     <input type="hidden" id="malIdInput">
-                    <input type="hidden" id="thumbnailInput">
 
                     <div class="form-group autocomplete-wrapper">
                         <label>Name</label>
                         <input type="text" id="nameInput" class="form-input" placeholder="Search anime name…"
                             autocomplete="off">
                         <div class="autocomplete-results" id="autocompleteResults"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Thumbnail URL</label>
+                        <div class="thumbnail-editor">
+                            <img id="thumbnailPreview" src="" alt="" onerror="this.style.display='none'"
+                                onload="this.style.display='block'">
+                            <input type="text" id="thumbnailInput" class="form-input" placeholder="https://..."
+                                oninput="updateThumbnailPreview()">
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -86,7 +102,7 @@
                         <label>Seasons Completed</label>
                         <div class="seasons-editor" id="seasonsContainer"></div>
                         <button type="button" class="btn btn-ghost btn-sm" onclick="addSeasonRow()"
-                            style="margin-top:4px">+ Add Season</button>
+                            style="margin-top:4px"><i class="fa-solid fa-plus"></i> Add Season</button>
                     </div>
 
                     <div class="form-group">
@@ -95,10 +111,22 @@
                     </div>
 
                     <div class="form-group">
-                        <div class="star-input">
-                            <label>Stars (0-10)</label>
-                            <input type="number" id="starsInput" class="form-input" min="0" max="10" placeholder="—">
+                        <label>Stars (0-10)</label>
+                        <div class="interactive-stars" id="interactiveStars">
+                            <span class="star" data-val="1"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="2"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="3"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="4"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="5"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="6"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="7"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="8"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="9"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="10"><i class="fa-solid fa-star"></i></span>
+                            <span class="stars-clear" id="starsClear" title="Clear rating"><i
+                                    class="fa-solid fa-xmark"></i></span>
                         </div>
+                        <input type="hidden" id="starsInput">
                     </div>
 
                     <div class="form-group">
