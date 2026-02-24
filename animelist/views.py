@@ -311,9 +311,13 @@ def api_mal_search(request):
     if not query or len(query) < 2:
         return JsonResponse({"results": []})
 
+    encoded_q = urllib.parse.quote(query)
+    url = f"https://api.jikan.moe/v4/anime?q={encoded_q}&limit=6"
+
     try:
-        url = f"https://api.jikan.moe/v4/anime?q={urllib.parse.quote(query)}&limit=6&sfw=true"
-        req = urllib.request.Request(url, headers={"User-Agent": "AnimeListApp/1.0"})
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "AnimeListApp/1.0"}
+        )
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
         results = []
@@ -363,9 +367,11 @@ def api_fetch_thumbnail(request, anime_id):  # type: ignore[no-untyped-def]
 
 def _fetch_thumbnail(name, retries=3):
     """Fetch thumbnail URL and MAL ID from Jikan API for a given anime name."""
+    encoded_name = urllib.parse.quote(name)
+    # Don't use sfw=true — it filters out hentai titles entirely
+    url = f"https://api.jikan.moe/v4/anime?q={encoded_name}&limit=1"
     for attempt in range(retries):
         try:
-            url = f"https://api.jikan.moe/v4/anime?q={urllib.parse.quote(name)}&limit=1&sfw=true"
             req = urllib.request.Request(
                 url, headers={"User-Agent": "AnimeListMigration/1.0"}
             )
