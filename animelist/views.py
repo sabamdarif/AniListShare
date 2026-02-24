@@ -523,9 +523,9 @@ def _fetch_thumbnail(name, retries=3):
     return "", None
 
 
-def _background_fetch_thumbnails(task_id):
+def _background_fetch_thumbnails(task_id, user_id):
     """Background thread: fetch thumbnails for anime with empty thumbnail_url."""
-    anime_list = list(Anime.objects.filter(thumbnail_url="").order_by("id"))
+    anime_list = list(Anime.objects.filter(thumbnail_url="", category__user_id=user_id).order_by("id"))
     total = len(anime_list)
     _import_progress[task_id] = {"current": 0, "total": total, "done": False}
 
@@ -554,6 +554,9 @@ def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type
 @require_http_methods(["POST"])
 def api_import_ods(request):  # type: ignore[no-untyped-def]
     """Import anime list from an uploaded ODS file."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
     uploaded = request.FILES.get("file")
     if not uploaded:
         return JsonResponse({"error": "No file uploaded"}, status=400)
@@ -573,9 +576,7 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
         return JsonResponse({"error": f"Failed to read ODS: {e}"}, status=400)
 
     # Clear existing data
-    Season.objects.all().delete()
-    Anime.objects.all().delete()
-    Category.objects.all().delete()
+    Category.objects.filter(user=request.user).delete()
 
     total_imported = 0
 
@@ -583,7 +584,7 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
         if not rows:
             continue
 
-        cat = Category.objects.create(name=sheet_name, order=order)
+        cat = Category.objects.create(name=sheet_name, order=order, user=request.user)
 
         # First row is the header – skip it
         for idx, row in enumerate(rows[1:]):
@@ -686,7 +687,7 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
     auto_fetch = request.POST.get("auto_fetch", "false") == "true"
     if auto_fetch and total_imported > 0:
         task_id = str(uuid.uuid4())
-        t = threading.Thread(target=_background_fetch_thumbnails, args=(task_id,))
+        t = threading.Thread(target=_background_fetch_thumbnails, args=(task_id, request.user.id))
         t.daemon = True
         t.start()
         return JsonResponse(
