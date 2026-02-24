@@ -246,6 +246,10 @@ a {
   color: var(--text);
 }
 
+.delete-cat-btn:hover {
+  color: var(--danger);
+}
+
 .drag-handle {
   cursor: grab;
   width: 40px;

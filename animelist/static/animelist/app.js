@@ -541,6 +541,26 @@ async function renameCategory(catId, currentName) {
   }
 }
 
+async function deleteCategory(catId, catName) {
+  if (
+    !confirm(
+      `Delete category "${catName}"?\n\nThis will permanently delete the category and ALL anime entries inside it.`,
+    )
+  )
+    return;
+
+  const resp = await fetch(`/api/category/${catId}/delete/`, {
+    method: "DELETE",
+  });
+
+  if (resp.ok) {
+    showToast("Category deleted");
+    location.reload();
+  } else {
+    showToast("Failed to delete category");
+  }
+}
+
 let searchTimeout;
 function setupAutocomplete() {
   const input = document.getElementById("nameInput");

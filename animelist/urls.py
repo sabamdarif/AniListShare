@@ -24,6 +24,11 @@ urlpatterns = [
         views.api_category_update,
         name="api_category_update",
     ),
+    path(
+        "api/category/<int:category_id>/delete/",
+        views.api_category_delete,
+        name="api_category_delete",
+    ),
     path("api/mal-search/", views.api_mal_search, name="api_mal_search"),
     path(
         "api/anime/<int:anime_id>/fetch-thumbnail/",

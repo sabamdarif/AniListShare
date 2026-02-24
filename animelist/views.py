@@ -293,6 +293,18 @@ def api_category_update(request, category_id):
 
 
 @csrf_exempt
+@require_http_methods(["DELETE"])
+def api_category_delete(request, category_id):
+    try:
+        category = Category.objects.get(id=category_id)
+    except Category.DoesNotExist:
+        return JsonResponse({"error": "Category not found"}, status=404)
+
+    category.delete()
+    return JsonResponse({"message": "Category deleted"})
+
+
+@csrf_exempt
 @require_http_methods(["GET"])
 def api_mal_search(request):
     query = request.GET.get("q", "").strip()

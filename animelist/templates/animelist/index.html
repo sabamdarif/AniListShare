@@ -48,6 +48,13 @@
                             onclick="renameCategory(this.dataset.catId, this.dataset.catName)">
                         <i class="fa-solid fa-pen"></i>
                     </button>
+                    <button class="edit-cat-btn delete-cat-btn"
+                            data-cat-id="{{ cat.id }}"
+                            data-cat-name="{{ cat.name }}"
+                            onclick="deleteCategory(this.dataset.catId, this.dataset.catName)"
+                            title="Delete category">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
                 </div>
             {% endfor %}
         </div>
