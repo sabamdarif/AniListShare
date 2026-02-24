@@ -238,6 +238,7 @@ def main():
 
     total = 0
     for order, (sheet_name, rows) in enumerate(data.items()):
+        rows = list(rows)
         print(f"\n== {sheet_name} ({len(rows)} rows) ==")
         count = import_sheet(sheet_name, rows, order, limit=args.limit)
         total += count

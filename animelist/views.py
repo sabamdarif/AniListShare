@@ -2,6 +2,7 @@ import json
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -380,9 +381,14 @@ def _background_fetch_thumbnails(task_id):
     _import_progress[task_id]["done"] = True
 
 
+def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type-arg]
+    """Safely extract and strip a cell value from an ODS row."""
+    return str(row[i]).strip() if i < len(row) and row[i] != "" else default
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_import_ods(request):
+def api_import_ods(request):  # type: ignore[no-untyped-def]
     """Import anime list from an uploaded ODS file."""
     uploaded = request.FILES.get("file")
     if not uploaded:
@@ -423,20 +429,17 @@ def api_import_ods(request):
             # Columns: Name | Thumbnail URL | MAL ID | Language | Stars |
             #          Reason | Extra Notes | Order | S1 Label | S1 Comment |
             #          S1 Watched | S1 Total | S2 Label | ...
-            def cell(i, default=""):
-                return str(row[i]).strip() if i < len(row) and row[i] != "" else default
-
-            name = cell(0)
+            name = _ods_cell(row, 0)
             if not name:
                 continue
 
-            thumb = cell(1)
-            mal_id_str = cell(2)
-            lang = cell(3)
-            stars_str = cell(4)
-            reason = cell(5)
-            extra_notes = cell(6)
-            order_str = cell(7, str(idx))
+            thumb = _ods_cell(row, 1)
+            mal_id_str = _ods_cell(row, 2)
+            lang = _ods_cell(row, 3)
+            stars_str = _ods_cell(row, 4)
+            reason = _ods_cell(row, 5)
+            extra_notes = _ods_cell(row, 6)
+            order_str = _ods_cell(row, 7, str(idx))
 
             mal_id = None
             if mal_id_str:
@@ -475,13 +478,19 @@ def api_import_ods(request):
             s_start = 8
             s_idx = 0
             while s_start < len(row):
-                s_label = cell(s_start)
+                s_label = _ods_cell(row, s_start)
                 if not s_label:
                     s_start += 4
                     continue
-                s_comment = cell(s_start + 1) if s_start + 1 < len(row) else ""
-                s_watched_str = cell(s_start + 2) if s_start + 2 < len(row) else ""
-                s_total_str = cell(s_start + 3) if s_start + 3 < len(row) else ""
+                s_comment = (
+                    _ods_cell(row, s_start + 1) if s_start + 1 < len(row) else ""
+                )
+                s_watched_str = (
+                    _ods_cell(row, s_start + 2) if s_start + 2 < len(row) else ""
+                )
+                s_total_str = (
+                    _ods_cell(row, s_start + 3) if s_start + 3 < len(row) else ""
+                )
 
                 s_watched = None
                 if s_watched_str:
