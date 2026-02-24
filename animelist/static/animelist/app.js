@@ -510,50 +510,107 @@ async function deleteAnime() {
   }
 }
 
-async function addCategory() {
-  const name = prompt("Category name:");
-  if (!name || !name.trim()) return;
+// ---------------------------------------------------------------------------
+// Category Modal (Add / Edit / Delete)
+// ---------------------------------------------------------------------------
 
-  const resp = await fetch("/api/category/create/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: name.trim() }),
-  });
-  if (resp.ok) {
-    location.reload();
-  }
+let editingCatId = null;
+
+function openCategoryModal(catId, catName) {
+  editingCatId = catId || null;
+  const isEdit = !!editingCatId;
+
+  document.getElementById("categoryModalTitle").textContent = isEdit
+    ? "Edit Category"
+    : "Add Category";
+  document.getElementById("categoryNameInput").value = catName || "";
+  document.getElementById("categoryDeleteSection").style.display = isEdit
+    ? ""
+    : "none";
+
+  // Reset to form view (in case delete confirm was showing)
+  document.getElementById("categoryFormSection").style.display = "";
+  document.getElementById("categoryDeleteConfirm").style.display = "none";
+  document.getElementById("categoryModalFooter").style.display = "";
+
+  document.getElementById("categoryModalOverlay").classList.add("open");
+
+  // Focus the input after the modal opens
+  setTimeout(function () {
+    document.getElementById("categoryNameInput").focus();
+  }, 50);
 }
 
-async function renameCategory(catId, currentName) {
-  const newName = prompt("Enter new category name:", currentName);
-  if (!newName || !newName.trim() || newName === currentName) return;
-
-  const resp = await fetch(`/api/category/${catId}/update/`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: newName.trim() }),
-  });
-
-  if (resp.ok) {
-    location.reload();
-  } else {
-    showToast("Failed to rename category");
-  }
+function addCategory() {
+  openCategoryModal(null, "");
 }
 
-async function deleteCategory(catId, catName) {
-  if (
-    !confirm(
-      `Delete category "${catName}"?\n\nThis will permanently delete the category and ALL anime entries inside it.`,
-    )
-  )
+function closeCategoryModal() {
+  document.getElementById("categoryModalOverlay").classList.remove("open");
+  editingCatId = null;
+}
+
+async function saveCategoryModal() {
+  var nameInput = document.getElementById("categoryNameInput");
+  var name = nameInput.value.trim();
+  if (!name) {
+    showToast("Category name is required");
+    nameInput.focus();
     return;
+  }
 
-  const resp = await fetch(`/api/category/${catId}/delete/`, {
+  var resp;
+  if (editingCatId) {
+    resp = await fetch("/api/category/" + editingCatId + "/update/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name }),
+    });
+    if (!resp.ok) {
+      showToast("Failed to rename category");
+      return;
+    }
+  } else {
+    resp = await fetch("/api/category/create/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name }),
+    });
+    if (!resp.ok) {
+      showToast("Failed to create category");
+      return;
+    }
+  }
+
+  closeCategoryModal();
+  location.reload();
+}
+
+function startDeleteCategory() {
+  var nameInput = document.getElementById("categoryNameInput");
+  document.getElementById("confirmDeleteCatName").textContent =
+    '"' + (nameInput.value.trim() || "this category") + '"';
+
+  document.getElementById("categoryFormSection").style.display = "none";
+  document.getElementById("categoryDeleteConfirm").style.display = "";
+  document.getElementById("categoryModalFooter").style.display = "none";
+}
+
+function cancelDeleteCategory() {
+  document.getElementById("categoryFormSection").style.display = "";
+  document.getElementById("categoryDeleteConfirm").style.display = "none";
+  document.getElementById("categoryModalFooter").style.display = "";
+}
+
+async function confirmDeleteCategory() {
+  if (!editingCatId) return;
+
+  var resp = await fetch("/api/category/" + editingCatId + "/delete/", {
     method: "DELETE",
   });
 
   if (resp.ok) {
+    closeCategoryModal();
     showToast("Category deleted");
     location.reload();
   } else {
@@ -956,4 +1013,24 @@ document.addEventListener("DOMContentLoaded", () => {
       loadCategory(catId);
     }
   });
+
+  // Category modal: close on Escape key
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      var catOverlay = document.getElementById("categoryModalOverlay");
+      if (catOverlay && catOverlay.classList.contains("open")) {
+        closeCategoryModal();
+      }
+    }
+  });
+
+  // Category modal: close on overlay click
+  var catOverlay = document.getElementById("categoryModalOverlay");
+  if (catOverlay) {
+    catOverlay.addEventListener("click", function (e) {
+      if (e.target === catOverlay) {
+        closeCategoryModal();
+      }
+    });
+  }
 });

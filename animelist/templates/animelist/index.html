@@ -45,15 +45,8 @@
                     <button class="edit-cat-btn"
                             data-cat-id="{{ cat.id }}"
                             data-cat-name="{{ cat.name }}"
-                            onclick="renameCategory(this.dataset.catId, this.dataset.catName)">
+                            onclick="openCategoryModal(this.dataset.catId, this.dataset.catName)">
                         <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button class="edit-cat-btn delete-cat-btn"
-                            data-cat-id="{{ cat.id }}"
-                            data-cat-name="{{ cat.name }}"
-                            onclick="deleteCategory(this.dataset.catId, this.dataset.catName)"
-                            title="Delete category">
-                        <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
             {% endfor %}
@@ -296,6 +289,58 @@
                                 id="importUploadBtn"
                                 onclick="uploadImportFile()"
                                 disabled>Upload</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-overlay" id="categoryModalOverlay">
+            <div class="modal" style="max-width:400px;">
+                <div class="modal-header">
+                    <h2 id="categoryModalTitle">Edit Category</h2>
+                    <button class="modal-close" onclick="closeCategoryModal()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="categoryModalBody">
+                    <div id="categoryFormSection">
+                        <div class="form-group" style="margin-bottom:0">
+                            <label>Category Name</label>
+                            <input type="text"
+                                   id="categoryNameInput"
+                                   class="form-input"
+                                   placeholder="Enter category name…"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();saveCategoryModal()}"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                    <div id="categoryDeleteConfirm"
+                         class="confirm-delete-section"
+                         style="display:none">
+                        <div class="confirm-delete-warning">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <p>
+                                Delete category <strong id="confirmDeleteCatName"></strong>?
+                            </p>
+                            <p class="confirm-delete-hint">
+                                This will permanently delete the category and <strong>all anime
+                                entries</strong> inside it.
+                            </p>
+                        </div>
+                        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+                            <button class="btn btn-ghost" onclick="cancelDeleteCategory()">Cancel</button>
+                            <button class="btn btn-danger" onclick="confirmDeleteCategory()">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="categoryModalFooter">
+                    <div id="categoryDeleteSection" style="display:none">
+                        <button class="btn btn-danger btn-sm" onclick="startDeleteCategory()">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-left:auto">
+                        <button class="btn btn-ghost" onclick="closeCategoryModal()">Cancel</button>
+                        <button class="btn btn-accent" onclick="saveCategoryModal()">Save</button>
                     </div>
                 </div>
             </div>

@@ -1073,3 +1073,45 @@ select.form-input {
   flex-shrink: 0;
 }
 
+/* ── Category Modal: Delete Confirmation ── */
+
+.confirm-delete-section {
+  animation: fadeIn 0.2s ease;
+}
+
+.confirm-delete-warning {
+  text-align: center;
+  padding: 12px 8px;
+  color: var(--text);
+}
+
+.confirm-delete-warning > i {
+  font-size: 2rem;
+  color: var(--danger);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.confirm-delete-warning > p {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.confirm-delete-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
