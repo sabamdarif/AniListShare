@@ -1033,4 +1033,85 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Share modal: close on Escape key
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      var shareOverlay = document.getElementById("shareModalOverlay");
+      if (shareOverlay && shareOverlay.classList.contains("open")) {
+        closeShareModal();
+      }
+    }
+  });
+
+  // Share modal: close on overlay click
+  var shareOverlay = document.getElementById("shareModalOverlay");
+  if (shareOverlay) {
+    shareOverlay.addEventListener("click", function (e) {
+      if (e.target === shareOverlay) {
+        closeShareModal();
+      }
+    });
+  }
 });
+
+// -----------------------------------------
+// Share Functionality
+// -----------------------------------------
+
+function openShareModal() {
+  document.getElementById("shareModalOverlay").classList.add("open");
+  fetch("/api/share/status/")
+    .then((res) => res.json())
+    .then((data) => {
+      const toggle = document.getElementById("shareToggleInput");
+      const linkContainer = document.getElementById("shareLinkContainer");
+      const linkInput = document.getElementById("shareLinkInput");
+
+      if (data.error) {
+        showToast("Error getting share status");
+        return;
+      }
+
+      toggle.checked = data.is_enabled;
+      linkInput.value = data.share_url;
+      linkContainer.style.display = data.is_enabled ? "block" : "none";
+    })
+    .catch((err) => showToast("Error connecting to server"));
+}
+
+function closeShareModal() {
+  document.getElementById("shareModalOverlay").classList.remove("open");
+}
+
+function toggleShareState(isEnabled) {
+  fetch("/api/share/toggle/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ is_enabled: isEnabled }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.error) {
+        showToast("Error toggling share state");
+        document.getElementById("shareToggleInput").checked = !isEnabled; // Revert
+        return;
+      }
+      document.getElementById("shareLinkInput").value = data.share_url;
+      document.getElementById("shareLinkContainer").style.display =
+        data.is_enabled ? "block" : "none";
+      showToast(data.is_enabled ? "Sharing enabled" : "Sharing disabled");
+    })
+    .catch((err) => {
+      showToast("Error connecting to server");
+      document.getElementById("shareToggleInput").checked = !isEnabled; // Revert
+    });
+}
+
+function copyShareLink() {
+  const lnk = document.getElementById("shareLinkInput");
+  lnk.select();
+  lnk.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(lnk.value);
+  showToast("Link copied to clipboard!");
+}

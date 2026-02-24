@@ -4,6 +4,10 @@ from . import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("signup/", views.signup_view, name="signup"),
+    path("login/", views.login_view, name="login"),
+    path("verify/", views.verify_otp_view, name="verify_otp"),
+    path("logout/", views.logout_view, name="logout"),
     path("api/anime/", views.api_anime_list, name="api_anime_list"),
     path("api/anime/create/", views.api_anime_create, name="api_anime_create"),
     path("api/anime/<int:anime_id>/", views.api_anime_update, name="api_anime_update"),
@@ -38,4 +42,12 @@ urlpatterns = [
     path("api/import-ods/", views.api_import_ods, name="api_import_ods"),
     path("api/import-progress/", views.api_import_progress, name="api_import_progress"),
     path("api/export-ods/", views.api_export_ods, name="api_export_ods"),
+    path("api/share/toggle/", views.api_toggle_share, name="api_toggle_share"),
+    path("api/share/status/", views.api_get_share_status, name="api_get_share_status"),
+    path("shared/<uuid:share_id>/", views.shared_list_view, name="shared_list_view"),
+    path(
+        "api/shared/<uuid:share_id>/anime/",
+        views.api_shared_anime_list,
+        name="api_shared_anime_list",
+    ),
 ]

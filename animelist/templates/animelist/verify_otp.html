@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify Email - My Anime List</title>
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
+        <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: var(--bg);
+        }
+
+        .auth-card {
+            background: var(--surface);
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px var(--border);
+        }
+
+        .auth-card h2 {
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .auth-card p {
+            margin-bottom: 24px;
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        .auth-card .form-group {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .auth-card .btn {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            margin-bottom: 16px;
+            font-size: 0.9em;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="auth-card">
+            <h2>Verify Your Email</h2>
+            <p>We've sent a 6-digit confirmation code to your email. It expires in 10 minutes.</p>
+            {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Verification Code</label>
+                    <input type="text"
+                           name="otp"
+                           class="form-input"
+                           required
+                           placeholder="000000"
+                           maxlength="6"
+                           pattern="\d{6}"
+                           title="Please enter a 6-digit code"
+                           style="text-align:center;
+                                  font-size:2em;
+                                  letter-spacing:12px;
+                                  padding: 16px">
+                </div>
+                <button type="submit" class="btn btn-accent">Verify Code</button>
+            </form>
+        </div>
+    </body>
+</html>
+

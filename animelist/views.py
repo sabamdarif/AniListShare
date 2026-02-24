@@ -1,4 +1,5 @@
 import json
+import random
 import tempfile
 import threading
 import time
@@ -8,30 +9,138 @@ import urllib.request
 import uuid
 
 import pyexcel_ods3
+from django.conf import settings
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .models import Anime, Category, Season
+from .models import Anime, Category, Season, SharedListProfile
 
 # In-memory progress tracker for background thumbnail fetching
 _import_progress = {}
 
 
+def signup_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password", "")
+        if not email or not password:
+            return render(
+                request,
+                "animelist/signup.html",
+                {"error": "Email and password required"},
+            )
+        if User.objects.filter(username=email).exists():
+            return render(
+                request, "animelist/signup.html", {"error": "Email already registered"}
+            )
+
+        otp = str(random.randint(100000, 999999))
+
+        # Store pending signup data in cache for 10 minutes
+        cache.set(
+            f"signup_data_{email}", {"password": password, "otp": otp}, timeout=600
+        )
+
+        send_mail(
+            subject="Your MyAnimeList OTP Code",
+            message=f"Your verification code is: {otp}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        request.session["verify_email"] = email
+        return redirect("verify_otp")
+
+    return render(request, "animelist/signup.html")
+
+
+def verify_otp_view(request):
+    email = request.session.get("verify_email")
+    if not email:
+        return redirect("signup")
+
+    if request.method == "POST":
+        otp = request.POST.get("otp", "").strip()
+        signup_data = cache.get(f"signup_data_{email}")
+
+        if not signup_data:
+            return render(
+                request,
+                "animelist/verify_otp.html",
+                {"error": "OTP expired. Please sign up again."},
+            )
+
+        if signup_data["otp"] == otp:
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=signup_data["password"],
+                is_active=True,
+            )
+
+            cache.delete(f"signup_data_{email}")
+            del request.session["verify_email"]
+
+            login(request, user)
+            return redirect("index")
+        else:
+            return render(
+                request, "animelist/verify_otp.html", {"error": "Invalid OTP"}
+            )
+
+    return render(request, "animelist/verify_otp.html")
+
+
+def login_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password", "")
+
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect("index")
+        else:
+            return render(
+                request, "animelist/login.html", {"error": "Invalid email or password"}
+            )
+
+    return render(request, "animelist/login.html")
+
+
+def logout_view(request):
+    logout(request)
+    return redirect("login")
+
+
+@login_required
 def index(request):
-    categories = Category.objects.prefetch_related("anime_entries__seasons").all()
+    categories = (
+        Category.objects.filter(user=request.user)
+        .prefetch_related("anime_entries__seasons")
+        .all()
+    )
     return render(request, "animelist/index.html", {"categories": categories})
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_anime_list(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     category_id = request.GET.get("category_id")
     if not category_id:
         return JsonResponse({"error": "category_id required"}, status=400)
     anime_qs = (
-        Anime.objects.filter(category_id=category_id)
+        Anime.objects.filter(category_id=category_id, category__user=request.user)
         .prefetch_related("seasons")
         .order_by("order")
     )
@@ -67,6 +176,8 @@ def api_anime_list(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_anime_create(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -78,7 +189,7 @@ def api_anime_create(request):
         return JsonResponse({"error": "category_id and name required"}, status=400)
 
     try:
-        category = Category.objects.get(id=category_id)
+        category = Category.objects.get(id=category_id, user=request.user)
     except Category.DoesNotExist:
         return JsonResponse({"error": "Category not found"}, status=404)
 
@@ -118,8 +229,10 @@ def api_anime_create(request):
 @csrf_exempt
 @require_http_methods(["PUT"])
 def api_anime_update(request, anime_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
-        anime = Anime.objects.get(id=anime_id)
+        anime = Anime.objects.get(id=anime_id, category__user=request.user)
     except Anime.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
 
@@ -145,7 +258,9 @@ def api_anime_update(request, anime_id):
     if new_category_id:
         try:
             if int(new_category_id) != anime.category_id:
-                new_cat = Category.objects.get(id=int(new_category_id))
+                new_cat = Category.objects.get(
+                    id=int(new_category_id), user=request.user
+                )
                 anime.category = new_cat
                 anime.order = Anime.objects.filter(category=new_cat).count()
         except (ValueError, TypeError, Category.DoesNotExist):
@@ -176,8 +291,10 @@ def api_anime_update(request, anime_id):
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def api_anime_delete(request, anime_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
-        anime = Anime.objects.get(id=anime_id)
+        anime = Anime.objects.get(id=anime_id, category__user=request.user)
     except Anime.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
 
@@ -195,6 +312,8 @@ def api_anime_delete(request, anime_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_anime_reorder(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -209,7 +328,7 @@ def api_anime_reorder(request):
         )
 
     try:
-        anime = Anime.objects.get(id=anime_id)
+        anime = Anime.objects.get(id=anime_id, category__user=request.user)
     except Anime.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
 
@@ -237,6 +356,8 @@ def api_anime_reorder(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_anime_reorder_bulk(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -248,7 +369,7 @@ def api_anime_reorder_bulk(request):
 
     # Note: normally we might check if they belong to same category
     for i, a_id in enumerate(anime_ids):
-        Anime.objects.filter(id=a_id).update(order=i)
+        Anime.objects.filter(id=a_id, category__user=request.user).update(order=i)
 
     return JsonResponse({"message": "Reordered"})
 
@@ -256,6 +377,8 @@ def api_anime_reorder_bulk(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_category_create(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -265,16 +388,18 @@ def api_category_create(request):
     if not name:
         return JsonResponse({"error": "name required"}, status=400)
 
-    max_order = Category.objects.count()
-    cat = Category.objects.create(name=name, order=max_order)
+    max_order = Category.objects.filter(user=request.user).count()
+    cat = Category.objects.create(name=name, order=max_order, user=request.user)
     return JsonResponse({"id": cat.id, "name": cat.name, "message": "Created"})
 
 
 @csrf_exempt
 @require_http_methods(["PUT"])
 def api_category_update(request, category_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
-        category = Category.objects.get(id=category_id)
+        category = Category.objects.get(id=category_id, user=request.user)
     except Category.DoesNotExist:
         return JsonResponse({"error": "Category not found"}, status=404)
 
@@ -295,8 +420,10 @@ def api_category_update(request, category_id):
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def api_category_delete(request, category_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     try:
-        category = Category.objects.get(id=category_id)
+        category = Category.objects.get(id=category_id, user=request.user)
     except Category.DoesNotExist:
         return JsonResponse({"error": "Category not found"}, status=404)
 
@@ -315,9 +442,7 @@ def api_mal_search(request):
     url = f"https://api.jikan.moe/v4/anime?q={encoded_q}&limit=6"
 
     try:
-        req = urllib.request.Request(
-            url, headers={"User-Agent": "AnimeListApp/1.0"}
-        )
+        req = urllib.request.Request(url, headers={"User-Agent": "AnimeListApp/1.0"})
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
         results = []
@@ -666,3 +791,114 @@ def api_export_ods(request):
     )
     response["Content-Disposition"] = 'attachment; filename="animelist_backup.ods"'
     return response
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_toggle_share(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    profile, created = SharedListProfile.objects.get_or_create(user=request.user)
+
+    try:
+        body = json.loads(request.body)
+        is_enabled = body.get("is_enabled")
+        if is_enabled is not None:
+            profile.is_enabled = bool(is_enabled)
+            profile.save()
+    except json.JSONDecodeError:
+        pass  # Just toggle if no body provided
+
+    url = request.build_absolute_uri(f"/shared/{profile.share_id}/")
+    return JsonResponse({"is_enabled": profile.is_enabled, "share_url": url})
+
+
+@require_http_methods(["GET"])
+def api_get_share_status(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    profile, created = SharedListProfile.objects.get_or_create(user=request.user)
+    url = request.build_absolute_uri(f"/shared/{profile.share_id}/")
+    return JsonResponse({"is_enabled": profile.is_enabled, "share_url": url})
+
+
+def shared_list_view(request, share_id):
+    try:
+        profile = SharedListProfile.objects.get(share_id=share_id)
+    except (SharedListProfile.DoesNotExist, ValueError):
+        return render(request, "animelist/shared_404.html", status=404)
+
+    if not profile.is_enabled:
+        return render(request, "animelist/shared_404.html", status=404)
+
+    categories = (
+        Category.objects.filter(user=profile.user)
+        .prefetch_related("anime_entries__seasons")
+        .all()
+    )
+    owner_name = (
+        profile.user.username.split("@")[0]
+        if "@" in profile.user.username
+        else profile.user.username
+    )
+
+    return render(
+        request,
+        "animelist/shared_index.html",
+        {
+            "categories": categories,
+            "owner_name": owner_name,
+            "share_id": share_id,
+        },
+    )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_shared_anime_list(request, share_id):
+    try:
+        profile = SharedListProfile.objects.get(share_id=share_id)
+    except (SharedListProfile.DoesNotExist, ValueError):
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    if not profile.is_enabled:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    category_id = request.GET.get("category_id")
+    if not category_id:
+        return JsonResponse({"error": "category_id required"}, status=400)
+
+    anime_qs = (
+        Anime.objects.filter(category_id=category_id, category__user=profile.user)
+        .prefetch_related("seasons")
+        .order_by("order")
+    )
+    data = []
+    for a in anime_qs:
+        data.append(
+            {
+                "id": a.id,
+                "name": a.name,
+                "thumbnail_url": a.thumbnail_url,
+                "mal_id": a.mal_id,
+                "language": a.language,
+                "stars": a.stars,
+                "order": a.order,
+                "reason": a.reason,
+                "extra_notes": a.extra_notes,
+                "seasons": [
+                    {
+                        "id": s.id,
+                        "label": s.label,
+                        "comment": s.comment,
+                        "episodes_watched": s.episodes_watched,
+                        "episodes_total": s.episodes_total,
+                        "order": s.order,
+                    }
+                    for s in a.seasons.all()
+                ],
+            }
+        )
+    return JsonResponse({"anime": data})

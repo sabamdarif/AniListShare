@@ -1,0 +1,273 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ owner_name }}'s Anime List</title>
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
+        <style>
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .share-badge {
+            background-color: var(--accent);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Hide specific elements on shared view that might have accidently leaked */
+        .drag-handle {
+            cursor: default !important;
+        }
+
+        .drag-handle:active {
+            cursor: default !important;
+        }
+        </style>
+    </head>
+    <body data-share-id="{{ share_id }}">
+        <div class="header">
+            <div class="header-title-container">
+                <h1>{{ owner_name }}'s List</h1>
+                <span class="share-badge">
+                    <i class="fa-solid fa-eye"></i> Shared Read-Only
+                </span>
+            </div>
+            <div class="header-search autocomplete-wrapper" id="localSearchWrapper">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text"
+                       id="localSearchInput"
+                       class="form-input"
+                       placeholder="Search this list..."
+                       autocomplete="off">
+                <div class="autocomplete-results" id="localSearchResults"></div>
+            </div>
+            <div class="header-actions">
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'index' %}" class="btn btn-ghost">Return to My List</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-ghost">Create Your Own List</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="tabs-bar">
+            {% for cat in categories %}
+                <div class="tab-wrapper" data-cat-id="{{ cat.id }}">
+                    <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="container">
+            {% for cat in categories %}
+                <div class="category-panel" data-cat-id="{{ cat.id }}">
+                    <table class="anime-table">
+                        <thead>
+                            <tr>
+                                <th class="col-num">#</th>
+                                <th class="col-thumb"></th>
+                                <th class="col-name">Name</th>
+                                <th class="col-seasons">Seasons</th>
+                                <th class="col-lang">Language</th>
+                                <th class="col-stars">Stars</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <p>Loading…</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        </div>
+        <!-- Load read-only JS -->
+        <script>
+        // Use a simpler script for read-only view
+        const shareId = document.body.dataset.shareId;
+        let currentCategoryId = null;
+
+        function switchTab(catId) {
+            currentCategoryId = catId;
+            document.querySelectorAll(".tab-wrapper").forEach(t => t.classList.toggle("active", t.dataset.catId == catId));
+            document.querySelectorAll(".category-panel").forEach(p => p.classList.toggle("active", p.dataset.catId == catId));
+        }
+
+        function renderStars(n, max = 10) {
+            if (n === null || n === undefined) return '<span class="stars-display text-muted">—</span>';
+            let html = '<span class="stars-display">';
+            for (let i = 1; i <= max; i++) {
+                html += i <= n ? '<i class="fa-solid fa-star"></i>' : '<span class="empty"><i class="fa-solid fa-star"></i></span>';
+            }
+            html += ` <span style="color:var(--text-muted);font-size:0.75rem">${n}/10</span></span>`;
+            return html;
+        }
+
+        function buildSeasonBadgesReadOnly(seasons) {
+            return seasons.map(s => {
+                let progressAttr = '';
+                let progressText = '';
+                let classes = 'season-badge';
+                let commentAttr = s.comment ? ` title="${s.comment.replace(/"/g, '&quot;')}"` : '';
+
+                if (s.episodes_watched !== null && s.episodes_total !== null && s.episodes_total > 0) {
+                    const pct = Math.min(100, Math.max(0, (s.episodes_watched / s.episodes_total) * 100));
+                    progressAttr = `--progress: ${pct}%;`;
+                    progressText = ` <span class="season-progress">(${s.episodes_watched}/${s.episodes_total})</span>`;
+                    classes += ' has-progress';
+                } else if (s.episodes_watched !== null) {
+                    progressText = ` <span class="season-progress">(${s.episodes_watched}/?)</span>`;
+                }
+
+                return `<div style="display: inline-flex; flex-direction: column; align-items: center; vertical-align: top; margin: 2px 3px; max-width: 90px; cursor: default;">
+                    <span class="${classes}" style="margin: 0; width: 100%; justify-content: center; ${progressAttr}"${commentAttr}>${s.label}${progressText}</span>
+                    ${s.comment ? `<span class="text-muted" style="font-size: 0.65rem; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;" title="${s.comment.replace(/"/g, '&quot;')}">${s.comment}</span>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function buildTableRowReadOnly(anime, idx) {
+            const thumb = anime.thumbnail_url
+                ? `<img class="thumb" src="${anime.thumbnail_url}" alt="" loading="lazy">`
+                : `<div class="thumb-placeholder"><span>N/A</span></div>`;
+
+            return `<tr data-id="${anime.id}">
+                <td class="col-num">${idx + 1}</td>
+                <td class="col-thumb">${thumb}</td>
+                <td class="col-name">
+                    <div class="anime-title" style="font-weight: 500;">${anime.name}</div>
+                    ${anime.reason ? `<div class="anime-reason text-muted" style="font-size: 0.75rem; margin-top: 4px;">${anime.reason}</div>` : ''}
+                </td>
+                <td class="col-seasons">${buildSeasonBadgesReadOnly(anime.seasons)}</td>
+                <td class="col-lang">
+                    ${anime.language ? anime.language.split(',').map(lang => `<span class="lang-badge">${lang.trim()}</span>`).join('') : '<span class="text-muted">—</span>'}
+                </td>
+                <td class="col-stars">${renderStars(anime.stars)}</td>
+            </tr>`;
+        }
+
+        async function loadCategoryShared(catId) {
+            const panel = document.querySelector(`.category-panel[data-cat-id="${catId}"]`);
+            const tbody = panel.querySelector("tbody");
+            try {
+                const resp = await fetch(`/api/shared/${shareId}/anime/?category_id=${catId}`);
+                if (!resp.ok) throw new Error("Failed to load");
+                const data = await resp.json();
+                if (data.anime.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>No anime in this category yet</p></div></td></tr>`;
+                } else {
+                    tbody.innerHTML = data.anime.map((a, i) => buildTableRowReadOnly(a, i)).join("");
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>Error loading list. <button class="btn btn-ghost btn-sm" onclick="loadCategoryShared('${catId}')">Retry</button></p></div></td></tr>`;
+            }
+        }
+
+        function setupLocalSearchShared() {
+            const input = document.getElementById("localSearchInput");
+            const resultsBox = document.getElementById("localSearchResults");
+
+            input.addEventListener("input", function () {
+                const q = this.value.toLowerCase().trim();
+                let matches = [];
+
+                if (q.length > 0) {
+                    document.querySelectorAll(`.category-panel`).forEach(panel => {
+                        const rows = panel.querySelectorAll("tbody tr[data-id]");
+                        const catName = document.querySelector(`.tab[data-cat-id="${panel.dataset.catId}"]`).textContent;
+
+                        rows.forEach(tr => {
+                            const titleEl = tr.querySelector(".anime-title");
+                            if (titleEl && titleEl.textContent.toLowerCase().includes(q)) {
+                                matches.push({
+                                    id: tr.dataset.id,
+                                    name: titleEl.textContent,
+                                    catId: panel.dataset.catId,
+                                    catName: catName,
+                                    tr: tr
+                                });
+                            }
+                        });
+                    });
+                }
+
+                if (matches.length > 0) {
+                    resultsBox.innerHTML = matches.map(m => `
+                        <div class="autocomplete-item" onclick="jumpToAnimeShared('${m.catId}', '${m.id}')">
+                            <span class="ac-title">${m.name}</span>
+                            <span class="ac-badge" style="background:var(--surface);color:var(--text-muted);font-size:0.7em">${m.catName}</span>
+                        </div>
+                    `).join("");
+                    resultsBox.style.display = "block";
+                } else {
+                    resultsBox.style.display = "none";
+                }
+            });
+
+            document.addEventListener("click", e => {
+                if (!e.target.closest("#localSearchWrapper")) {
+                    resultsBox.style.display = "none";
+                }
+            });
+        }
+
+        window.jumpToAnimeShared = function (catId, animeId) {
+            switchTab(catId);
+            document.getElementById("localSearchResults").style.display = "none";
+            document.getElementById("localSearchInput").value = "";
+            const row = document.querySelector(`tr[data-id="${animeId}"]`);
+            if (row) {
+                row.scrollIntoView({ behavior: "smooth", block: "center" });
+                row.classList.add("highlight-flash");
+                setTimeout(() => row.classList.remove("highlight-flash"), 1500);
+            }
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            setupLocalSearchShared();
+            const firstTab = document.querySelector(".tab");
+            if (firstTab) {
+                switchTab(firstTab.dataset.catId);
+                loadCategoryShared(firstTab.dataset.catId);
+            }
+
+            document.querySelectorAll(".tab").forEach(tab => {
+                tab.addEventListener("click", () => {
+                    switchTab(tab.dataset.catId);
+                    loadCategoryShared(tab.dataset.catId);
+                });
+            });
+
+            // Preload all
+            document.querySelectorAll(".category-panel").forEach(panel => {
+                const catId = panel.dataset.catId;
+                if (catId && catId !== (firstTab && firstTab.dataset.catId)) {
+                    loadCategoryShared(catId);
+                }
+            });
+        });
+        </script>
+    </body>
+</html>
+

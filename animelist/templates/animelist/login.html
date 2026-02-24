@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Log In - My Anime List</title>
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
+        <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: var(--bg);
+        }
+
+        .auth-card {
+            background: var(--surface);
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px var(--border);
+        }
+
+        .auth-card h2 {
+            margin-bottom: 24px;
+            color: var(--text);
+        }
+
+        .auth-card .form-group {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .auth-card .btn {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .auth-links {
+            margin-top: 16px;
+            font-size: 0.9em;
+        }
+
+        .auth-links a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            margin-bottom: 16px;
+            font-size: 0.9em;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="auth-card">
+            <h2>Welcome Back</h2>
+            {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email"
+                           name="email"
+                           class="form-input"
+                           required
+                           placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-accent">Log In</button>
+            </form>
+            <div class="auth-links">
+                Need an account? <a href="{% url 'signup' %}">Sign up</a>
+            </div>
+        </div>
+    </body>
+</html>

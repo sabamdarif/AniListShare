@@ -23,6 +23,18 @@
                 <div class="autocomplete-results" id="localSearchResults"></div>
             </div>
             <div class="header-actions">
+                <span style="color:var(--text-secondary); margin-right: 8px;">{{ request.user.username }}</span>
+                <a href="{% url 'logout' %}"
+                   class="btn btn-ghost"
+                   style="text-decoration:none;
+                          display:inline-flex;
+                          align-items:center;
+                          gap:6px">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </a>
+                <button class="btn btn-ghost" onclick="openShareModal()">
+                    <i class="fa-solid fa-share-nodes"></i> Share
+                </button>
                 <button class="btn btn-ghost" onclick="openImportModal()">
                     <i class="fa-solid fa-file-import"></i> Import
                 </button>
@@ -342,6 +354,59 @@
                         <button class="btn btn-ghost" onclick="closeCategoryModal()">Cancel</button>
                         <button class="btn btn-accent" onclick="saveCategoryModal()">Save</button>
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-overlay" id="shareModalOverlay">
+            <div class="modal" style="max-width: 500px">
+                <div class="modal-header">
+                    <h2 id="shareModalTitle">Share Your List</h2>
+                    <button class="modal-close" onclick="closeShareModal()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="shareModalBody">
+                    <p style="margin-bottom: 24px;
+                              color: var(--text-muted);
+                              font-size: 0.9em">
+                        Generate a read-only link to share your anime list with others. You can disable this at any time.
+                    </p>
+                    <div style="display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                margin-bottom: 24px">
+                        <div>
+                            <span style="font-weight: 500; display: block; margin-bottom: 4px;">Enable Public Link</span>
+                            <span style="font-size: 0.8em; color: var(--text-muted);">Anyone with the link can view your
+                            list.</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox"
+                                   id="shareToggleInput"
+                                   onchange="toggleShareState(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="shareLinkContainer" style="display: none;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Your Share Link</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text"
+                                   id="shareLinkInput"
+                                   class="form-input"
+                                   readonly
+                                   style="flex: 1;
+                                          font-family: monospace;
+                                          font-size: 0.9em">
+                            <button class="btn btn-accent" onclick="copyShareLink()">
+                                <i class="fa-solid fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="shareModalFooter">
+                    <button class="btn btn-ghost"
+                            onclick="closeShareModal()"
+                            style="margin-left:auto">Close</button>
                 </div>
             </div>
         </div>

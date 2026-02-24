@@ -1,7 +1,11 @@
+import uuid
+
+from django.contrib.auth.models import User
 from django.db import models
 
 
 class Category(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=200)
     order = models.IntegerField(default=0)
 
@@ -46,3 +50,14 @@ class Season(models.Model):
 
     def __str__(self):
         return f"{self.anime.name} - {self.label}"
+
+
+class SharedListProfile(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="shared_profile"
+    )
+    share_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    is_enabled = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username}'s Shared List ({'Enabled' if self.is_enabled else 'Disabled'})"
