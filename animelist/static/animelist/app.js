@@ -82,7 +82,7 @@ function buildSeasonBadges(animeId, seasons) {
 function buildTableRow(anime, idx) {
   const thumb = anime.thumbnail_url
     ? `<img class="thumb" src="${anime.thumbnail_url}" alt="" loading="lazy">`
-    : `<div class="thumb-placeholder">N/A</div>`;
+    : `<div class="thumb-placeholder" id="thumb-${anime.id}"><span>N/A</span><button class="thumb-load-btn" onclick="event.stopPropagation();fetchThumbnail(${anime.id})" title="Fetch thumbnail"><i class="fa-solid fa-download"></i> Load</button></div>`;
   return `<tr data-id="${anime.id}">
     <td class="col-num drag-handle" title="Drag to reorder">${idx + 1}</td>
     <td class="col-thumb">${thumb}</td>
@@ -108,6 +108,49 @@ function buildTableRow(anime, idx) {
       </div>
     </td>
   </tr>`;
+}
+
+async function fetchThumbnail(animeId) {
+  const placeholder = document.getElementById(`thumb-${animeId}`);
+  if (!placeholder) return;
+
+  // Show loading state
+  const btn = placeholder.querySelector(".thumb-load-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  }
+
+  try {
+    const resp = await fetch(`/api/anime/${animeId}/fetch-thumbnail/`, {
+      method: "POST",
+    });
+    const data = await resp.json();
+
+    if (data.thumbnail_url) {
+      // Replace placeholder with actual image
+      const td = placeholder.parentElement;
+      td.innerHTML = `<img class="thumb" src="${data.thumbnail_url}" alt="" loading="lazy">`;
+      showToast("Thumbnail loaded!");
+    } else {
+      // Restore button with error state
+      if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Not found';
+        btn.classList.add("error");
+        setTimeout(() => {
+          btn.innerHTML = '<i class="fa-solid fa-download"></i> Load';
+          btn.classList.remove("error");
+          btn.disabled = false;
+        }, 2000);
+      }
+    }
+  } catch {
+    if (btn) {
+      btn.innerHTML = '<i class="fa-solid fa-download"></i> Load';
+      btn.disabled = false;
+    }
+    showToast("Failed to fetch thumbnail");
+  }
 }
 
 async function loadCategory(catId) {

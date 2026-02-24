@@ -323,6 +323,27 @@ def api_mal_search(request):
         return JsonResponse({"results": []})
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_fetch_thumbnail(request, anime_id):  # type: ignore[no-untyped-def]
+    """Fetch thumbnail from Jikan API for a single anime entry."""
+    try:
+        anime = Anime.objects.get(id=anime_id)
+    except Anime.DoesNotExist:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    thumb_url, mal_id = _fetch_thumbnail(anime.name)
+    if thumb_url:
+        anime.thumbnail_url = thumb_url
+        if mal_id:
+            anime.mal_id = mal_id
+        anime.save(update_fields=["thumbnail_url", "mal_id"])
+        return JsonResponse(
+            {"status": "ok", "thumbnail_url": thumb_url, "mal_id": mal_id}
+        )
+    return JsonResponse({"status": "not_found", "thumbnail_url": "", "mal_id": None})
+
+
 # ---------------------------------------------------------------------------
 # ODS Import / Export
 # ---------------------------------------------------------------------------
