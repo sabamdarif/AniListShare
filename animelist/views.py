@@ -1,13 +1,21 @@
 import json
+import tempfile
+import threading
+import time
 import urllib.parse
 import urllib.request
+import uuid
 
-from django.http import JsonResponse
+import pyexcel_ods3
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Anime, Category, Season
+
+# In-memory progress tracker for background thumbnail fetching
+_import_progress = {}
 
 
 def index(request):
@@ -94,8 +102,12 @@ def api_anime_create(request):
                 anime=anime,
                 label=s["label"].strip(),
                 comment=s.get("comment", ""),
-                episodes_watched=s.get("episodes_watched") if s.get("episodes_watched") not in [None, ""] else None,
-                episodes_total=s.get("episodes_total") if s.get("episodes_total") not in [None, ""] else None,
+                episodes_watched=s.get("episodes_watched")
+                if s.get("episodes_watched") not in [None, ""]
+                else None,
+                episodes_total=s.get("episodes_total")
+                if s.get("episodes_total") not in [None, ""]
+                else None,
                 order=i,
             )
 
@@ -148,8 +160,12 @@ def api_anime_update(request, anime_id):
                     anime=anime,
                     label=s["label"].strip(),
                     comment=s.get("comment", ""),
-                    episodes_watched=s.get("episodes_watched") if s.get("episodes_watched") not in [None, ""] else None,
-                    episodes_total=s.get("episodes_total") if s.get("episodes_total") not in [None, ""] else None,
+                    episodes_watched=s.get("episodes_watched")
+                    if s.get("episodes_watched") not in [None, ""]
+                    else None,
+                    episodes_total=s.get("episodes_total")
+                    if s.get("episodes_total") not in [None, ""]
+                    else None,
                     order=i,
                 )
 
@@ -304,3 +320,301 @@ def api_mal_search(request):
         return JsonResponse({"results": results})
     except Exception:
         return JsonResponse({"results": []})
+
+
+# ---------------------------------------------------------------------------
+# ODS Import / Export
+# ---------------------------------------------------------------------------
+
+
+def _fetch_thumbnail(name, retries=3):
+    """Fetch thumbnail URL and MAL ID from Jikan API for a given anime name."""
+    for attempt in range(retries):
+        try:
+            url = f"https://api.jikan.moe/v4/anime?q={urllib.parse.quote(name)}&limit=1&sfw=true"
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "AnimeListMigration/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode())
+            results = data.get("data", [])
+            if results:
+                item = results[0]
+                return (
+                    item.get("images", {}).get("jpg", {}).get("image_url", ""),
+                    item.get("mal_id"),
+                )
+            return "", None
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                time.sleep(2 ** (attempt + 1))
+                continue
+            return "", None
+        except Exception:
+            if attempt < retries - 1:
+                time.sleep(1)
+                continue
+            return "", None
+    return "", None
+
+
+def _background_fetch_thumbnails(task_id):
+    """Background thread: fetch thumbnails for anime with empty thumbnail_url."""
+    anime_list = list(Anime.objects.filter(thumbnail_url="").order_by("id"))
+    total = len(anime_list)
+    _import_progress[task_id] = {"current": 0, "total": total, "done": False}
+
+    if total == 0:
+        _import_progress[task_id]["done"] = True
+        return
+
+    for i, anime in enumerate(anime_list, 1):
+        thumb_url, mal_id = _fetch_thumbnail(anime.name)
+        if thumb_url:
+            anime.thumbnail_url = thumb_url
+            anime.mal_id = mal_id
+            anime.save(update_fields=["thumbnail_url", "mal_id"])
+        _import_progress[task_id]["current"] = i
+        time.sleep(1.5)  # Jikan rate limit
+
+    _import_progress[task_id]["done"] = True
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_import_ods(request):
+    """Import anime list from an uploaded ODS file."""
+    uploaded = request.FILES.get("file")
+    if not uploaded:
+        return JsonResponse({"error": "No file uploaded"}, status=400)
+
+    if not uploaded.name.endswith(".ods"):
+        return JsonResponse({"error": "Only .ods files are supported"}, status=400)
+
+    # Write to a temp file so pyexcel_ods3 can read it
+    with tempfile.NamedTemporaryFile(suffix=".ods", delete=False) as tmp:
+        for chunk in uploaded.chunks():
+            tmp.write(chunk)
+        tmp_path = tmp.name
+
+    try:
+        data = pyexcel_ods3.get_data(tmp_path)
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to read ODS: {e}"}, status=400)
+
+    # Clear existing data
+    Season.objects.all().delete()
+    Anime.objects.all().delete()
+    Category.objects.all().delete()
+
+    total_imported = 0
+
+    for order, (sheet_name, rows) in enumerate(data.items()):
+        if not rows:
+            continue
+
+        cat = Category.objects.create(name=sheet_name, order=order)
+
+        # First row is the header – skip it
+        for idx, row in enumerate(rows[1:]):
+            if not row or not str(row[0]).strip():
+                continue
+
+            # Columns: Name | Thumbnail URL | MAL ID | Language | Stars |
+            #          Reason | Extra Notes | Order | S1 Label | S1 Comment |
+            #          S1 Watched | S1 Total | S2 Label | ...
+            def cell(i, default=""):
+                return str(row[i]).strip() if i < len(row) and row[i] != "" else default
+
+            name = cell(0)
+            if not name:
+                continue
+
+            thumb = cell(1)
+            mal_id_str = cell(2)
+            lang = cell(3)
+            stars_str = cell(4)
+            reason = cell(5)
+            extra_notes = cell(6)
+            order_str = cell(7, str(idx))
+
+            mal_id = None
+            if mal_id_str:
+                try:
+                    mal_id = int(float(mal_id_str))
+                except (ValueError, TypeError):
+                    pass
+
+            stars = None
+            if stars_str:
+                try:
+                    stars = int(float(stars_str))
+                    if stars == 0:
+                        stars = None
+                except (ValueError, TypeError):
+                    pass
+
+            try:
+                anime_order = int(float(order_str))
+            except (ValueError, TypeError):
+                anime_order = idx
+
+            anime = Anime.objects.create(
+                category=cat,
+                name=name,
+                thumbnail_url=thumb,
+                mal_id=mal_id,
+                language=lang,
+                stars=stars,
+                order=anime_order,
+                reason=reason,
+                extra_notes=extra_notes,
+            )
+
+            # Parse season columns (groups of 4: label, comment, watched, total)
+            s_start = 8
+            s_idx = 0
+            while s_start < len(row):
+                s_label = cell(s_start)
+                if not s_label:
+                    s_start += 4
+                    continue
+                s_comment = cell(s_start + 1) if s_start + 1 < len(row) else ""
+                s_watched_str = cell(s_start + 2) if s_start + 2 < len(row) else ""
+                s_total_str = cell(s_start + 3) if s_start + 3 < len(row) else ""
+
+                s_watched = None
+                if s_watched_str:
+                    try:
+                        s_watched = int(float(s_watched_str))
+                    except (ValueError, TypeError):
+                        pass
+
+                s_total = None
+                if s_total_str:
+                    try:
+                        s_total = int(float(s_total_str))
+                    except (ValueError, TypeError):
+                        pass
+
+                Season.objects.create(
+                    anime=anime,
+                    label=s_label,
+                    comment=s_comment,
+                    episodes_watched=s_watched,
+                    episodes_total=s_total,
+                    order=s_idx,
+                )
+                s_idx += 1
+                s_start += 4
+
+            total_imported += 1
+
+    auto_fetch = request.POST.get("auto_fetch", "false") == "true"
+    if auto_fetch and total_imported > 0:
+        task_id = str(uuid.uuid4())
+        t = threading.Thread(target=_background_fetch_thumbnails, args=(task_id,))
+        t.daemon = True
+        t.start()
+        return JsonResponse(
+            {"status": "ok", "task_id": task_id, "imported": total_imported}
+        )
+
+    return JsonResponse({"status": "ok", "imported": total_imported})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_import_progress(request):
+    """Poll thumbnail-fetch progress."""
+    task_id = request.GET.get("task_id", "")
+    info = _import_progress.get(task_id)
+    if info is None:
+        return JsonResponse({"error": "Unknown task_id"}, status=404)
+    return JsonResponse(info)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_export_ods(request):
+    """Export the entire anime list as an ODS file download."""
+    categories = Category.objects.prefetch_related("anime_entries__seasons").order_by(
+        "order"
+    )
+
+    book = {}
+
+    for cat in categories:
+        header = [
+            "Name",
+            "Thumbnail URL",
+            "MAL ID",
+            "Language",
+            "Stars",
+            "Reason",
+            "Extra Notes",
+            "Order",
+        ]
+
+        # Determine max number of seasons in this category to set header columns
+        max_seasons = 0
+        anime_list = list(cat.anime_entries.order_by("order"))
+        for anime in anime_list:
+            sc = anime.seasons.count()
+            if sc > max_seasons:
+                max_seasons = sc
+
+        for si in range(max_seasons):
+            n = si + 1
+            header.extend(
+                [f"S{n} Label", f"S{n} Comment", f"S{n} Watched", f"S{n} Total"]
+            )
+
+        rows = [header]
+
+        for anime in anime_list:
+            row = [
+                anime.name,
+                anime.thumbnail_url or "",
+                anime.mal_id if anime.mal_id else "",
+                anime.language or "",
+                anime.stars if anime.stars else "",
+                anime.reason or "",
+                anime.extra_notes or "",
+                anime.order,
+            ]
+            for season in anime.seasons.order_by("order"):
+                row.extend(
+                    [
+                        season.label,
+                        season.comment or "",
+                        season.episodes_watched
+                        if season.episodes_watched is not None
+                        else "",
+                        season.episodes_total
+                        if season.episodes_total is not None
+                        else "",
+                    ]
+                )
+            rows.append(row)
+
+        sheet_name = cat.name or f"Category {cat.id}"
+        book[sheet_name] = rows
+
+    if not book:
+        book["Sheet1"] = [["No data"]]
+
+    with tempfile.NamedTemporaryFile(suffix=".ods", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    pyexcel_ods3.save_data(tmp_path, book)
+
+    with open(tmp_path, "rb") as f:
+        content = f.read()
+
+    response = HttpResponse(
+        content,
+        content_type="application/vnd.oasis.opendocument.spreadsheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="animelist_backup.ods"'
+    return response

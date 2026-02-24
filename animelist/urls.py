@@ -25,4 +25,7 @@ urlpatterns = [
         name="api_category_update",
     ),
     path("api/mal-search/", views.api_mal_search, name="api_mal_search"),
+    path("api/import-ods/", views.api_import_ods, name="api_import_ods"),
+    path("api/import-progress/", views.api_import_progress, name="api_import_progress"),
+    path("api/export-ods/", views.api_export_ods, name="api_export_ods"),
 ]

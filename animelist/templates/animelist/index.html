@@ -23,6 +23,12 @@
                 <div class="autocomplete-results" id="localSearchResults"></div>
             </div>
             <div class="header-actions">
+                <button class="btn btn-ghost" onclick="openImportModal()">
+                    <i class="fa-solid fa-file-import"></i> Import
+                </button>
+                <button class="btn btn-ghost" onclick="exportOds()">
+                    <i class="fa-solid fa-file-export"></i> Export
+                </button>
                 <button class="btn btn-primary" onclick="addCategory()">
                     <i class="fa-solid fa-folder-plus"></i>
                     Category
@@ -214,6 +220,75 @@
                     <div style="display:flex;gap:8px;margin-left:auto">
                         <button class="btn btn-ghost" onclick="closeQuickSeasonModal()">Cancel</button>
                         <button class="btn btn-accent" onclick="saveQuickSeason()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-overlay" id="importModalOverlay">
+            <div class="modal" style="max-width:480px;">
+                <div class="modal-header">
+                    <h2>Import Anime List</h2>
+                    <button class="modal-close" onclick="closeImportModal()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="drop-zone"
+                         id="dropZone"
+                         ondragover="handleDragOver(event)"
+                         ondragleave="handleDragLeave(event)"
+                         ondrop="handleDrop(event)"
+                         onclick="document.getElementById('importFileInput').click()">
+                        <i class="fa-solid fa-cloud-arrow-up drop-zone-icon"></i>
+                        <p class="drop-zone-text">
+                            Drag & drop your <strong>.ods</strong> file here
+                        </p>
+                        <p class="drop-zone-hint">or click to browse</p>
+                        <input type="file"
+                               id="importFileInput"
+                               accept=".ods"
+                               style="display:none"
+                               onchange="handleFileSelect(this)">
+                    </div>
+                    <div class="import-file-info" id="importFileInfo" style="display:none">
+                        <i class="fa-solid fa-file-spreadsheet"></i>
+                        <span id="importFileName"></span>
+                        <button class="btn-icon btn-sm" onclick="clearImportFile()" title="Remove">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="import-option">
+                        <label class="toggle-label" for="autoFetchToggle">
+                            <span>Auto fetch all thumbnails</span>
+                            <span class="toggle-hint">Fetches cover images from MyAnimeList (takes time)</span>
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoFetchToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="import-progress" id="importProgress" style="display:none">
+                        <div class="progress-header">
+                            <span>Fetching thumbnails…</span>
+                            <span id="progressCount">0 / 0</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="progressBarFill"></div>
+                        </div>
+                        <p class="progress-text" id="progressText">Starting…</p>
+                    </div>
+                    <div class="import-warning">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>This will <strong>replace</strong> your entire current list.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div style="display:flex;gap:8px;margin-left:auto">
+                        <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
+                        <button class="btn btn-accent"
+                                id="importUploadBtn"
+                                onclick="uploadImportFile()"
+                                disabled>Upload</button>
                     </div>
                 </div>
             </div>

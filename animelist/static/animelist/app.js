@@ -715,6 +715,161 @@ function setupLocalSearch() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Import / Export ODS
+// ---------------------------------------------------------------------------
+
+let importSelectedFile = null;
+
+function openImportModal() {
+  importSelectedFile = null;
+  document.getElementById("dropZone").style.display = "";
+  document.getElementById("importFileInfo").style.display = "none";
+  document.getElementById("importProgress").style.display = "none";
+  document.getElementById("importUploadBtn").disabled = true;
+  document.getElementById("autoFetchToggle").checked = false;
+  document.getElementById("importFileInput").value = "";
+  document.getElementById("importModalOverlay").classList.add("open");
+}
+
+function closeImportModal() {
+  document.getElementById("importModalOverlay").classList.remove("open");
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById("dropZone").classList.add("dragover");
+}
+
+function handleDragLeave(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById("dropZone").classList.remove("dragover");
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById("dropZone").classList.remove("dragover");
+
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    const file = files[0];
+    if (file.name.endsWith(".ods")) {
+      setImportFile(file);
+    } else {
+      showToast("Only .ods files are supported");
+    }
+  }
+}
+
+function handleFileSelect(input) {
+  if (input.files.length > 0) {
+    setImportFile(input.files[0]);
+  }
+}
+
+function setImportFile(file) {
+  importSelectedFile = file;
+  document.getElementById("dropZone").style.display = "none";
+  document.getElementById("importFileInfo").style.display = "flex";
+  document.getElementById("importFileName").textContent = file.name;
+  document.getElementById("importUploadBtn").disabled = false;
+}
+
+function clearImportFile() {
+  importSelectedFile = null;
+  document.getElementById("dropZone").style.display = "";
+  document.getElementById("importFileInfo").style.display = "none";
+  document.getElementById("importUploadBtn").disabled = true;
+  document.getElementById("importFileInput").value = "";
+}
+
+async function uploadImportFile() {
+  if (!importSelectedFile) return;
+
+  const autoFetch = document.getElementById("autoFetchToggle").checked;
+  const uploadBtn = document.getElementById("importUploadBtn");
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = "Uploading…";
+
+  const formData = new FormData();
+  formData.append("file", importSelectedFile);
+  formData.append("auto_fetch", autoFetch ? "true" : "false");
+
+  try {
+    const resp = await fetch("/api/import-ods/", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showToast(data.error || "Import failed");
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = "Upload";
+      return;
+    }
+
+    showToast(`Imported ${data.imported} anime!`);
+
+    if (data.task_id) {
+      // Show progress bar and start polling
+      document.getElementById("importProgress").style.display = "block";
+      uploadBtn.style.display = "none";
+      pollImportProgress(data.task_id);
+    } else {
+      // No thumbnail fetch – just reload
+      location.reload();
+    }
+  } catch (e) {
+    showToast("Upload failed: " + e.message);
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = "Upload";
+  }
+}
+
+function pollImportProgress(taskId) {
+  const progressFill = document.getElementById("progressBarFill");
+  const progressCount = document.getElementById("progressCount");
+  const progressText = document.getElementById("progressText");
+
+  const interval = setInterval(async () => {
+    try {
+      const resp = await fetch(
+        `/api/import-progress/?task_id=${encodeURIComponent(taskId)}`,
+      );
+      const info = await resp.json();
+
+      if (info.error) {
+        clearInterval(interval);
+        progressText.textContent = "Error: " + info.error;
+        return;
+      }
+
+      const pct =
+        info.total > 0 ? Math.round((info.current / info.total) * 100) : 0;
+      progressFill.style.width = pct + "%";
+      progressCount.textContent = `${info.current} / ${info.total}`;
+      progressText.textContent = `${pct}% complete`;
+
+      if (info.done) {
+        clearInterval(interval);
+        progressFill.style.width = "100%";
+        progressText.textContent = "Done! Reloading…";
+        setTimeout(() => location.reload(), 1000);
+      }
+    } catch {
+      // Ignore transient network errors during polling
+    }
+  }, 2000);
+}
+
+function exportOds() {
+  window.location.href = "/api/export-ods/";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupAutocomplete();
   setupLocalSearch();
@@ -729,5 +884,13 @@ document.addEventListener("DOMContentLoaded", () => {
       switchTab(tab.dataset.catId);
       loadCategory(tab.dataset.catId);
     });
+  });
+
+  // Preload all category data for search
+  document.querySelectorAll(".category-panel").forEach((panel) => {
+    const catId = panel.dataset.catId;
+    if (catId && catId !== (firstTab && firstTab.dataset.catId)) {
+      loadCategory(catId);
+    }
   });
 });
