@@ -4,3 +4,5 @@ PyJWT[crypto]
 pyexcel-ods3
 requests
 python-dotenv
+psycopg2-binary
+dj-database-url

@@ -13,9 +13,19 @@ A Django web app to manage your anime watchlist with a tabbed, spreadsheet-style
 ## Setup
 
 ```bash
-pip install django pyexcel-ods3 requests django-allauth python-dotenv
+pip install -r requirements.txt
 python manage.py migrate
 ```
+
+### Database Configuration
+
+By default, the app uses **SQLite** for local development. To use **PostgreSQL** (e.g., Prisma Postgres), set `DATABASE_URL` in your `.env` file:
+
+```env
+DATABASE_URL=postgres://user:password@host:5432/dbname?sslmode=require
+```
+
+If `DATABASE_URL` is not set, the app falls back to a local `db.sqlite3` file.
 
 ## Google Login Setup
 
@@ -103,3 +113,37 @@ python manage.py createsuperuser
 ```
 
 Then visit http://localhost:8000/admin/ to manage data directly.
+
+## Deploying to Vercel
+
+### 1. Install the Vercel CLI
+
+```bash
+npm i -g vercel
+```
+
+### 2. Set Environment Variables on Vercel
+
+In your Vercel project settings (**Settings → Environment Variables**), add:
+
+| Variable               | Description                     |
+| ---------------------- | ------------------------------- |
+| `DATABASE_URL`         | Your Postgres connection string |
+| `DJANGO_SECRET_KEY`    | Generated Django secret key     |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID          |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret      |
+| `DEBUG`                | Set to `False` for production   |
+
+### 3. Add Your Vercel Domain to Google OAuth
+
+In the [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), add your Vercel domain as an authorized redirect URI:
+
+```
+https://your-app.vercel.app/accounts/google/login/callback/
+```
+
+### 4. Deploy
+
+```bash
+vercel deploy
+```
