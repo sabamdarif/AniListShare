@@ -1,4 +1,6 @@
 django
+django-allauth
+PyJWT[crypto]
 pyexcel-ods3
 requests
 python-dotenv

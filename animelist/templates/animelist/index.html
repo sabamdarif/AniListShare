@@ -22,7 +22,10 @@
                        autocomplete="off">
                 <div class="autocomplete-results" id="localSearchResults"></div>
             </div>
-            <div class="header-actions">
+            <button class="hamburger-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="header-actions" id="headerActions">
                 <span style="color:var(--text-secondary); margin-right: 8px;">{{ request.user.username }}</span>
                 <a href="{% url 'logout' %}"
                    class="btn btn-ghost"
@@ -414,4 +417,3 @@
         <script src="{% static 'animelist/app.js' %}"></script>
     </body>
 </html>
-

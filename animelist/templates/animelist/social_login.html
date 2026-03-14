@@ -1,0 +1,295 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sign In - My Anime List</title>
+        <meta name="description"
+              content="Sign in to My Anime List to track and manage your anime collection.">
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
+        <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: var(--bg);
+            overflow: hidden;
+        }
+
+        /* Animated background particles */
+        .bg-particles {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-particles span {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-up 6s infinite;
+        }
+
+        .bg-particles span:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 5s; }
+        .bg-particles span:nth-child(2) { left: 25%; animation-delay: 1s; animation-duration: 7s; }
+        .bg-particles span:nth-child(3) { left: 40%; animation-delay: 2s; animation-duration: 4s; }
+        .bg-particles span:nth-child(4) { left: 55%; animation-delay: 0.5s; animation-duration: 6s; }
+        .bg-particles span:nth-child(5) { left: 70%; animation-delay: 1.5s; animation-duration: 8s; }
+        .bg-particles span:nth-child(6) { left: 85%; animation-delay: 3s; animation-duration: 5.5s; }
+        .bg-particles span:nth-child(7) { left: 15%; animation-delay: 2.5s; animation-duration: 7.5s; }
+        .bg-particles span:nth-child(8) { left: 60%; animation-delay: 4s; animation-duration: 6.5s; }
+
+        @keyframes float-up {
+            0% { bottom: -10px; opacity: 0; transform: scale(0.5); }
+            20% { opacity: 0.3; }
+            80% { opacity: 0.15; }
+            100% { bottom: 110vh; opacity: 0; transform: scale(1.2); }
+        }
+
+        .auth-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 0 20px;
+        }
+
+        .auth-card {
+            background: var(--surface);
+            padding: 40px 36px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(154, 184, 122, 0.05);
+            backdrop-filter: blur(8px);
+            animation: card-appear 0.5s ease-out;
+        }
+
+        @keyframes card-appear {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .auth-logo {
+            margin-bottom: 8px;
+        }
+
+        .auth-logo i {
+            font-size: 2.5rem;
+            color: var(--accent);
+            filter: drop-shadow(0 0 12px rgba(154, 184, 122, 0.3));
+        }
+
+        .auth-card h2 {
+            margin-bottom: 6px;
+            color: var(--text);
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .auth-card .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-bottom: 32px;
+            line-height: 1.4;
+        }
+
+        .social-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .social-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .social-btn:active {
+            transform: translateY(0);
+        }
+
+        .social-btn i, .social-btn svg {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        /* Google button */
+        .social-btn-google {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .social-btn-google::before {
+            background: linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(234, 67, 53, 0.05));
+        }
+
+        .social-btn-google:hover {
+            border-color: rgba(66, 133, 244, 0.4);
+            background: var(--bg);
+        }
+
+        .social-btn-google:hover::before {
+            opacity: 1;
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Facebook button */
+        .social-btn-facebook {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .social-btn-facebook::before {
+            background: linear-gradient(135deg, rgba(66, 103, 178, 0.15), rgba(66, 103, 178, 0.05));
+        }
+
+        .social-btn-facebook:hover {
+            border-color: rgba(66, 103, 178, 0.5);
+            background: var(--bg);
+        }
+
+        .social-btn-facebook:hover::before {
+            opacity: 1;
+        }
+
+        .social-btn-facebook i {
+            color: #4267B2;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 24px 0;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 24px;
+            padding: 8px 16px;
+            background: rgba(154, 184, 122, 0.08);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .security-badge i {
+            color: var(--accent);
+            font-size: 0.8rem;
+        }
+
+        .error-msg {
+            background: rgba(199, 80, 80, 0.1);
+            border: 1px solid rgba(199, 80, 80, 0.3);
+            color: var(--danger);
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 32px 24px;
+            }
+        }
+        </style>
+    </head>
+    <body>
+        <div class="bg-particles">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="auth-wrapper">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <i class="fas fa-tv"></i>
+                </div>
+                <h2>My Anime List</h2>
+                <p class="auth-subtitle">Track, organize, and share your anime journey</p>
+                {% if error %}
+                    <div class="error-msg">
+                        <i class="fas fa-exclamation-circle"></i> {{ error }}
+                    </div>
+                {% endif %}
+                <div class="social-buttons">
+                    <a href="{% provider_login_url 'google' %}"
+                       class="social-btn social-btn-google"
+                       id="google-login-btn">
+                        <svg class="google-icon"
+                             viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                        Continue with Google
+                    </a>
+                    <a href="{% provider_login_url 'facebook' %}"
+                       class="social-btn social-btn-facebook"
+                       id="facebook-login-btn">
+                        <i class="fab fa-facebook-f"></i>
+                        Continue with Facebook (Unavailable)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

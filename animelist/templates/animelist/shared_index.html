@@ -60,7 +60,10 @@
                        autocomplete="off">
                 <div class="autocomplete-results" id="localSearchResults"></div>
             </div>
-            <div class="header-actions">
+            <button class="hamburger-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="header-actions" id="headerActions">
                 {% if request.user.is_authenticated %}
                     <a href="{% url 'index' %}" class="btn btn-ghost">Return to My List</a>
                 {% else %}
@@ -245,6 +248,15 @@
         };
 
         document.addEventListener("DOMContentLoaded", () => {
+            // Mobile menu toggle
+            const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+            const headerActions = document.getElementById("headerActions");
+            if (mobileMenuBtn && headerActions) {
+                mobileMenuBtn.addEventListener("click", () => {
+                    headerActions.classList.toggle("show");
+                });
+            }
+
             setupLocalSearchShared();
             const firstTab = document.querySelector(".tab");
             if (firstTab) {
@@ -270,4 +282,3 @@
         </script>
     </body>
 </html>
-

@@ -1006,6 +1006,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Mobile menu toggle
+  const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+  const headerActions = document.getElementById("headerActions");
+  if (mobileMenuBtn && headerActions) {
+    mobileMenuBtn.addEventListener("click", () => {
+      headerActions.classList.toggle("show");
+    });
+  }
+
   // Preload all category data for search
   document.querySelectorAll(".category-panel").forEach((panel) => {
     const catId = panel.dataset.catId;

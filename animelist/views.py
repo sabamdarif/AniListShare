@@ -26,99 +26,31 @@ from .models import Anime, Category, Season, SharedListProfile
 _import_progress = {}
 
 
+def social_login_view(request):
+    """Social login page with Google and Facebook buttons."""
+    if request.user.is_authenticated:
+        return redirect("index")
+    return render(request, "animelist/social_login.html")
+
+
 def signup_view(request):
-    if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "")
-        if not email or not password:
-            return render(
-                request,
-                "animelist/signup.html",
-                {"error": "Email and password required"},
-            )
-        if User.objects.filter(username=email).exists():
-            return render(
-                request, "animelist/signup.html", {"error": "Email already registered"}
-            )
-
-        otp = str(random.randint(100000, 999999))
-
-        # Store pending signup data in cache for 10 minutes
-        cache.set(
-            f"signup_data_{email}", {"password": password, "otp": otp}, timeout=600
-        )
-
-        send_mail(
-            subject="Your MyAnimeList OTP Code",
-            message=f"Your verification code is: {otp}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-
-        request.session["verify_email"] = email
-        return redirect("verify_otp")
-
-    return render(request, "animelist/signup.html")
+    """Legacy signup – redirect to social login."""
+    return redirect("social_login")
 
 
 def verify_otp_view(request):
-    email = request.session.get("verify_email")
-    if not email:
-        return redirect("signup")
-
-    if request.method == "POST":
-        otp = request.POST.get("otp", "").strip()
-        signup_data = cache.get(f"signup_data_{email}")
-
-        if not signup_data:
-            return render(
-                request,
-                "animelist/verify_otp.html",
-                {"error": "OTP expired. Please sign up again."},
-            )
-
-        if signup_data["otp"] == otp:
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                password=signup_data["password"],
-                is_active=True,
-            )
-
-            cache.delete(f"signup_data_{email}")
-            del request.session["verify_email"]
-
-            login(request, user)
-            return redirect("index")
-        else:
-            return render(
-                request, "animelist/verify_otp.html", {"error": "Invalid OTP"}
-            )
-
-    return render(request, "animelist/verify_otp.html")
+    """Legacy OTP verification – redirect to social login."""
+    return redirect("social_login")
 
 
 def login_view(request):
-    if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "")
-
-        user = authenticate(request, username=email, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect("index")
-        else:
-            return render(
-                request, "animelist/login.html", {"error": "Invalid email or password"}
-            )
-
-    return render(request, "animelist/login.html")
+    """Legacy login – redirect to social login."""
+    return redirect("social_login")
 
 
 def logout_view(request):
     logout(request)
-    return redirect("login")
+    return redirect("social_login")
 
 
 @login_required
@@ -525,7 +457,9 @@ def _fetch_thumbnail(name, retries=3):
 
 def _background_fetch_thumbnails(task_id, user_id):
     """Background thread: fetch thumbnails for anime with empty thumbnail_url."""
-    anime_list = list(Anime.objects.filter(thumbnail_url="", category__user_id=user_id).order_by("id"))
+    anime_list = list(
+        Anime.objects.filter(thumbnail_url="", category__user_id=user_id).order_by("id")
+    )
     total = len(anime_list)
     _import_progress[task_id] = {"current": 0, "total": total, "done": False}
 
@@ -687,7 +621,9 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
     auto_fetch = request.POST.get("auto_fetch", "false") == "true"
     if auto_fetch and total_imported > 0:
         task_id = str(uuid.uuid4())
-        t = threading.Thread(target=_background_fetch_thumbnails, args=(task_id, request.user.id))
+        t = threading.Thread(
+            target=_background_fetch_thumbnails, args=(task_id, request.user.id)
+        )
         t.daemon = True
         t.start()
         return JsonResponse(
