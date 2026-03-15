@@ -18,7 +18,7 @@ SECRET_KEY = (
 
 DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".vercel.app", ".now.sh"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", ".now.sh"]
 
 # ---------------------------------------------------------------------------
 # Installed apps
@@ -79,11 +79,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "myanimelist.wsgi.application"
 
 DATABASES = {
+    # If Prisma DB fails locally or DEBUG is True, fallback to sqlite3 unless explicitly forced
     "default": dj_database_url.config(
-        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
+        default=os.environ.get("DATABASE_URL", "sqlite:///" + str(BASE_DIR / "db.sqlite3")),
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=True,
+        ssl_require=not DEBUG,  # No SSL requirement for local sqlite
     )
 }
 
@@ -136,8 +137,8 @@ TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
