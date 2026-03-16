@@ -5,6 +5,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ owner_name }}'s Anime List</title>
+        <link rel="icon" href="{% static 'animelist/logo.png' %}" type="image/png">
         <link rel="stylesheet"
               href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
@@ -46,7 +47,12 @@
     <body data-share-id="{{ share_id }}">
         <div class="header">
             <div class="header-title-container">
-                <h1>{{ owner_name }}'s List</h1>
+                <div class="header-brand">
+                    <img src="{% static 'animelist/logo.png' %}"
+                         alt="My Anime List Logo"
+                         class="header-logo">
+                    <h1>{{ owner_name }}'s List</h1>
+                </div>
                 <span class="share-badge">
                     <i class="fa-solid fa-eye"></i> Shared Read-Only
                 </span>

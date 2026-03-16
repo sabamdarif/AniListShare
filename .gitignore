@@ -11,8 +11,9 @@ venv/
 client_secret_*.json
 
 # Project specific
-# animelist.ods
+*.ods
 # migrate_ods.py
+*.bak
 
 # Editor / OS
 .vscode/

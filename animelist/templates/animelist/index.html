@@ -5,6 +5,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>My Anime List</title>
+        <link rel="icon" href="{% static 'animelist/logo.png' %}" type="image/png">
         <link rel="stylesheet"
               href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -12,7 +13,12 @@
     </head>
     <body>
         <div class="header">
-            <h1>My Anime List</h1>
+            <div class="header-brand">
+                <img src="{% static 'animelist/logo.png' %}"
+                     alt="My Anime List Logo"
+                     class="header-logo">
+                <h1>My Anime List</h1>
+            </div>
             <div class="header-search autocomplete-wrapper" id="localSearchWrapper">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
                 <input type="text"
