@@ -324,6 +324,26 @@ def api_category_create(request):
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
+def api_category_reorder(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    category_ids = body.get("category_ids", [])
+    if not isinstance(category_ids, list):
+        return JsonResponse({"error": "category_ids must be a list"}, status=400)
+
+    for i, c_id in enumerate(category_ids):
+        Category.objects.filter(id=c_id, user=request.user).update(order=i)
+
+    return JsonResponse({"message": "Categories reordered"})
+
+
+@csrf_exempt
 @require_http_methods(["PUT"])
 def api_category_update(request, category_id):
     if not request.user.is_authenticated:

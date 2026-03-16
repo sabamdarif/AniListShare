@@ -23,6 +23,11 @@ urlpatterns = [
         views.api_anime_reorder_bulk,
         name="api_anime_reorder_bulk",
     ),
+    path(
+        "api/category/reorder/",
+        views.api_category_reorder,
+        name="api_category_reorder",
+    ),
     path("api/category/create/", views.api_category_create, name="api_category_create"),
     path(
         "api/category/<int:category_id>/update/",

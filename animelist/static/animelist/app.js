@@ -1215,6 +1215,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  const tabsBar = document.querySelector(".tabs-bar");
+  if (tabsBar) {
+    Sortable.create(tabsBar, {
+      animation: 150,
+      filter: ".edit-cat-btn",
+      onEnd: async function (evt) {
+        if (evt.oldIndex === evt.newIndex) return;
+
+        const tabWrappers = tabsBar.querySelectorAll(".tab-wrapper");
+        const categoryIds = Array.from(tabWrappers).map((w) =>
+          parseInt(w.dataset.catId, 10),
+        );
+
+        try {
+          await fetch("/api/category/reorder/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category_ids: categoryIds }),
+          });
+        } catch (e) {
+          console.error("Failed to reorder categories", e);
+          showToast("Failed to save category order.");
+        }
+      },
+    });
+  }
+
   // Mobile menu toggle
   const mobileMenuBtn = document.getElementById("mobileMenuBtn");
   const headerActions = document.getElementById("headerActions");

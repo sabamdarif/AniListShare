@@ -239,7 +239,7 @@ a {
   color: var(--text-muted);
   font-size: 0.85rem;
   font-weight: 500;
-  cursor: pointer;
+  cursor: inherit; /* Inherit grab cursor from tab-wrapper */
   border-bottom: 3px solid transparent;
   transition: all 0.2s;
   white-space: nowrap;
@@ -260,6 +260,20 @@ a {
   display: flex;
   align-items: center;
   border-bottom: 3px solid transparent;
+  cursor: grab;
+}
+
+.tab-wrapper:active {
+  cursor: grabbing;
+}
+
+.tab-wrapper.sortable-ghost {
+  opacity: 0.5;
+  background: var(--surface2);
+}
+
+.tab-wrapper.sortable-drag {
+  cursor: grabbing !important;
 }
 
 .tab-wrapper.active {
