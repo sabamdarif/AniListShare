@@ -897,18 +897,18 @@ select.form-input {
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    gap: 6px; /* Reduced gap to keep buttons closer */
   }
 
-  .hamburger-btn {
-    display: block;
+  /* Make the brand and title container take the remaining space and appear first */
+  .header-brand,
+  .header-title-container {
     order: 1;
-    margin-right: 12px;
+    flex: 1;
   }
 
   .header h1 {
     font-size: 1.25rem;
-    order: 2;
-    flex: 1;
     text-align: left;
   }
 
@@ -916,9 +916,17 @@ select.form-input {
     display: none;
   }
 
+  /* Make the search button appear second */
   .mobile-search-btn {
     display: block;
+    order: 2;
+  }
+
+  /* Make the main menu button appear third (on the far right) */
+  .hamburger-btn {
+    display: block;
     order: 3;
+    margin-right: 0;
   }
 
   /* Mobile menu styles */
@@ -1517,4 +1525,3 @@ select.form-input {
 .mobile-search-no-results p {
   font-size: 0.9rem;
 }
-
