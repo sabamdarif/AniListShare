@@ -66,6 +66,12 @@
                        autocomplete="off">
                 <div class="autocomplete-results" id="localSearchResults"></div>
             </div>
+            <button class="mobile-search-btn"
+                    id="mobileSearchBtn"
+                    aria-label="Search"
+                    onclick="openMobileSearchShared()">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
             <button class="hamburger-btn" id="mobileMenuBtn" aria-label="Toggle menu">
                 <i class="fa-solid fa-bars"></i>
             </button>
@@ -110,6 +116,27 @@
                     </table>
                 </div>
             {% endfor %}
+        </div>
+        <div class="mobile-search-overlay" id="mobileSearchOverlay">
+            <div class="mobile-search-header">
+                <i class="fa-solid fa-magnifying-glass mobile-search-icon"></i>
+                <input type="text"
+                       id="mobileSearchInputShared"
+                       class="form-input"
+                       placeholder="Search this list…"
+                       autocomplete="off">
+                <button class="mobile-search-close"
+                        onclick="closeMobileSearchShared()"
+                        aria-label="Close search">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mobile-search-results" id="mobileSearchResultsShared">
+                <div class="mobile-search-placeholder">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <p>Type to search this list</p>
+                </div>
+            </div>
         </div>
         <!-- Load read-only JS -->
         <script>
@@ -253,6 +280,160 @@
             }
         };
 
+        // ---------------------------------------------------------------------------
+        // Mobile Full-Screen Search (Shared)
+        // ---------------------------------------------------------------------------
+
+        function openMobileSearchShared() {
+            const overlay = document.getElementById("mobileSearchOverlay");
+            const input = document.getElementById("mobileSearchInputShared");
+            const results = document.getElementById("mobileSearchResultsShared");
+
+            input.value = "";
+            results.innerHTML = `<div class="mobile-search-placeholder">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <p>Type to search this list</p>
+            </div>`;
+
+            overlay.style.display = "flex";
+            void overlay.offsetWidth;
+            overlay.classList.add("open");
+            document.body.style.overflow = "hidden";
+
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function closeMobileSearchShared() {
+            const overlay = document.getElementById("mobileSearchOverlay");
+            overlay.classList.remove("open");
+            document.body.style.overflow = "";
+
+            setTimeout(() => {
+                if (!overlay.classList.contains("open")) {
+                    overlay.style.display = "none";
+                }
+            }, 300);
+        }
+
+        function renderMobileStarsShared(n, max = 10) {
+            if (n === null || n === undefined)
+                return '<span class="msc-stars" style="color:var(--text-muted)">—</span>';
+            let html = '<span class="msc-stars">';
+            for (let i = 1; i <= max; i++) {
+                html += i <= n ? '<i class="fa-solid fa-star"></i>' : '<span class="empty"><i class="fa-solid fa-star"></i></span>';
+            }
+            html += ` <span style="color:var(--text-muted);font-size:0.7rem">${n}/10</span></span>`;
+            return html;
+        }
+
+        let mobileSearchTimeoutShared;
+
+        function setupMobileSearchShared() {
+            const input = document.getElementById("mobileSearchInputShared");
+            const results = document.getElementById("mobileSearchResultsShared");
+
+            if (!input || !results) return;
+
+            function performMobileSearchShared() {
+                const q = input.value.trim().toLowerCase();
+                if (q.length < 2) {
+                    results.innerHTML = `<div class="mobile-search-placeholder">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <p>Type to search this list</p>
+                    </div>`;
+                    return;
+                }
+
+                const allAnime = [];
+                document.querySelectorAll(".category-panel").forEach(panel => {
+                    const rows = panel.querySelectorAll("tbody tr[data-id]");
+                    rows.forEach(tr => {
+                        const titleEl = tr.querySelector(".anime-title");
+                        const langEls = tr.querySelectorAll(".lang-badge");
+                        const starEl = tr.querySelector(".col-stars").textContent.trim();
+                        const thumbImg = tr.querySelector(".thumb");
+
+                        const title = titleEl ? titleEl.textContent : "";
+                        const thumbnail_url = thumbImg ? thumbImg.src : null;
+
+                        let langs = [];
+                        langEls.forEach(bad => langs.push(bad.textContent));
+                        const language = langs.length > 0 ? langs.join(", ") : null;
+
+                        let stars = null;
+                        if(starEl !== "—") {
+                           const parseMatch = starEl.match(/(\d+)\/10/);
+                           if(parseMatch) stars = parseInt(parseMatch[1], 10);
+                        }
+
+                        allAnime.push({
+                            id: tr.dataset.id,
+                            catId: panel.dataset.catId,
+                            name: title,
+                            thumbnail_url: thumbnail_url,
+                            language: language,
+                            stars: stars
+                        });
+                    });
+                });
+
+                if (allAnime.length === 0) {
+                    results.innerHTML = `<div class="mobile-search-no-results">
+                        <i class="fa-solid fa-database"></i>
+                        <p>No data loaded yet</p>
+                    </div>`;
+                    return;
+                }
+
+                const matches = allAnime.filter(a => a.name.toLowerCase().includes(q));
+
+                if (matches.length === 0) {
+                    results.innerHTML = `<div class="mobile-search-no-results">
+                        <i class="fa-solid fa-face-sad-tear"></i>
+                        <p>No matches found for "${input.value.trim()}"</p>
+                    </div>`;
+                    return;
+                }
+
+                results.innerHTML = matches.slice(0, 20).map(r => {
+                    const thumbHtml = r.thumbnail_url
+                        ? `<img src="${r.thumbnail_url}" alt="" loading="lazy" onerror="this.style.display='none'">`
+                        : `<div class="msc-placeholder">N/A</div>`;
+
+                    const langHtml = r.language
+                        ? r.language.split(",").map(l => `<span class="lang-badge">${l.trim()}</span>`).join("")
+                        : '<span style="color:var(--text-muted);font-size:0.75rem">—</span>';
+
+                    return `<div class="mobile-search-card" data-id="${r.id}" data-cat-id="${r.catId}">
+                        ${thumbHtml}
+                        <div class="msc-info">
+                            <div class="msc-title">${r.name.replace(/"/g, "&quot;")}</div>
+                            <div class="msc-meta">${langHtml}</div>
+                            <div style="margin-top:4px">${renderMobileStarsShared(r.stars)}</div>
+                        </div>
+                    </div>`;
+                }).join("");
+
+                results.querySelectorAll(".mobile-search-card").forEach(card => {
+                    card.addEventListener("click", () => {
+                        jumpToAnimeShared(card.dataset.catId, card.dataset.id);
+                        closeMobileSearchShared();
+                    });
+                });
+            }
+
+            input.addEventListener("input", () => {
+                clearTimeout(mobileSearchTimeoutShared);
+                mobileSearchTimeoutShared = setTimeout(performMobileSearchShared, 200);
+            });
+
+            input.addEventListener("focus", () => {
+                if (input.value.trim().length >= 2) {
+                    performMobileSearchShared();
+                }
+            });
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             // Mobile menu toggle
             const mobileMenuBtn = document.getElementById("mobileMenuBtn");
@@ -264,6 +445,7 @@
             }
 
             setupLocalSearchShared();
+            setupMobileSearchShared();
             const firstTab = document.querySelector(".tab");
             if (firstTab) {
                 switchTab(firstTab.dataset.catId);
