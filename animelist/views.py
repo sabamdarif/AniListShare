@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import ssl
 import tempfile
@@ -483,15 +484,22 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
         return JsonResponse({"error": "Only .ods files are supported"}, status=400)
 
     # Write to a temp file so pyexcel_ods3 can read it
-    with tempfile.NamedTemporaryFile(suffix=".ods", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".ods", delete=False, mode="wb") as tmp:
         for chunk in uploaded.chunks():
-            tmp.write(chunk)
+            tmp.write(chunk)  # type: ignore[arg-type]
         tmp_path = tmp.name
 
     try:
         data = pyexcel_ods3.get_data(tmp_path)
     except Exception as e:
+        os.unlink(tmp_path)
         return JsonResponse({"error": f"Failed to read ODS: {e}"}, status=400)
+    finally:
+        # Clean up temp file after reading
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
     # Clear existing data
     Category.objects.filter(user=request.user).delete()
