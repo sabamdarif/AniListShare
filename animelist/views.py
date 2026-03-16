@@ -504,103 +504,190 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
         cat = Category.objects.create(name=sheet_name, order=order, user=request.user)
 
-        # First row is the header – skip it
-        for idx, row in enumerate(rows[1:]):
-            if not row or not str(row[0]).strip():
-                continue
+        # Auto-detect format: export format has 'Name' as first cell of row 0
+        first_cell = str(rows[0][0]).strip() if rows[0] else ""
+        is_export_format = first_cell == "Name"
 
-            # Columns: Name | Thumbnail URL | MAL ID | Language | Stars |
-            #          Reason | Extra Notes | Order | S1 Label | S1 Comment |
-            #          S1 Watched | S1 Total | S2 Label | ...
-            name = _ods_cell(row, 0)
-            if not name:
-                continue
-
-            thumb = _ods_cell(row, 1)
-            mal_id_str = _ods_cell(row, 2)
-            lang = _ods_cell(row, 3)
-            stars_str = _ods_cell(row, 4)
-            reason = _ods_cell(row, 5)
-            extra_notes = _ods_cell(row, 6)
-            order_str = _ods_cell(row, 7, str(idx))
-
-            mal_id = None
-            if mal_id_str:
-                try:
-                    mal_id = int(float(mal_id_str))
-                except (ValueError, TypeError):
-                    pass
-
-            stars = None
-            if stars_str:
-                try:
-                    stars = int(float(stars_str))
-                    if stars == 0:
-                        stars = None
-                except (ValueError, TypeError):
-                    pass
-
-            try:
-                anime_order = int(float(order_str))
-            except (ValueError, TypeError):
-                anime_order = idx
-
-            anime = Anime.objects.create(
-                category=cat,
-                name=name,
-                thumbnail_url=thumb,
-                mal_id=mal_id,
-                language=lang,
-                stars=stars,
-                order=anime_order,
-                reason=reason,
-                extra_notes=extra_notes,
-            )
-
-            # Parse season columns (groups of 4: label, comment, watched, total)
-            s_start = 8
-            s_idx = 0
-            while s_start < len(row):
-                s_label = _ods_cell(row, s_start)
-                if not s_label:
-                    s_start += 4
+        if is_export_format:
+            # ── Export format ──────────────────────────────────────
+            # Row 0: header (Name | Thumbnail URL | MAL ID | ...)
+            # Row 1+: data
+            for idx, row in enumerate(rows[1:]):
+                if not row or not str(row[0]).strip():
                     continue
-                s_comment = (
-                    _ods_cell(row, s_start + 1) if s_start + 1 < len(row) else ""
-                )
-                s_watched_str = (
-                    _ods_cell(row, s_start + 2) if s_start + 2 < len(row) else ""
-                )
-                s_total_str = (
-                    _ods_cell(row, s_start + 3) if s_start + 3 < len(row) else ""
-                )
 
-                s_watched = None
-                if s_watched_str:
+                name = _ods_cell(row, 0)
+                if not name:
+                    continue
+
+                thumb = _ods_cell(row, 1)
+                mal_id_str = _ods_cell(row, 2)
+                lang = _ods_cell(row, 3)
+                stars_str = _ods_cell(row, 4)
+                reason = _ods_cell(row, 5)
+                extra_notes = _ods_cell(row, 6)
+                order_str = _ods_cell(row, 7, str(idx))
+
+                mal_id = None
+                if mal_id_str:
                     try:
-                        s_watched = int(float(s_watched_str))
+                        mal_id = int(float(mal_id_str))
                     except (ValueError, TypeError):
                         pass
 
-                s_total = None
-                if s_total_str:
+                stars = None
+                if stars_str:
                     try:
-                        s_total = int(float(s_total_str))
+                        stars = int(float(stars_str))
+                        if stars == 0:
+                            stars = None
                     except (ValueError, TypeError):
                         pass
 
-                Season.objects.create(
-                    anime=anime,
-                    label=s_label,
-                    comment=s_comment,
-                    episodes_watched=s_watched,
-                    episodes_total=s_total,
-                    order=s_idx,
-                )
-                s_idx += 1
-                s_start += 4
+                try:
+                    anime_order = int(float(order_str))
+                except (ValueError, TypeError):
+                    anime_order = idx
 
-            total_imported += 1
+                anime = Anime.objects.create(
+                    category=cat,
+                    name=name,
+                    thumbnail_url=thumb,
+                    mal_id=mal_id,
+                    language=lang,
+                    stars=stars,
+                    order=anime_order,
+                    reason=reason,
+                    extra_notes=extra_notes,
+                )
+
+                # Parse season columns (groups of 4: label, comment, watched, total)
+                s_start = 8
+                s_idx = 0
+                while s_start < len(row):
+                    s_label = _ods_cell(row, s_start)
+                    if not s_label:
+                        s_start += 4
+                        continue
+                    s_comment = (
+                        _ods_cell(row, s_start + 1) if s_start + 1 < len(row) else ""
+                    )
+                    s_watched_str = (
+                        _ods_cell(row, s_start + 2) if s_start + 2 < len(row) else ""
+                    )
+                    s_total_str = (
+                        _ods_cell(row, s_start + 3) if s_start + 3 < len(row) else ""
+                    )
+
+                    s_watched = None
+                    if s_watched_str:
+                        try:
+                            s_watched = int(float(s_watched_str))
+                        except (ValueError, TypeError):
+                            pass
+
+                    s_total = None
+                    if s_total_str:
+                        try:
+                            s_total = int(float(s_total_str))
+                        except (ValueError, TypeError):
+                            pass
+
+                    Season.objects.create(
+                        anime=anime,
+                        label=s_label,
+                        comment=s_comment,
+                        episodes_watched=s_watched,
+                        episodes_total=s_total,
+                        order=s_idx,
+                    )
+                    s_idx += 1
+                    s_start += 4
+
+                total_imported += 1
+
+        else:
+            # ── Original format ───────────────────────────────────
+            # Row 0: ['Anime List']
+            # Row 1: ['SERIES'] / ['Movie '] / ['DROP'] / ['Trash'] etc.
+            # Row 2: ['Name', 'Seasons', ..., 'Extra']  (or just ['Name'] for Movies)
+            # Row 3+: data
+            sheet_type_cell = (
+                str(rows[1][0]).strip().upper() if len(rows) > 1 and rows[1] else ""
+            )
+            is_movies = "MOVIE" in sheet_type_cell
+            is_trash = "TRASH" in sheet_type_cell
+
+            # Movies have 2 header rows, everything else has 3
+            header_count = 2 if is_movies else 3
+            data_rows = rows[header_count:]
+
+            for idx, row in enumerate(data_rows):
+                if not row or not str(row[0]).strip():
+                    continue
+
+                name = str(row[0]).strip()
+                if not name:
+                    continue
+
+                if is_movies:
+                    # Movies: just the name
+                    anime = Anime.objects.create(
+                        category=cat,
+                        name=name,
+                        order=idx,
+                    )
+                    total_imported += 1
+                    continue
+
+                # Series / Drop / Trash: parse seasons + language
+                language = ""
+                reason = ""
+
+                if is_trash:
+                    # Trash: Name | Seasons(1-4) | Reason(5) | ?(6) | Extra(7)
+                    seasons = []
+                    for i in range(1, 5):
+                        val = _ods_cell(row, i)
+                        if val and val != "`":
+                            seasons.append(val)
+                    reason = _ods_cell(row, 5)
+                    language = _ods_cell(row, 7) if len(row) > 7 else ""
+                else:
+                    # Regular series: Name | Seasons(1..N) | Extra(last col)
+                    # Language is in column 12 if 13+ cols, else the last col
+                    if len(row) >= 13:
+                        language = _ods_cell(row, 12)
+                    elif len(row) > 2:
+                        last_val = _ods_cell(row, len(row) - 1)
+                        if last_val and not last_val.startswith("S"):
+                            language = last_val
+
+                    season_end = (
+                        12 if len(row) >= 13 else len(row) - (1 if language else 0)
+                    )
+                    seasons = []
+                    for i in range(1, season_end):
+                        val = _ods_cell(row, i)
+                        if val and val != "`":
+                            seasons.append(val)
+
+                anime = Anime.objects.create(
+                    category=cat,
+                    name=name,
+                    language=language,
+                    reason=reason,
+                    order=idx,
+                )
+
+                for s_idx, s_label in enumerate(seasons):
+                    Season.objects.create(
+                        anime=anime,
+                        label=s_label,
+                        order=s_idx,
+                    )
+
+                total_imported += 1
 
     auto_fetch = request.POST.get("auto_fetch", "false") == "true"
     thumbnails_needed = 0
