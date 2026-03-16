@@ -83,9 +83,15 @@ DATABASES = {
         default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=True,
+        ssl_require=not DEBUG,
     )
 }
+
+# ---------------------------------------------------------------------------
+# Supabase client settings
+# ---------------------------------------------------------------------------
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Authentication backends

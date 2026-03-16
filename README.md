@@ -19,13 +19,48 @@ python manage.py migrate
 
 ### Database Configuration
 
-By default, the app uses **SQLite** for local development. To use **PostgreSQL** (e.g., Prisma Postgres), set `DATABASE_URL` in your `.env` file:
+By default, the app uses **SQLite** for local development. To use **Supabase Postgres**, set `DATABASE_URL` in your `.env` file.
+
+#### Setting Up Supabase Postgres
+
+1. Create a project at [supabase.com](https://supabase.com/dashboard).
+2. Go to **Project Settings → Database** and copy the **Connection string (URI)** — use the **Transaction (port 6543)** pooler URL for best performance.
+3. Add it to `.env`:
 
 ```env
-DATABASE_URL=postgres://user:password@host:5432/dbname?sslmode=require
+# Supabase Postgres (pooled connection — recommended for production)
+DATABASE_URL=postgres://postgres.YOURREF:PASSWORD@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+
+# Supabase API credentials (for SDK features like Storage)
+SUPABASE_URL=https://YOURREF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
-If `DATABASE_URL` is not set, the app falls back to a local `db.sqlite3` file.
+4. Run migrations:
+
+```bash
+python manage.py migrate
+```
+
+If `DATABASE_URL` is not set, the app falls back to a local `db.sqlite3` file automatically.
+
+#### ⚠️ Common Pitfalls
+
+| Mistake                                                     | What Happens                                                         | Fix                                                                                                                  |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Adding `&pgbouncer=true` to `DATABASE_URL`                  | `psycopg` throws `invalid connection option "pgbouncer"`             | Remove `&pgbouncer=true` — it's a **Prisma-only** parameter, not a standard Postgres option. Django doesn't need it. |
+| Using the **Session (port 5432)** URL for long-running apps | Works, but connections may time out on serverless platforms (Vercel) | Use the **Transaction pooler (port 6543)** URL instead                                                               |
+| Setting `sslmode=disable`                                   | Connection refused by Supabase                                       | Always use `sslmode=require`                                                                                         |
+| Forgetting to run `python manage.py migrate`                | Tables don't exist, app crashes on first request                     | Always run migrations after changing `DATABASE_URL`                                                                  |
+
+#### What Happens If Both Supabase and Prisma Postgres URLs Are Set?
+
+The app only reads **`DATABASE_URL`** — all other Postgres variables (`POSTGRES_PRISMA_URL`, `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, etc.) are **ignored by Django**. Those extra variables exist only for compatibility with other tools (Prisma, Next.js, etc.).
+
+- ✅ **Only `DATABASE_URL` matters** for Django. Set it once and forget the rest.
+- If `DATABASE_URL` points to Supabase, Django uses Supabase.
+- If `DATABASE_URL` is empty or unset, Django falls back to local SQLite.
+- Having both `POSTGRES_PRISMA_URL` and `DATABASE_URL` set simultaneously is fine — Django will only use `DATABASE_URL`.
 
 ## Google Login Setup
 
@@ -126,13 +161,15 @@ npm i -g vercel
 
 In your Vercel project settings (**Settings → Environment Variables**), add:
 
-| Variable               | Description                     |
-| ---------------------- | ------------------------------- |
-| `DATABASE_URL`         | Your Postgres connection string |
-| `DJANGO_SECRET_KEY`    | Generated Django secret key     |
-| `GOOGLE_CLIENT_ID`     | Google OAuth client ID          |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret      |
-| `DEBUG`                | Set to `False` for production   |
+| Variable                    | Description                                 |
+| --------------------------- | ------------------------------------------- |
+| `DATABASE_URL`              | Supabase Postgres pooled connection string  |
+| `DJANGO_SECRET_KEY`         | Generated Django secret key                 |
+| `SUPABASE_URL`              | Your Supabase project URL                   |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side SDK) |
+| `GOOGLE_CLIENT_ID`          | Google OAuth client ID                      |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth client secret                  |
+| `DEBUG`                     | Set to `False` for production               |
 
 ### 3. Add Your Vercel Domain to Google OAuth
 
