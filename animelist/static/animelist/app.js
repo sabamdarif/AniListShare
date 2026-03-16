@@ -1091,6 +1091,7 @@ async function uploadImportFile() {
 
   const formData = new FormData();
   formData.append("file", importSelectedFile);
+  formData.append("auto_fetch", autoFetch ? "true" : "false");
 
   try {
     const resp = await fetch("/api/import-ods/", {
@@ -1106,15 +1107,14 @@ async function uploadImportFile() {
       return;
     }
 
-    showToast(`Imported ${data.imported} anime!`);
-
-    if (autoFetch && data.imported > 0) {
-      // Show progress bar and start SSE stream
-      document.getElementById("importProgress").style.display = "block";
-      uploadBtn.style.display = "none";
-      startThumbnailStream();
+    if (data.task_id && data.thumbnails_needed > 0) {
+      showToast(
+        `Imported ${data.imported} anime! Fetching ${data.thumbnails_needed} thumbnails…`,
+      );
+      showFetchProgressOverlay();
+      pollThumbnailStatus();
     } else {
-      // No thumbnail fetch – just reload
+      showToast(`Imported ${data.imported} anime!`);
       location.reload();
     }
   } catch (e) {
@@ -1124,41 +1124,70 @@ async function uploadImportFile() {
   }
 }
 
-function startThumbnailStream() {
+function showFetchProgressOverlay() {
+  // Open the import modal and show the progress section
+  document.getElementById("importModalOverlay").classList.add("open");
+  document.getElementById("dropZone").style.display = "none";
+  document.getElementById("importFileInfo").style.display = "none";
+  document.getElementById("importProgress").style.display = "block";
+  document.getElementById("importUploadBtn").style.display = "none";
+}
+
+let _pollTimer = null;
+
+function pollThumbnailStatus() {
+  if (_pollTimer) clearInterval(_pollTimer);
+
   const progressFill = document.getElementById("progressBarFill");
   const progressCount = document.getElementById("progressCount");
   const progressText = document.getElementById("progressText");
 
-  const evtSource = new EventSource("/api/fetch-thumbnails-stream/");
-
-  evtSource.onmessage = function (event) {
+  _pollTimer = setInterval(async () => {
     try {
-      const info = JSON.parse(event.data);
+      const resp = await fetch("/api/thumbnail-fetch-status/");
+      const info = await resp.json();
+
+      if (!info.active) {
+        clearInterval(_pollTimer);
+        _pollTimer = null;
+        progressFill.style.width = "100%";
+        progressText.textContent = "Done! Reloading…";
+        setTimeout(() => location.reload(), 1000);
+        return;
+      }
 
       const pct =
         info.total > 0 ? Math.round((info.current / info.total) * 100) : 0;
       progressFill.style.width = pct + "%";
       progressCount.textContent = `${info.current} / ${info.total}`;
-      progressText.textContent = info.name
-        ? `${pct}% — ${info.name}`
+      progressText.textContent = info.current_name
+        ? `${pct}% — ${info.current_name}`
         : `${pct}% complete`;
 
       if (info.done) {
-        evtSource.close();
+        clearInterval(_pollTimer);
+        _pollTimer = null;
         progressFill.style.width = "100%";
         progressText.textContent = "Done! Reloading…";
         setTimeout(() => location.reload(), 1000);
       }
     } catch {
-      // Ignore parse errors
+      // Ignore transient network errors during polling
     }
-  };
+  }, 3000);
+}
 
-  evtSource.onerror = function () {
-    evtSource.close();
-    progressText.textContent = "Connection lost. Reloading…";
-    setTimeout(() => location.reload(), 2000);
-  };
+async function checkActiveFetchTask() {
+  try {
+    const resp = await fetch("/api/thumbnail-fetch-status/");
+    const info = await resp.json();
+    if (info.active && !info.done) {
+      showFetchProgressOverlay();
+      pollThumbnailStatus();
+    }
+  } catch {
+    // Ignore — no active task or network error
+  }
 }
 
 function exportOds() {
@@ -1170,6 +1199,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLocalSearch();
   setupMobileSearch();
   setupInteractiveStars();
+
+  // Check for an active thumbnail fetch task on page load
+  checkActiveFetchTask();
+
   const firstTab = document.querySelector(".tab");
   if (firstTab) {
     switchTab(firstTab.dataset.catId);

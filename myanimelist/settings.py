@@ -164,12 +164,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 # ---------------------------------------------------------------------------
-# Cache (used for legacy OTP – kept for compatibility)
+# Cache – database-backed so it persists across Vercel serverless invocations
 # ---------------------------------------------------------------------------
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "otp-cache",
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
     }
 }
 

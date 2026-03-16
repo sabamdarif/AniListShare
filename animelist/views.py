@@ -1,10 +1,12 @@
 import json
 import random
+import ssl
 import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 
 import pyexcel_ods3
 from django.conf import settings
@@ -13,7 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -450,9 +452,15 @@ def _fetch_thumbnail(name, retries=3):
     return "", None
 
 
-def _sse_event(data):
-    """Format a dict as an SSE event string."""
-    return f"data: {json.dumps(data)}\n\n"
+def _fire_next_batch(host, task_id):
+    """Fire-and-forget HTTP request to process the next thumbnail batch."""
+    url = f"https://{host}/api/process-thumbnail-batch/?task_id={task_id}"
+    try:
+        ctx = ssl.create_default_context()
+        req = urllib.request.Request(url, method="POST", data=b"")
+        urllib.request.urlopen(req, timeout=3, context=ctx)
+    except Exception:
+        pass  # Fire-and-forget: the request was sent, that's all we need
 
 
 def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type-arg]
@@ -594,53 +602,118 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
             total_imported += 1
 
-    return JsonResponse({"status": "ok", "imported": total_imported})
+    auto_fetch = request.POST.get("auto_fetch", "false") == "true"
+    thumbnails_needed = 0
+    task_id = None
+
+    if auto_fetch and total_imported > 0:
+        thumbnails_needed = Anime.objects.filter(
+            thumbnail_url="", category__user=request.user
+        ).count()
+
+        if thumbnails_needed > 0:
+            task_id = str(uuid.uuid4())
+            task_data = {
+                "task_id": task_id,
+                "user_id": request.user.id,
+                "total": thumbnails_needed,
+                "current": 0,
+                "current_name": "",
+                "done": False,
+            }
+            cache.set(f"thumb_task:{task_id}", task_data, timeout=7200)
+            cache.set(f"thumb_active:{request.user.id}", task_id, timeout=7200)
+            # Kick off the self-invoking processing chain
+            _fire_next_batch(request.get_host(), task_id)
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "imported": total_imported,
+            "thumbnails_needed": thumbnails_needed,
+            "task_id": task_id,
+        }
+    )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_process_thumbnail_batch(request):
+    """Internal endpoint: process 1 thumbnail and self-invoke to continue.
+
+    No user auth required — the task_id serves as the auth token.
+    """
+    task_id = request.GET.get("task_id", "")
+    task = cache.get(f"thumb_task:{task_id}")
+    if not task:
+        return JsonResponse({"error": "Unknown task"}, status=404)
+    if task["done"]:
+        return JsonResponse(task)
+
+    user_id = task["user_id"]
+
+    # Find the next anime without a thumbnail
+    anime = (
+        Anime.objects.filter(thumbnail_url="", category__user_id=user_id)
+        .order_by("id")
+        .first()
+    )
+
+    if not anime:
+        # All done
+        task["done"] = True
+        task["current"] = task["total"]
+        cache.set(f"thumb_task:{task_id}", task, timeout=7200)
+        return JsonResponse(task)
+
+    # Fetch thumbnail for this anime
+    thumb_url, mal_id = _fetch_thumbnail(anime.name)
+    if thumb_url:
+        anime.thumbnail_url = thumb_url
+        if mal_id:
+            anime.mal_id = mal_id
+        anime.save(update_fields=["thumbnail_url", "mal_id"])
+    else:
+        # Mark as attempted so we don't retry forever
+        anime.thumbnail_url = "none"
+        anime.save(update_fields=["thumbnail_url"])
+
+    task["current"] += 1
+    task["current_name"] = anime.name
+
+    # Check if we're done
+    remaining = Anime.objects.filter(
+        thumbnail_url="", category__user_id=user_id
+    ).count()
+    if remaining == 0:
+        task["done"] = True
+
+    cache.set(f"thumb_task:{task_id}", task, timeout=7200)
+
+    # Self-invoke to continue the chain (fire-and-forget)
+    if not task["done"]:
+        time.sleep(1.5)  # Jikan rate limit
+        _fire_next_batch(request.get_host(), task_id)
+
+    return JsonResponse(task)
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def api_fetch_thumbnails_stream(request):
-    """SSE endpoint: fetch thumbnails for anime with empty thumbnail_url and stream progress."""
+def api_thumbnail_fetch_status(request):
+    """Return the current thumbnail-fetch task progress for the logged-in user."""
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
-    user_id = request.user.id
+    task_id = cache.get(f"thumb_active:{request.user.id}")
+    if not task_id:
+        return JsonResponse({"active": False})
 
-    def event_stream():
-        anime_list = list(
-            Anime.objects.filter(thumbnail_url="", category__user_id=user_id).order_by(
-                "id"
-            )
-        )
-        total = len(anime_list)
+    task = cache.get(f"thumb_task:{task_id}")
+    if not task:
+        return JsonResponse({"active": False})
 
-        if total == 0:
-            yield _sse_event({"current": 0, "total": 0, "done": True, "name": ""})
-            return
-
-        for i, anime in enumerate(anime_list, 1):
-            thumb_url, mal_id = _fetch_thumbnail(anime.name)
-            if thumb_url:
-                anime.thumbnail_url = thumb_url
-                if mal_id:
-                    anime.mal_id = mal_id
-                anime.save(update_fields=["thumbnail_url", "mal_id"])
-
-            yield _sse_event(
-                {
-                    "current": i,
-                    "total": total,
-                    "name": anime.name,
-                    "done": i == total,
-                }
-            )
-            if i < total:
-                time.sleep(1.5)  # Jikan rate limit
-
-    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
-    response["Cache-Control"] = "no-cache"
-    response["X-Accel-Buffering"] = "no"
-    return response
+    return JsonResponse({"active": True, **task})
 
 
 @csrf_exempt

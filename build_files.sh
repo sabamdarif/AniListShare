@@ -6,5 +6,6 @@
 
 source /vercel/path0/.vercel/python/.venv/bin/activate
 
+python manage.py createcachetable --database default 2>/dev/null || true
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput

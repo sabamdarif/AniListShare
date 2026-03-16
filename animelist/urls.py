@@ -42,9 +42,14 @@ urlpatterns = [
     ),
     path("api/import-ods/", views.api_import_ods, name="api_import_ods"),
     path(
-        "api/fetch-thumbnails-stream/",
-        views.api_fetch_thumbnails_stream,
-        name="api_fetch_thumbnails_stream",
+        "api/process-thumbnail-batch/",
+        views.api_process_thumbnail_batch,
+        name="api_process_thumbnail_batch",
+    ),
+    path(
+        "api/thumbnail-fetch-status/",
+        views.api_thumbnail_fetch_status,
+        name="api_thumbnail_fetch_status",
     ),
     path("api/export-ods/", views.api_export_ods, name="api_export_ods"),
     path("api/share/toggle/", views.api_toggle_share, name="api_toggle_share"),
