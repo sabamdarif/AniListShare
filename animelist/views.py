@@ -1,12 +1,10 @@
 import json
 import random
 import tempfile
-import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 
 import pyexcel_ods3
 from django.conf import settings
@@ -15,15 +13,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Anime, Category, Season, SharedListProfile
-
-# In-memory progress tracker for background thumbnail fetching
-_import_progress = {}
 
 
 def social_login_view(request):
@@ -455,28 +450,9 @@ def _fetch_thumbnail(name, retries=3):
     return "", None
 
 
-def _background_fetch_thumbnails(task_id, user_id):
-    """Background thread: fetch thumbnails for anime with empty thumbnail_url."""
-    anime_list = list(
-        Anime.objects.filter(thumbnail_url="", category__user_id=user_id).order_by("id")
-    )
-    total = len(anime_list)
-    _import_progress[task_id] = {"current": 0, "total": total, "done": False}
-
-    if total == 0:
-        _import_progress[task_id]["done"] = True
-        return
-
-    for i, anime in enumerate(anime_list, 1):
-        thumb_url, mal_id = _fetch_thumbnail(anime.name)
-        if thumb_url:
-            anime.thumbnail_url = thumb_url
-            anime.mal_id = mal_id
-            anime.save(update_fields=["thumbnail_url", "mal_id"])
-        _import_progress[task_id]["current"] = i
-        time.sleep(1.5)  # Jikan rate limit
-
-    _import_progress[task_id]["done"] = True
+def _sse_event(data):
+    """Format a dict as an SSE event string."""
+    return f"data: {json.dumps(data)}\n\n"
 
 
 def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type-arg]
@@ -618,30 +594,53 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
             total_imported += 1
 
-    auto_fetch = request.POST.get("auto_fetch", "false") == "true"
-    if auto_fetch and total_imported > 0:
-        task_id = str(uuid.uuid4())
-        t = threading.Thread(
-            target=_background_fetch_thumbnails, args=(task_id, request.user.id)
-        )
-        t.daemon = True
-        t.start()
-        return JsonResponse(
-            {"status": "ok", "task_id": task_id, "imported": total_imported}
-        )
-
     return JsonResponse({"status": "ok", "imported": total_imported})
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def api_import_progress(request):
-    """Poll thumbnail-fetch progress."""
-    task_id = request.GET.get("task_id", "")
-    info = _import_progress.get(task_id)
-    if info is None:
-        return JsonResponse({"error": "Unknown task_id"}, status=404)
-    return JsonResponse(info)
+def api_fetch_thumbnails_stream(request):
+    """SSE endpoint: fetch thumbnails for anime with empty thumbnail_url and stream progress."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    user_id = request.user.id
+
+    def event_stream():
+        anime_list = list(
+            Anime.objects.filter(thumbnail_url="", category__user_id=user_id).order_by(
+                "id"
+            )
+        )
+        total = len(anime_list)
+
+        if total == 0:
+            yield _sse_event({"current": 0, "total": 0, "done": True, "name": ""})
+            return
+
+        for i, anime in enumerate(anime_list, 1):
+            thumb_url, mal_id = _fetch_thumbnail(anime.name)
+            if thumb_url:
+                anime.thumbnail_url = thumb_url
+                if mal_id:
+                    anime.mal_id = mal_id
+                anime.save(update_fields=["thumbnail_url", "mal_id"])
+
+            yield _sse_event(
+                {
+                    "current": i,
+                    "total": total,
+                    "name": anime.name,
+                    "done": i == total,
+                }
+            )
+            if i < total:
+                time.sleep(1.5)  # Jikan rate limit
+
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
 
 
 @csrf_exempt

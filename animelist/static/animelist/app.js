@@ -1091,7 +1091,6 @@ async function uploadImportFile() {
 
   const formData = new FormData();
   formData.append("file", importSelectedFile);
-  formData.append("auto_fetch", autoFetch ? "true" : "false");
 
   try {
     const resp = await fetch("/api/import-ods/", {
@@ -1109,11 +1108,11 @@ async function uploadImportFile() {
 
     showToast(`Imported ${data.imported} anime!`);
 
-    if (data.task_id) {
-      // Show progress bar and start polling
+    if (autoFetch && data.imported > 0) {
+      // Show progress bar and start SSE stream
       document.getElementById("importProgress").style.display = "block";
       uploadBtn.style.display = "none";
-      pollImportProgress(data.task_id);
+      startThumbnailStream();
     } else {
       // No thumbnail fetch – just reload
       location.reload();
@@ -1125,40 +1124,41 @@ async function uploadImportFile() {
   }
 }
 
-function pollImportProgress(taskId) {
+function startThumbnailStream() {
   const progressFill = document.getElementById("progressBarFill");
   const progressCount = document.getElementById("progressCount");
   const progressText = document.getElementById("progressText");
 
-  const interval = setInterval(async () => {
-    try {
-      const resp = await fetch(
-        `/api/import-progress/?task_id=${encodeURIComponent(taskId)}`,
-      );
-      const info = await resp.json();
+  const evtSource = new EventSource("/api/fetch-thumbnails-stream/");
 
-      if (info.error) {
-        clearInterval(interval);
-        progressText.textContent = "Error: " + info.error;
-        return;
-      }
+  evtSource.onmessage = function (event) {
+    try {
+      const info = JSON.parse(event.data);
 
       const pct =
         info.total > 0 ? Math.round((info.current / info.total) * 100) : 0;
       progressFill.style.width = pct + "%";
       progressCount.textContent = `${info.current} / ${info.total}`;
-      progressText.textContent = `${pct}% complete`;
+      progressText.textContent = info.name
+        ? `${pct}% — ${info.name}`
+        : `${pct}% complete`;
 
       if (info.done) {
-        clearInterval(interval);
+        evtSource.close();
         progressFill.style.width = "100%";
         progressText.textContent = "Done! Reloading…";
         setTimeout(() => location.reload(), 1000);
       }
     } catch {
-      // Ignore transient network errors during polling
+      // Ignore parse errors
     }
-  }, 2000);
+  };
+
+  evtSource.onerror = function () {
+    evtSource.close();
+    progressText.textContent = "Connection lost. Reloading…";
+    setTimeout(() => location.reload(), 2000);
+  };
 }
 
 function exportOds() {
