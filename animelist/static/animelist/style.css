@@ -131,6 +131,21 @@ a {
   padding: 4px;
 }
 
+.mobile-search-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 6px;
+  transition: color 0.2s;
+}
+
+.mobile-search-btn:hover {
+  color: var(--accent);
+}
+
 .btn-accent:hover {
   background: #b0cf90;
   transform: translateY(-1px);
@@ -884,10 +899,12 @@ select.form-input {
   }
 
   .header-search {
-    order: 4;
-    width: 100%;
-    margin: 12px 0 0 0;
-    max-width: none;
+    display: none;
+  }
+
+  .mobile-search-btn {
+    display: block;
+    order: 3;
   }
 
   /* Mobile menu styles */
@@ -1285,4 +1302,204 @@ select.form-input {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Mobile Full-Screen Search Overlay ── */
+
+.mobile-search-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 600;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(100%);
+  transition:
+    opacity 0.25s ease,
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-search-overlay.open {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-search-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-search-header .mobile-search-icon {
+  color: var(--text-muted);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.mobile-search-header .form-input {
+  flex: 1;
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 20px;
+  background: var(--surface2);
+  border-color: var(--border);
+}
+
+.mobile-search-header .form-input:focus {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+.mobile-search-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-search-close:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.mobile-search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-search-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.mobile-search-placeholder i {
+  font-size: 2.5rem;
+  opacity: 0.3;
+}
+
+.mobile-search-placeholder p {
+  font-size: 0.95rem;
+}
+
+.mobile-search-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-search-card:hover,
+.mobile-search-card:active {
+  background: var(--surface2);
+  border-color: var(--accent);
+}
+
+.mobile-search-card img {
+  width: 56px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+.mobile-search-card .msc-placeholder {
+  width: 56px;
+  height: 78px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.mobile-search-card .msc-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-search-card .msc-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mobile-search-card .msc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.mobile-search-card .msc-meta .lang-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+}
+
+.mobile-search-card .msc-stars {
+  font-size: 0.75rem;
+  color: var(--star);
+}
+
+.mobile-search-card .msc-stars .empty {
+  color: var(--border);
+}
+
+.mobile-search-no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.mobile-search-no-results i {
+  font-size: 2rem;
+  opacity: 0.3;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.mobile-search-no-results p {
+  font-size: 0.9rem;
 }

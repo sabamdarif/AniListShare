@@ -836,6 +836,181 @@ function setupLocalSearch() {
 }
 
 // ---------------------------------------------------------------------------
+// Mobile Full-Screen Search
+// ---------------------------------------------------------------------------
+
+function openMobileSearch() {
+  const overlay = document.getElementById("mobileSearchOverlay");
+  const input = document.getElementById("mobileSearchInput");
+  const results = document.getElementById("mobileSearchResults");
+
+  // Reset state
+  input.value = "";
+  results.innerHTML = `<div class="mobile-search-placeholder">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <p>Type to search your anime list</p>
+  </div>`;
+
+  // Show overlay with animation
+  overlay.style.display = "flex";
+  // Force reflow for animation
+  void overlay.offsetWidth;
+  overlay.classList.add("open");
+
+  // Prevent body scrolling
+  document.body.style.overflow = "hidden";
+
+  // Focus input after animation
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeMobileSearch() {
+  const overlay = document.getElementById("mobileSearchOverlay");
+  overlay.classList.remove("open");
+  document.body.style.overflow = "";
+
+  // Hide after transition
+  setTimeout(() => {
+    if (!overlay.classList.contains("open")) {
+      overlay.style.display = "none";
+    }
+  }, 300);
+}
+
+function renderMobileStars(n, max = 10) {
+  if (n === null || n === undefined)
+    return '<span class="msc-stars" style="color:var(--text-muted)">—</span>';
+  let html = '<span class="msc-stars">';
+  for (let i = 1; i <= max; i++) {
+    html +=
+      i <= n
+        ? '<i class="fa-solid fa-star"></i>'
+        : '<span class="empty"><i class="fa-solid fa-star"></i></span>';
+  }
+  html += ` <span style="color:var(--text-muted);font-size:0.7rem">${n}/10</span></span>`;
+  return html;
+}
+
+let mobileSearchTimeout;
+
+function setupMobileSearch() {
+  const input = document.getElementById("mobileSearchInput");
+  const results = document.getElementById("mobileSearchResults");
+
+  if (!input || !results) return;
+
+  function performMobileSearch() {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) {
+      results.innerHTML = `<div class="mobile-search-placeholder">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <p>Type to search your anime list</p>
+      </div>`;
+      return;
+    }
+
+    // Collect all loaded anime
+    const allAnime = [];
+    document.querySelectorAll(".category-panel").forEach((panel) => {
+      if (panel._animeData) {
+        panel._animeData.forEach((a) => {
+          allAnime.push({ ...a, catId: panel.dataset.catId });
+        });
+      }
+    });
+
+    if (allAnime.length === 0) {
+      results.innerHTML = `<div class="mobile-search-no-results">
+        <i class="fa-solid fa-database"></i>
+        <p>No data loaded yet</p>
+      </div>`;
+      return;
+    }
+
+    const matches = allAnime.filter((a) => {
+      const nameMatch = a.name && a.name.toLowerCase().includes(q);
+      const enMatch =
+        a.title_english && a.title_english.toLowerCase().includes(q);
+      const malMatch = a.mal_title && a.mal_title.toLowerCase().includes(q);
+      return nameMatch || enMatch || malMatch;
+    });
+
+    if (matches.length === 0) {
+      results.innerHTML = `<div class="mobile-search-no-results">
+        <i class="fa-solid fa-face-sad-tear"></i>
+        <p>No matches found for "${input.value.trim()}"</p>
+      </div>`;
+      return;
+    }
+
+    results.innerHTML = matches
+      .slice(0, 20)
+      .map((r) => {
+        const thumbHtml = r.thumbnail_url
+          ? `<img src="${r.thumbnail_url}" alt="" loading="lazy" onerror="this.style.display='none'">`
+          : `<div class="msc-placeholder">N/A</div>`;
+
+        const langHtml = r.language
+          ? r.language
+              .split(",")
+              .map((l) => `<span class="lang-badge">${l.trim()}</span>`)
+              .join("")
+          : '<span style="color:var(--text-muted);font-size:0.75rem">—</span>';
+
+        return `<div class="mobile-search-card" data-id="${r.id}" data-cat-id="${r.catId}">
+          ${thumbHtml}
+          <div class="msc-info">
+            <div class="msc-title">${r.name.replace(/"/g, "&quot;")}</div>
+            <div class="msc-meta">
+              ${langHtml}
+            </div>
+            <div style="margin-top:4px">${renderMobileStars(r.stars)}</div>
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    // Attach click handlers
+    results.querySelectorAll(".mobile-search-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const catId = card.dataset.catId;
+        const animeId = card.dataset.id;
+
+        closeMobileSearch();
+
+        // Switch tab if needed
+        if (currentCategoryId !== catId) {
+          switchTab(catId);
+        }
+
+        // Scroll to and highlight the anime row
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-id="${animeId}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+            row.classList.remove("highlighted-row");
+            void row.offsetWidth;
+            row.classList.add("highlighted-row");
+            setTimeout(() => row.classList.remove("highlighted-row"), 2000);
+          }
+        }, 150);
+      });
+    });
+  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(mobileSearchTimeout);
+    mobileSearchTimeout = setTimeout(performMobileSearch, 200);
+  });
+
+  input.addEventListener("focus", () => {
+    if (input.value.trim().length >= 2) {
+      performMobileSearch();
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Import / Export ODS
 // ---------------------------------------------------------------------------
 
@@ -993,6 +1168,7 @@ function exportOds() {
 document.addEventListener("DOMContentLoaded", () => {
   setupAutocomplete();
   setupLocalSearch();
+  setupMobileSearch();
   setupInteractiveStars();
   const firstTab = document.querySelector(".tab");
   if (firstTab) {
@@ -1026,6 +1202,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Category modal: close on Escape key
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
+      // Close mobile search overlay first if open
+      var mobileOverlay = document.getElementById("mobileSearchOverlay");
+      if (mobileOverlay && mobileOverlay.classList.contains("open")) {
+        closeMobileSearch();
+        return;
+      }
+
       var catOverlay = document.getElementById("categoryModalOverlay");
       if (catOverlay && catOverlay.classList.contains("open")) {
         closeCategoryModal();
