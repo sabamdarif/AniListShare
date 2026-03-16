@@ -79,12 +79,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "myanimelist.wsgi.application"
 
 DATABASES = {
-    # If Prisma DB fails locally or DEBUG is True, fallback to sqlite3 unless explicitly forced
     "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL", "sqlite:///" + str(BASE_DIR / "db.sqlite3")),
+        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=not DEBUG,  # No SSL requirement for local sqlite
+        ssl_require=True,
     )
 }
 
@@ -140,7 +139,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
+    BASE_DIR / "animelist" / "static",
 ]
 # STATICFILES_STORAGE is deprecated in Django 4.2+, removed in 5.1+
 # We must use STORAGES so that WhiteNoise generates the expected staticfiles.json

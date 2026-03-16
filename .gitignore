@@ -19,3 +19,8 @@ client_secret_*.json
 .idea/
 .DS_Store
 db.sqlite3
+staticfiles/account/js
+staticfiles/admin
+staticfiles/animelist
+staticfiles/facebook/js
+staticfiles/staticfiles.json
