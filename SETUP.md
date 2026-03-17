@@ -1,0 +1,144 @@
+# Setup & Deployment
+
+
+```bash
+pip install -r requirements.txt
+python manage.py migrate
+```
+
+### Database Configuration
+
+To use **Supabase Postgres**, set `DATABASE_URL` in your `.env` file.
+
+#### Setting Up Supabase Postgres
+
+- Add this to your `.env`:
+
+```env
+# Supabase Postgres (pooled connection — recommended for production)
+DATABASE_URL=postgres://postgres.YOURREF:PASSWORD@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+
+# Supabase API credentials (for SDK features like Storage)
+SUPABASE_URL=https://YOURREF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+4. Run migrations:
+
+```bash
+python manage.py migrate
+```
+
+If `DATABASE_URL` is not set, the app falls back to a local `db.sqlite3` file automatically.
+
+#### ⚠️ Common Pitfalls
+
+| Mistake                                                     | What Happens                                                         | Fix                                                                                                                  |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Adding `&pgbouncer=true` to `DATABASE_URL`                  | `psycopg` throws `invalid connection option "pgbouncer"`             | Remove `&pgbouncer=true` — it's a **Prisma-only** parameter, not a standard Postgres option. Django doesn't need it. |
+| Using the **Session (port 5432)** URL for long-running apps | Works, but connections may time out on serverless platforms (Vercel) | Use the **Transaction pooler (port 6543)** URL instead                                                               |
+| Setting `sslmode=disable`                                   | Connection refused by Supabase                                       | Always use `sslmode=require`                                                                                         |
+| Forgetting to run `python manage.py migrate`                | Tables don't exist, app crashes on first request                     | Always run migrations after changing `DATABASE_URL`                                                                  |
+
+#### What Happens If Both Supabase and Prisma Postgres URLs Are Set?
+
+The app only reads **`DATABASE_URL`** — all other Postgres variables (`POSTGRES_PRISMA_URL`, `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, etc.) are **ignored by Django**. Those extra variables exist only for compatibility with other tools (Prisma, Next.js, etc.).
+
+- ✅ **Only `DATABASE_URL` matters** for Django. Set it once and forget the rest.
+- If `DATABASE_URL` points to Supabase, Django uses Supabase.
+- If `DATABASE_URL` is empty or unset, Django falls back to local SQLite.
+- Having both `POSTGRES_PRISMA_URL` and `DATABASE_URL` set simultaneously is fine — Django will only use `DATABASE_URL`.
+
+## Google Login Setup
+
+Follow these steps to enable **Sign in with Google**:
+
+### 1. Create a Google OAuth Client
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (or select an existing one).
+3. Navigate to **APIs & Services → Credentials**.
+4. Click **Create Credentials → OAuth client ID**.
+5. Select **Web application** as the application type.
+6. Give it a name (e.g., `AniListShare`).
+
+### 2. Add Authorized Redirect URIs
+
+Under **Authorized redirect URIs**, add the callback URL for your app:
+
+| Environment       | Redirect URI                                             |
+| ----------------- | -------------------------------------------------------- |
+| Local development | `http://127.0.0.1:8000/accounts/google/login/callback/`  |
+| Production        | `https://yourdomain.com/accounts/google/login/callback/` |
+
+> **⚠️ Important:** The redirect URI must match **exactly** — including the trailing slash. A mismatch will cause a `redirect_uri_mismatch` (Error 400).
+
+Click **Save**.
+
+### 3. Configure the `.env` File
+
+Copy your **Client ID** and **Client Secret** from the credentials page and add them to your `.env` file:
+
+```env
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+```
+
+You can use `.env.example` as a reference template.
+
+## Google Top Mail Setup
+
+### 1. Generate App Password
+- Go to :- https://myaccount.google.com/apppasswords
+- and create a app and copy the password 
+
+### 2. Configure the `.env` File
+
+```env
+EMAIL_HOST_USER=your@gmail.com
+EMAIL_HOST_PASSWORD="your-app-password"
+```
+
+## Admin Panel
+
+```bash
+python manage.py createsuperuser
+```
+
+Then visit http://localhost:8000/admin/ to manage data directly.
+
+## Deploying to Vercel
+
+### 1. Install the Vercel CLI
+
+```bash
+npm i -g vercel
+```
+
+### 2. Set Environment Variables on Vercel
+
+In your Vercel project settings (**Settings → Environment Variables**), add:
+
+| Variable                    | Description                                 |
+| --------------------------- | ------------------------------------------- |
+| `DATABASE_URL`              | Supabase Postgres pooled connection string  |
+| `DJANGO_SECRET_KEY`         | Generated Django secret key                 |
+| `SUPABASE_URL`              | Your Supabase project URL                   |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side SDK) |
+| `GOOGLE_CLIENT_ID`          | Google OAuth client ID                      |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth client secret                  |
+| `DEBUG`                     | Set to `False` for production               |
+
+### 3. Add Your Vercel Domain to Google OAuth
+
+In the [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), add your Vercel domain as an authorized redirect URI:
+
+```
+https://your-app.vercel.app/accounts/google/login/callback/
+```
+
+### 4. Deploy
+
+```bash
+vercel deploy
+```
