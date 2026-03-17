@@ -1,15 +1,8 @@
+{% extends "animelist/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ owner_name }}'s Anime List</title>
-        <link rel="icon" href="{% static 'animelist/logo.png' %}" type="image/png">
-        <link rel="stylesheet"
-              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
-        <style>
+{% block title %}{{ owner_name }}'s Anime List{% endblock %}
+{% block extra_head %}
+    <style>
         .header-actions {
             display: flex;
             align-items: center;
@@ -42,9 +35,10 @@
         .drag-handle:active {
             cursor: default !important;
         }
-        </style>
-    </head>
-    <body data-share-id="{{ share_id }}">
+    </style>
+{% endblock %}
+{% block body_tag %}<body data-share-id="{{ share_id }}">{% endblock %}
+    {% block content %}
         <div class="header">
             <div class="header-title-container">
                 <div class="header-brand">
@@ -510,5 +504,4 @@
             loadSharedCategories();
         });
         </script>
-    </body>
-</html>
+    {% endblock %}

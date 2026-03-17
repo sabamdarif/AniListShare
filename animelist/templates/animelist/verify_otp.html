@@ -1,15 +1,8 @@
+{% extends "animelist/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify Email - AniListShare</title>
-        <link rel="icon" href="{% static 'animelist/logo.png' %}" type="image/png">
-        <link rel="stylesheet"
-              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
-        <style>
+{% block title %}Verify Email - AniListShare{% endblock %}
+{% block extra_head %}
+    <style>
         body {
             display: flex;
             align-items: center;
@@ -55,40 +48,39 @@
             margin-bottom: 16px;
             font-size: 0.9em;
         }
-        </style>
-    </head>
-    <body>
-        <div class="auth-card">
-            <div class="auth-logo">
-                <img src="{% static 'animelist/logo.png' %}"
-                     alt="AniListShare Logo"
-                     style="height: 64px;
-                            width: auto;
-                            object-fit: contain;
-                            margin-bottom: 8px">
-            </div>
-            <h2>Verify Your Email</h2>
-            <p>We've sent a 6-digit confirmation code to your email. It expires in 10 minutes.</p>
-            {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-            <form method="POST">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label>Verification Code</label>
-                    <input type="text"
-                           name="otp"
-                           class="form-input"
-                           required
-                           placeholder="000000"
-                           maxlength="6"
-                           pattern="\d{6}"
-                           title="Please enter a 6-digit code"
-                           style="text-align:center;
-                                  font-size:2em;
-                                  letter-spacing:12px;
-                                  padding: 16px">
-                </div>
-                <button type="submit" class="btn btn-accent">Verify Code</button>
-            </form>
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="auth-card">
+        <div class="auth-logo">
+            <img src="{% static 'animelist/logo.png' %}"
+                 alt="AniListShare Logo"
+                 style="height: 64px;
+                        width: auto;
+                        object-fit: contain;
+                        margin-bottom: 8px">
         </div>
-    </body>
-</html>
+        <h2>Verify Your Email</h2>
+        <p>We've sent a 6-digit confirmation code to your email. It expires in 10 minutes.</p>
+        {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Verification Code</label>
+                <input type="text"
+                       name="otp"
+                       class="form-input"
+                       required
+                       placeholder="000000"
+                       maxlength="6"
+                       pattern="\d{6}"
+                       title="Please enter a 6-digit code"
+                       style="text-align:center;
+                              font-size:2em;
+                              letter-spacing:12px;
+                              padding: 16px">
+            </div>
+            <button type="submit" class="btn btn-accent">Verify Code</button>
+        </form>
+    </div>
+{% endblock %}

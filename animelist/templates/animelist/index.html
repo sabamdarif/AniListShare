@@ -1,557 +1,550 @@
+{% extends "animelist/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AniListShare</title>
-        <link rel="icon" href="{% static 'animelist/logo.png' %}" type="image/png">
-        <link rel="stylesheet"
-              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-        <link rel="stylesheet" href="{% static 'animelist/style.css' %}">
-    </head>
-    <body>
-        <div class="header">
-            <div class="header-brand">
-                <img src="{% static 'animelist/logo.png' %}"
-                     alt="AniListShare Logo"
-                     class="header-logo">
-                <h1>AniListShare</h1>
-            </div>
-            <div class="header-search autocomplete-wrapper" id="localSearchWrapper">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text"
-                       id="localSearchInput"
-                       class="form-input"
-                       placeholder="Search your list..."
-                       autocomplete="off">
-                <div class="autocomplete-results" id="localSearchResults"></div>
-            </div>
-            <button class="mobile-search-btn"
-                    id="mobileSearchBtn"
-                    aria-label="Search"
-                    onclick="openMobileSearch()">
-                <i class="fa-solid fa-magnifying-glass"></i>
+{% block extra_head_early %}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+{% endblock %}
+{% block content %}
+    <div class="header">
+        <div class="header-brand">
+            <img src="{% static 'animelist/logo.png' %}"
+                 alt="AniListShare Logo"
+                 class="header-logo">
+            <h1>AniListShare</h1>
+        </div>
+        <div class="header-search autocomplete-wrapper" id="localSearchWrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text"
+                   id="localSearchInput"
+                   class="form-input"
+                   placeholder="Search your list..."
+                   autocomplete="off">
+            <div class="autocomplete-results" id="localSearchResults"></div>
+        </div>
+        <button class="mobile-search-btn"
+                id="mobileSearchBtn"
+                aria-label="Search"
+                onclick="openMobileSearch()">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <button class="hamburger-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="header-actions" id="headerActions">
+            <span style="color:var(--text-secondary); margin-right: 8px;">{{ request.user.username }}</span>
+            <a href="{% url 'logout' %}"
+               class="btn btn-ghost"
+               style="text-decoration:none;
+                      display:inline-flex;
+                      align-items:center;
+                      gap:6px">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+            <button class="btn btn-ghost" onclick="openShareModal()">
+                <i class="fa-solid fa-share-nodes"></i> Share
             </button>
-            <button class="hamburger-btn" id="mobileMenuBtn" aria-label="Toggle menu">
-                <i class="fa-solid fa-bars"></i>
+            <button class="btn btn-ghost" onclick="openImportModal()">
+                <i class="fa-solid fa-file-import"></i> Import
             </button>
-            <div class="header-actions" id="headerActions">
-                <span style="color:var(--text-secondary); margin-right: 8px;">{{ request.user.username }}</span>
-                <a href="{% url 'logout' %}"
-                   class="btn btn-ghost"
-                   style="text-decoration:none;
-                          display:inline-flex;
-                          align-items:center;
-                          gap:6px">
-                    <i class="fa-solid fa-right-from-bracket"></i> Logout
-                </a>
-                <button class="btn btn-ghost" onclick="openShareModal()">
-                    <i class="fa-solid fa-share-nodes"></i> Share
-                </button>
-                <button class="btn btn-ghost" onclick="openImportModal()">
-                    <i class="fa-solid fa-file-import"></i> Import
-                </button>
-                <button class="btn btn-ghost" onclick="exportOds()">
-                    <i class="fa-solid fa-file-export"></i> Export
-                </button>
-                <button class="btn btn-primary" onclick="addCategory()">
-                    <i class="fa-solid fa-folder-plus"></i>
-                    Category
-                </button>
-                <button class="btn btn-accent"
-                        {% if not categories %} style="opacity: 0.5; cursor: not-allowed;" onclick="showToast('Please create a category first'); return false;" title="Please create a category first" {% else %} onclick="openAddModal()" {% endif %}>
-                    <i class="fa-solid fa-plus"></i> Add Anime
+            <button class="btn btn-ghost" onclick="exportOds()">
+                <i class="fa-solid fa-file-export"></i> Export
+            </button>
+            <button class="btn btn-primary" onclick="addCategory()">
+                <i class="fa-solid fa-folder-plus"></i>
+                Category
+            </button>
+            <button class="btn btn-accent"
+                    {% if not categories %} style="opacity: 0.5; cursor: not-allowed;" onclick="showToast('Please create a category first'); return false;" title="Please create a category first" {% else %} onclick="openAddModal()" {% endif %}>
+                <i class="fa-solid fa-plus"></i> Add Anime
+            </button>
+        </div>
+    </div>
+    <div class="tabs-bar">
+        {% for cat in categories %}
+            <div class="tab-wrapper" data-cat-id="{{ cat.id }}">
+                <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
+                <button class="edit-cat-btn"
+                        data-cat-id="{{ cat.id }}"
+                        data-cat-name="{{ cat.name }}"
+                        onclick="openCategoryModal(this.dataset.catId, this.dataset.catName)">
+                    <i class="fa-solid fa-pen"></i>
                 </button>
             </div>
-        </div>
-        <div class="tabs-bar">
-            {% for cat in categories %}
-                <div class="tab-wrapper" data-cat-id="{{ cat.id }}">
-                    <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
-                    <button class="edit-cat-btn"
-                            data-cat-id="{{ cat.id }}"
-                            data-cat-name="{{ cat.name }}"
-                            onclick="openCategoryModal(this.dataset.catId, this.dataset.catName)">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                </div>
-            {% endfor %}
-        </div>
-        <div class="container">
-            {% for cat in categories %}
-                <div class="category-panel" data-cat-id="{{ cat.id }}">
-                    <table class="anime-table">
-                        <thead>
-                            <tr>
-                                <th class="col-num">#</th>
-                                <th class="col-thumb"></th>
-                                <th class="col-name">Name</th>
-                                <th class="col-seasons">Seasons</th>
-                                <th class="col-lang">Language</th>
-                                <th class="col-stars">Stars</th>
-                                <th class="col-actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="col-num">
-                                    <div class="skeleton skeleton-text"
-                                         style="width: 20px;
-                                                display: inline-block;
-                                                margin: 0 auto"></div>
-                                </td>
-                                <td class="col-thumb">
-                                    <div class="skeleton skeleton-thumb"></div>
-                                </td>
-                                <td class="col-name">
-                                    <div class="skeleton skeleton-title"></div>
-                                    <div class="skeleton skeleton-text" style="width: 40%;"></div>
-                                </td>
-                                <td class="col-seasons">
-                                    <div class="skeleton skeleton-badge" style="width: 65px;"></div>
-                                    <div class="skeleton skeleton-badge" style="width: 80px;"></div>
-                                </td>
-                                <td class="col-lang">
-                                    <div class="skeleton skeleton-badge" style="width: 45px;"></div>
-                                </td>
-                                <td class="col-stars">
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                </td>
-                                <td class="col-actions">
-                                    <div class="actions-cell">
-                                        <div class="skeleton"
-                                             style="width: 30px;
-                                                    height: 30px;
-                                                    border-radius: 6px"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="col-num">
-                                    <div class="skeleton skeleton-text"
-                                         style="width: 20px;
-                                                display: inline-block;
-                                                margin: 0 auto"></div>
-                                </td>
-                                <td class="col-thumb">
-                                    <div class="skeleton skeleton-thumb"></div>
-                                </td>
-                                <td class="col-name">
-                                    <div class="skeleton skeleton-title"></div>
-                                    <div class="skeleton skeleton-text" style="width: 40%;"></div>
-                                </td>
-                                <td class="col-seasons">
-                                    <div class="skeleton skeleton-badge" style="width: 65px;"></div>
-                                    <div class="skeleton skeleton-badge" style="width: 80px;"></div>
-                                </td>
-                                <td class="col-lang">
-                                    <div class="skeleton skeleton-badge" style="width: 45px;"></div>
-                                </td>
-                                <td class="col-stars">
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                </td>
-                                <td class="col-actions">
-                                    <div class="actions-cell">
-                                        <div class="skeleton"
-                                             style="width: 30px;
-                                                    height: 30px;
-                                                    border-radius: 6px"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="col-num">
-                                    <div class="skeleton skeleton-text"
-                                         style="width: 20px;
-                                                display: inline-block;
-                                                margin: 0 auto"></div>
-                                </td>
-                                <td class="col-thumb">
-                                    <div class="skeleton skeleton-thumb"></div>
-                                </td>
-                                <td class="col-name">
-                                    <div class="skeleton skeleton-title"></div>
-                                    <div class="skeleton skeleton-text" style="width: 40%;"></div>
-                                </td>
-                                <td class="col-seasons">
-                                    <div class="skeleton skeleton-badge" style="width: 65px;"></div>
-                                    <div class="skeleton skeleton-badge" style="width: 80px;"></div>
-                                </td>
-                                <td class="col-lang">
-                                    <div class="skeleton skeleton-badge" style="width: 45px;"></div>
-                                </td>
-                                <td class="col-stars">
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                    <div class="skeleton skeleton-star"></div>
-                                </td>
-                                <td class="col-actions">
-                                    <div class="actions-cell">
-                                        <div class="skeleton"
-                                             style="width: 30px;
-                                                    height: 30px;
-                                                    border-radius: 6px"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            {% endfor %}
-        </div>
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal">
-                <div class="modal-header">
-                    <h2 id="modalTitle">Add Anime</h2>
-                    <button class="modal-close" onclick="closeModal()">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="animeForm" onsubmit="event.preventDefault();saveAnime()">
-                        <input type="hidden" id="animeIdField">
-                        <input type="hidden" id="malIdInput">
-                        <div class="form-group autocomplete-wrapper">
-                            <label>Name</label>
-                            <input type="text"
-                                   id="nameInput"
-                                   class="form-input"
-                                   placeholder="Search anime name…"
-                                   autocomplete="off">
-                            <div class="autocomplete-results" id="autocompleteResults"></div>
-                        </div>
-                        <div class="form-group">
-                            <label>Thumbnail URL</label>
-                            <div class="thumbnail-editor">
-                                <img id="thumbnailPreview"
-                                     src=""
-                                     alt=""
-                                     onerror="this.style.display='none'"
-                                     onload="this.style.display='block'">
-                                <input type="text"
-                                       id="thumbnailInput"
-                                       class="form-input"
-                                       placeholder="https://..."
-                                       oninput="updateThumbnailPreview()">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select id="categorySelect" class="form-input">
-                                {% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Seasons Completed</label>
-                            <div class="seasons-editor" id="seasonsContainer"></div>
-                            <button type="button"
-                                    class="btn btn-ghost btn-sm"
-                                    onclick="addSeasonRow()"
-                                    style="margin-top:4px">
-                                <i class="fa-solid fa-plus"></i> Add Season
-                            </button>
-                        </div>
-                        <div class="form-group">
-                            <label>Language</label>
-                            <input type="text"
-                                   id="languageInput"
-                                   class="form-input"
-                                   placeholder="e.g. Eng, Hin, Jap"
-                                   oninput="updateLanguagePreview()">
-                            <div id="languagePreview"
-                                 style="margin-top: 8px;
-                                        display: flex;
-                                        flex-wrap: wrap;
-                                        gap: 4px"></div>
-                        </div>
-                        <div class="form-group">
-                            <label>Stars (0-10)</label>
-                            <div class="interactive-stars" id="interactiveStars">
-                                <span class="star" data-val="1"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="2"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="3"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="4"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="5"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="6"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="7"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="8"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="9"><i class="fa-solid fa-star"></i></span>
-                                <span class="star" data-val="10"><i class="fa-solid fa-star"></i></span>
-                                <span class="stars-clear" id="starsClear" title="Clear rating"><i class="fa-solid fa-xmark"></i></span>
-                            </div>
-                            <input type="hidden" id="starsInput">
-                        </div>
-                        <div class="form-group">
-                            <label>Notes / Reason</label>
-                            <input type="text"
-                                   id="reasonInput"
-                                   class="form-input"
-                                   placeholder="Optional">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <div id="deleteSection" style="display:none">
-                        <button class="btn btn-danger btn-sm" onclick="deleteAnime()">Delete</button>
-                    </div>
-                    <div style="display:flex;gap:8px;margin-left:auto">
-                        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-                        <button class="btn btn-accent" onclick="saveAnime()">Save</button>
-                    </div>
-                </div>
+        {% endfor %}
+    </div>
+    <div class="container">
+        {% for cat in categories %}
+            <div class="category-panel" data-cat-id="{{ cat.id }}">
+                <table class="anime-table">
+                    <thead>
+                        <tr>
+                            <th class="col-num">#</th>
+                            <th class="col-thumb"></th>
+                            <th class="col-name">Name</th>
+                            <th class="col-seasons">Seasons</th>
+                            <th class="col-lang">Language</th>
+                            <th class="col-stars">Stars</th>
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="col-num">
+                                <div class="skeleton skeleton-text"
+                                     style="width: 20px;
+                                            display: inline-block;
+                                            margin: 0 auto"></div>
+                            </td>
+                            <td class="col-thumb">
+                                <div class="skeleton skeleton-thumb"></div>
+                            </td>
+                            <td class="col-name">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-text" style="width: 40%;"></div>
+                            </td>
+                            <td class="col-seasons">
+                                <div class="skeleton skeleton-badge" style="width: 65px;"></div>
+                                <div class="skeleton skeleton-badge" style="width: 80px;"></div>
+                            </td>
+                            <td class="col-lang">
+                                <div class="skeleton skeleton-badge" style="width: 45px;"></div>
+                            </td>
+                            <td class="col-stars">
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                            </td>
+                            <td class="col-actions">
+                                <div class="actions-cell">
+                                    <div class="skeleton"
+                                         style="width: 30px;
+                                                height: 30px;
+                                                border-radius: 6px"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="col-num">
+                                <div class="skeleton skeleton-text"
+                                     style="width: 20px;
+                                            display: inline-block;
+                                            margin: 0 auto"></div>
+                            </td>
+                            <td class="col-thumb">
+                                <div class="skeleton skeleton-thumb"></div>
+                            </td>
+                            <td class="col-name">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-text" style="width: 40%;"></div>
+                            </td>
+                            <td class="col-seasons">
+                                <div class="skeleton skeleton-badge" style="width: 65px;"></div>
+                                <div class="skeleton skeleton-badge" style="width: 80px;"></div>
+                            </td>
+                            <td class="col-lang">
+                                <div class="skeleton skeleton-badge" style="width: 45px;"></div>
+                            </td>
+                            <td class="col-stars">
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                            </td>
+                            <td class="col-actions">
+                                <div class="actions-cell">
+                                    <div class="skeleton"
+                                         style="width: 30px;
+                                                height: 30px;
+                                                border-radius: 6px"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="col-num">
+                                <div class="skeleton skeleton-text"
+                                     style="width: 20px;
+                                            display: inline-block;
+                                            margin: 0 auto"></div>
+                            </td>
+                            <td class="col-thumb">
+                                <div class="skeleton skeleton-thumb"></div>
+                            </td>
+                            <td class="col-name">
+                                <div class="skeleton skeleton-title"></div>
+                                <div class="skeleton skeleton-text" style="width: 40%;"></div>
+                            </td>
+                            <td class="col-seasons">
+                                <div class="skeleton skeleton-badge" style="width: 65px;"></div>
+                                <div class="skeleton skeleton-badge" style="width: 80px;"></div>
+                            </td>
+                            <td class="col-lang">
+                                <div class="skeleton skeleton-badge" style="width: 45px;"></div>
+                            </td>
+                            <td class="col-stars">
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                                <div class="skeleton skeleton-star"></div>
+                            </td>
+                            <td class="col-actions">
+                                <div class="actions-cell">
+                                    <div class="skeleton"
+                                         style="width: 30px;
+                                                height: 30px;
+                                                border-radius: 6px"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-        </div>
-        <div class="modal-overlay" id="quickSeasonModalOverlay">
-            <div class="modal" style="max-width:320px;">
-                <div class="modal-header">
-                    <h2 id="qsLabel">Edit Season</h2>
-                    <button class="modal-close" onclick="closeQuickSeasonModal()">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <input type="number"
-                               id="qsWatchedInput"
-                               class="form-input"
-                               placeholder="Watched"
-                               min="0">
-                        <span class="ep-sep">/</span>
-                        <input type="number"
-                               id="qsTotalInput"
-                               class="form-input"
-                               placeholder="Total"
-                               min="1">
-                        <button type="button"
-                                class="btn btn-accent btn-sm"
-                                onclick="processQuickComplete()"
-                                title="Mark Complete">
-                            <i class="fa-solid fa-check-double"></i>
-                        </button>
-                    </div>
-                    <div style="margin-top:12px;">
-                        <input type="text"
-                               id="qsCommentInput"
-                               class="form-input"
-                               placeholder="Comment (optional)">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <div style="display:flex;gap:8px;margin-left:auto">
-                        <button class="btn btn-ghost" onclick="closeQuickSeasonModal()">Cancel</button>
-                        <button class="btn btn-accent" onclick="saveQuickSeason()">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-overlay" id="importModalOverlay">
-            <div class="modal" style="max-width:480px;">
-                <div class="modal-header">
-                    <h2>Import Anime List</h2>
-                    <button class="modal-close" onclick="closeImportModal()">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="drop-zone"
-                         id="dropZone"
-                         ondragover="handleDragOver(event)"
-                         ondragleave="handleDragLeave(event)"
-                         ondrop="handleDrop(event)"
-                         onclick="document.getElementById('importFileInput').click()">
-                        <i class="fa-solid fa-cloud-arrow-up drop-zone-icon"></i>
-                        <p class="drop-zone-text">
-                            Drag & drop your <strong>.ods</strong> file here
-                        </p>
-                        <p class="drop-zone-hint">or click to browse</p>
-                        <input type="file"
-                               id="importFileInput"
-                               accept=".ods"
-                               style="display:none"
-                               onchange="handleFileSelect(this)">
-                    </div>
-                    <div class="import-file-info" id="importFileInfo" style="display:none">
-                        <i class="fa-solid fa-file-spreadsheet"></i>
-                        <span id="importFileName"></span>
-                        <button class="btn-icon btn-sm" onclick="clearImportFile()" title="Remove">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                    <div class="import-option">
-                        <label class="toggle-label" for="autoFetchToggle">
-                            <span>Auto fetch all thumbnails</span>
-                            <span class="toggle-hint">Fetches cover images from MyAnimeList (takes time)</span>
-                        </label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="autoFetchToggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="import-progress" id="importProgress" style="display:none">
-                        <div class="progress-header">
-                            <span>Fetching thumbnails…</span>
-                            <span id="progressCount">0 / 0</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" id="progressBarFill"></div>
-                        </div>
-                        <p class="progress-text" id="progressText">Starting…</p>
-                    </div>
-                    <div class="import-warning">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span>This will <strong>replace</strong> your entire current list.</span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <div style="display:flex;gap:8px;margin-left:auto">
-                        <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
-                        <button class="btn btn-accent"
-                                id="importUploadBtn"
-                                onclick="uploadImportFile()"
-                                disabled>Upload</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-overlay" id="categoryModalOverlay">
-            <div class="modal" style="max-width:400px;">
-                <div class="modal-header">
-                    <h2 id="categoryModalTitle">Edit Category</h2>
-                    <button class="modal-close" onclick="closeCategoryModal()">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="modal-body" id="categoryModalBody">
-                    <div id="categoryFormSection">
-                        <div class="form-group" style="margin-bottom:0">
-                            <label>Category Name</label>
-                            <input type="text"
-                                   id="categoryNameInput"
-                                   class="form-input"
-                                   placeholder="Enter category name…"
-                                   onkeydown="if(event.key==='Enter'){event.preventDefault();saveCategoryModal()}"
-                                   autocomplete="off">
-                        </div>
-                    </div>
-                    <div id="categoryDeleteConfirm"
-                         class="confirm-delete-section"
-                         style="display:none">
-                        <div class="confirm-delete-warning">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <p>
-                                Delete category <strong id="confirmDeleteCatName"></strong>?
-                            </p>
-                            <p class="confirm-delete-hint">
-                                This will permanently delete the category and <strong>all anime
-                                entries</strong> inside it.
-                            </p>
-                        </div>
-                        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-                            <button class="btn btn-ghost" onclick="cancelDeleteCategory()">Cancel</button>
-                            <button class="btn btn-danger" onclick="confirmDeleteCategory()">Delete</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" id="categoryModalFooter">
-                    <div id="categoryDeleteSection" style="display:none">
-                        <button class="btn btn-danger btn-sm" onclick="startDeleteCategory()">
-                            <i class="fa-solid fa-trash"></i> Delete
-                        </button>
-                    </div>
-                    <div style="display:flex;gap:8px;margin-left:auto">
-                        <button class="btn btn-ghost" onclick="closeCategoryModal()">Cancel</button>
-                        <button class="btn btn-accent" onclick="saveCategoryModal()">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-overlay" id="shareModalOverlay">
-            <div class="modal" style="max-width: 500px">
-                <div class="modal-header">
-                    <h2 id="shareModalTitle">Share Your List</h2>
-                    <button class="modal-close" onclick="closeShareModal()">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div class="modal-body" id="shareModalBody">
-                    <p style="margin-bottom: 24px;
-                              color: var(--text-muted);
-                              font-size: 0.9em">
-                        Generate a read-only link to share your anime list with others. You can disable this at any time.
-                    </p>
-                    <div style="display: flex;
-                                align-items: center;
-                                justify-content: space-between;
-                                margin-bottom: 24px">
-                        <div>
-                            <span style="font-weight: 500; display: block; margin-bottom: 4px;">Enable Public Link</span>
-                            <span style="font-size: 0.8em; color: var(--text-muted);">Anyone with the link can view your
-                            list.</span>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox"
-                                   id="shareToggleInput"
-                                   onchange="toggleShareState(this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div id="shareLinkContainer" style="display: none;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Your Share Link</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text"
-                                   id="shareLinkInput"
-                                   class="form-input"
-                                   readonly
-                                   style="flex: 1;
-                                          font-family: monospace;
-                                          font-size: 0.9em">
-                            <button class="btn btn-accent" onclick="copyShareLink()">
-                                <i class="fa-solid fa-copy"></i> Copy
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" id="shareModalFooter">
-                    <button class="btn btn-ghost"
-                            onclick="closeShareModal()"
-                            style="margin-left:auto">Close</button>
-                </div>
-            </div>
-        </div>
-        <div class="mobile-search-overlay" id="mobileSearchOverlay">
-            <div class="mobile-search-header">
-                <i class="fa-solid fa-magnifying-glass mobile-search-icon"></i>
-                <input type="text"
-                       id="mobileSearchInput"
-                       class="form-input"
-                       placeholder="Search your anime list…"
-                       autocomplete="off">
-                <button class="mobile-search-close"
-                        onclick="closeMobileSearch()"
-                        aria-label="Close search">
+        {% endfor %}
+    </div>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Anime</h2>
+                <button class="modal-close" onclick="closeModal()">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="mobile-search-results" id="mobileSearchResults">
-                <div class="mobile-search-placeholder">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <p>Type to search your anime list</p>
+            <div class="modal-body">
+                <form id="animeForm" onsubmit="event.preventDefault();saveAnime()">
+                    <input type="hidden" id="animeIdField">
+                    <input type="hidden" id="malIdInput">
+                    <div class="form-group autocomplete-wrapper">
+                        <label>Name</label>
+                        <input type="text"
+                               id="nameInput"
+                               class="form-input"
+                               placeholder="Search anime name…"
+                               autocomplete="off">
+                        <div class="autocomplete-results" id="autocompleteResults"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Thumbnail URL</label>
+                        <div class="thumbnail-editor">
+                            <img id="thumbnailPreview"
+                                 src=""
+                                 alt=""
+                                 onerror="this.style.display='none'"
+                                 onload="this.style.display='block'">
+                            <input type="text"
+                                   id="thumbnailInput"
+                                   class="form-input"
+                                   placeholder="https://..."
+                                   oninput="updateThumbnailPreview()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="categorySelect" class="form-input">
+                            {% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Seasons Completed</label>
+                        <div class="seasons-editor" id="seasonsContainer"></div>
+                        <button type="button"
+                                class="btn btn-ghost btn-sm"
+                                onclick="addSeasonRow()"
+                                style="margin-top:4px">
+                            <i class="fa-solid fa-plus"></i> Add Season
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Language</label>
+                        <input type="text"
+                               id="languageInput"
+                               class="form-input"
+                               placeholder="e.g. Eng, Hin, Jap"
+                               oninput="updateLanguagePreview()">
+                        <div id="languagePreview"
+                             style="margin-top: 8px;
+                                    display: flex;
+                                    flex-wrap: wrap;
+                                    gap: 4px"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Stars (0-10)</label>
+                        <div class="interactive-stars" id="interactiveStars">
+                            <span class="star" data-val="1"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="2"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="3"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="4"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="5"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="6"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="7"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="8"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="9"><i class="fa-solid fa-star"></i></span>
+                            <span class="star" data-val="10"><i class="fa-solid fa-star"></i></span>
+                            <span class="stars-clear" id="starsClear" title="Clear rating"><i class="fa-solid fa-xmark"></i></span>
+                        </div>
+                        <input type="hidden" id="starsInput">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes / Reason</label>
+                        <input type="text"
+                               id="reasonInput"
+                               class="form-input"
+                               placeholder="Optional">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div id="deleteSection" style="display:none">
+                    <button class="btn btn-danger btn-sm" onclick="deleteAnime()">Delete</button>
+                </div>
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                    <button class="btn btn-accent" onclick="saveAnime()">Save</button>
                 </div>
             </div>
         </div>
-        <div class="toast" id="toast"></div>
-        <script src="{% static 'animelist/app.js' %}" defer></script>
-    </body>
-</html>
+    </div>
+    <div class="modal-overlay" id="quickSeasonModalOverlay">
+        <div class="modal" style="max-width:320px;">
+            <div class="modal-header">
+                <h2 id="qsLabel">Edit Season</h2>
+                <button class="modal-close" onclick="closeQuickSeasonModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="number"
+                           id="qsWatchedInput"
+                           class="form-input"
+                           placeholder="Watched"
+                           min="0">
+                    <span class="ep-sep">/</span>
+                    <input type="number"
+                           id="qsTotalInput"
+                           class="form-input"
+                           placeholder="Total"
+                           min="1">
+                    <button type="button"
+                            class="btn btn-accent btn-sm"
+                            onclick="processQuickComplete()"
+                            title="Mark Complete">
+                        <i class="fa-solid fa-check-double"></i>
+                    </button>
+                </div>
+                <div style="margin-top:12px;">
+                    <input type="text"
+                           id="qsCommentInput"
+                           class="form-input"
+                           placeholder="Comment (optional)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button class="btn btn-ghost" onclick="closeQuickSeasonModal()">Cancel</button>
+                    <button class="btn btn-accent" onclick="saveQuickSeason()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="importModalOverlay">
+        <div class="modal" style="max-width:480px;">
+            <div class="modal-header">
+                <h2>Import Anime List</h2>
+                <button class="modal-close" onclick="closeImportModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="drop-zone"
+                     id="dropZone"
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)"
+                     ondrop="handleDrop(event)"
+                     onclick="document.getElementById('importFileInput').click()">
+                    <i class="fa-solid fa-cloud-arrow-up drop-zone-icon"></i>
+                    <p class="drop-zone-text">
+                        Drag & drop your <strong>.ods</strong> file here
+                    </p>
+                    <p class="drop-zone-hint">or click to browse</p>
+                    <input type="file"
+                           id="importFileInput"
+                           accept=".ods"
+                           style="display:none"
+                           onchange="handleFileSelect(this)">
+                </div>
+                <div class="import-file-info" id="importFileInfo" style="display:none">
+                    <i class="fa-solid fa-file-spreadsheet"></i>
+                    <span id="importFileName"></span>
+                    <button class="btn-icon btn-sm" onclick="clearImportFile()" title="Remove">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="import-option">
+                    <label class="toggle-label" for="autoFetchToggle">
+                        <span>Auto fetch all thumbnails</span>
+                        <span class="toggle-hint">Fetches cover images from MyAnimeList (takes time)</span>
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoFetchToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="import-progress" id="importProgress" style="display:none">
+                    <div class="progress-header">
+                        <span>Fetching thumbnails…</span>
+                        <span id="progressCount">0 / 0</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="progressBarFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">Starting…</p>
+                </div>
+                <div class="import-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>This will <strong>replace</strong> your entire current list.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
+                    <button class="btn btn-accent"
+                            id="importUploadBtn"
+                            onclick="uploadImportFile()"
+                            disabled>Upload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="categoryModalOverlay">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-header">
+                <h2 id="categoryModalTitle">Edit Category</h2>
+                <button class="modal-close" onclick="closeCategoryModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="categoryModalBody">
+                <div id="categoryFormSection">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label>Category Name</label>
+                        <input type="text"
+                               id="categoryNameInput"
+                               class="form-input"
+                               placeholder="Enter category name…"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();saveCategoryModal()}"
+                               autocomplete="off">
+                    </div>
+                </div>
+                <div id="categoryDeleteConfirm"
+                     class="confirm-delete-section"
+                     style="display:none">
+                    <div class="confirm-delete-warning">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <p>
+                            Delete category <strong id="confirmDeleteCatName"></strong>?
+                        </p>
+                        <p class="confirm-delete-hint">
+                            This will permanently delete the category and <strong>all anime
+                            entries</strong> inside it.
+                        </p>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+                        <button class="btn btn-ghost" onclick="cancelDeleteCategory()">Cancel</button>
+                        <button class="btn btn-danger" onclick="confirmDeleteCategory()">Delete</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="categoryModalFooter">
+                <div id="categoryDeleteSection" style="display:none">
+                    <button class="btn btn-danger btn-sm" onclick="startDeleteCategory()">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </div>
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button class="btn btn-ghost" onclick="closeCategoryModal()">Cancel</button>
+                    <button class="btn btn-accent" onclick="saveCategoryModal()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="shareModalOverlay">
+        <div class="modal" style="max-width: 500px">
+            <div class="modal-header">
+                <h2 id="shareModalTitle">Share Your List</h2>
+                <button class="modal-close" onclick="closeShareModal()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="shareModalBody">
+                <p style="margin-bottom: 24px;
+                          color: var(--text-muted);
+                          font-size: 0.9em">
+                    Generate a read-only link to share your anime list with others. You can disable this at any time.
+                </p>
+                <div style="display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            margin-bottom: 24px">
+                    <div>
+                        <span style="font-weight: 500; display: block; margin-bottom: 4px;">Enable Public Link</span>
+                        <span style="font-size: 0.8em; color: var(--text-muted);">Anyone with the link can view your
+                        list.</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox"
+                               id="shareToggleInput"
+                               onchange="toggleShareState(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="shareLinkContainer" style="display: none;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Your Share Link</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text"
+                               id="shareLinkInput"
+                               class="form-input"
+                               readonly
+                               style="flex: 1;
+                                      font-family: monospace;
+                                      font-size: 0.9em">
+                        <button class="btn btn-accent" onclick="copyShareLink()">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="shareModalFooter">
+                <button class="btn btn-ghost"
+                        onclick="closeShareModal()"
+                        style="margin-left:auto">Close</button>
+            </div>
+        </div>
+    </div>
+    <div class="mobile-search-overlay" id="mobileSearchOverlay">
+        <div class="mobile-search-header">
+            <i class="fa-solid fa-magnifying-glass mobile-search-icon"></i>
+            <input type="text"
+                   id="mobileSearchInput"
+                   class="form-input"
+                   placeholder="Search your anime list…"
+                   autocomplete="off">
+            <button class="mobile-search-close"
+                    onclick="closeMobileSearch()"
+                    aria-label="Close search">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="mobile-search-results" id="mobileSearchResults">
+            <div class="mobile-search-placeholder">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <p>Type to search your anime list</p>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+{% endblock %}
+{% block extra_body %}
+    <script src="{% static 'animelist/app.js' %}" defer></script>
+{% endblock %}
