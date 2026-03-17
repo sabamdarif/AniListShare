@@ -113,6 +113,7 @@
 
         function switchTab(catId) {
             currentCategoryId = catId;
+            localStorage.setItem('lastCategoryIdShared_' + shareId, catId);
             document.querySelectorAll(".tab-wrapper").forEach(t => t.classList.toggle("active", t.dataset.catId == catId));
             document.querySelectorAll(".category-panel").forEach(p => p.classList.toggle("active", p.dataset.catId == catId));
         }
@@ -241,8 +242,12 @@
                     });
                 });
 
-                const firstCatId = categories[0].id;
-                switchTab(firstCatId);
+                let targetCatId = categories[0].id;
+                const lastCatId = localStorage.getItem('lastCategoryIdShared_' + shareId);
+                if (lastCatId && categories.some(c => c.id == lastCatId)) {
+                    targetCatId = lastCatId;
+                }
+                switchTab(targetCatId);
 
                 const loadPromises = categories.map(cat => loadCategoryShared(cat.id));
                 await Promise.all(loadPromises);

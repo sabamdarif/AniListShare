@@ -2,6 +2,7 @@ let currentCategoryId = null;
 
 function switchTab(catId) {
   currentCategoryId = catId;
+  localStorage.setItem("lastCategoryId", catId);
   document
     .querySelectorAll(".tab-wrapper")
     .forEach((t) => t.classList.toggle("active", t.dataset.catId == catId));
@@ -1281,10 +1282,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   checkActiveFetchTask();
 
-  const firstTab = document.querySelector(".tab");
-  if (firstTab) {
-    switchTab(firstTab.dataset.catId);
-    loadCategory(firstTab.dataset.catId);
+  let activeTab = document.querySelector(".tab");
+  const lastCatId = localStorage.getItem("lastCategoryId");
+  if (lastCatId) {
+    const savedTab = document.querySelector(`.tab[data-cat-id="${lastCatId}"]`);
+    if (savedTab) activeTab = savedTab;
+  }
+
+  if (activeTab) {
+    switchTab(activeTab.dataset.catId);
+    loadCategory(activeTab.dataset.catId);
   }
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -1340,7 +1347,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".category-panel").forEach((panel) => {
     const catId = panel.dataset.catId;
-    if (catId && catId !== (firstTab && firstTab.dataset.catId)) {
+    if (catId && catId !== (activeTab && activeTab.dataset.catId)) {
       loadCategory(catId);
     }
   });
