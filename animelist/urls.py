@@ -67,6 +67,11 @@ urlpatterns = [
     path("api/share/status/", views.api_get_share_status, name="api_get_share_status"),
     path("shared/<uuid:share_id>/", views.shared_list_view, name="shared_list_view"),
     path(
+        "api/shared/<uuid:share_id>/categories/",
+        views.api_shared_categories,
+        name="api_shared_categories",
+    ),
+    path(
         "api/shared/<uuid:share_id>/anime/",
         views.api_shared_anime_list,
         name="api_shared_anime_list",

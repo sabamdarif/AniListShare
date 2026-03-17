@@ -1120,11 +1120,6 @@ def shared_list_view(request, share_id):
     if not profile.is_enabled:
         return render(request, "animelist/shared_404.html", status=404)
 
-    categories = (
-        Category.objects.filter(user=profile.user)
-        .prefetch_related("anime_entries__seasons")
-        .all()
-    )
     owner_name = (
         profile.user.username.split("@")[0]
         if "@" in profile.user.username
@@ -1135,11 +1130,26 @@ def shared_list_view(request, share_id):
         request,
         "animelist/shared_index.html",
         {
-            "categories": categories,
             "owner_name": owner_name,
             "share_id": share_id,
         },
     )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_shared_categories(request, share_id):
+    try:
+        profile = SharedListProfile.objects.get(share_id=share_id)
+    except (SharedListProfile.DoesNotExist, ValueError):
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    if not profile.is_enabled:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    categories = Category.objects.filter(user=profile.user).order_by("order")
+    data = [{"id": c.id, "name": c.name, "order": c.order} for c in categories]
+    return JsonResponse({"categories": data})
 
 
 @csrf_exempt

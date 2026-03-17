@@ -83,40 +83,8 @@
                 {% endif %}
             </div>
         </div>
-        <div class="tabs-bar">
-            {% for cat in categories %}
-                <div class="tab-wrapper" data-cat-id="{{ cat.id }}">
-                    <button class="tab" data-cat-id="{{ cat.id }}">{{ cat.name }}</button>
-                </div>
-            {% endfor %}
-        </div>
-        <div class="container">
-            {% for cat in categories %}
-                <div class="category-panel" data-cat-id="{{ cat.id }}">
-                    <table class="anime-table">
-                        <thead>
-                            <tr>
-                                <th class="col-num">#</th>
-                                <th class="col-thumb"></th>
-                                <th class="col-name">Name</th>
-                                <th class="col-seasons">Seasons</th>
-                                <th class="col-lang">Language</th>
-                                <th class="col-stars">Stars</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="6">
-                                    <div class="empty-state">
-                                        <p>Loading…</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            {% endfor %}
-        </div>
+        <div class="tabs-bar" id="tabsBar"></div>
+        <div class="container" id="categoriesContainer"></div>
         <div class="mobile-search-overlay" id="mobileSearchOverlay">
             <div class="mobile-search-header">
                 <i class="fa-solid fa-magnifying-glass mobile-search-icon"></i>
@@ -140,7 +108,6 @@
         </div>
         <!-- Load read-only JS -->
         <script>
-        // Use a simpler script for read-only view
         const shareId = document.body.dataset.shareId;
         let currentCategoryId = null;
 
@@ -220,6 +187,70 @@
             }
         }
 
+        function buildCategoryPanel(catId) {
+            return `<div class="category-panel" data-cat-id="${catId}">
+                <table class="anime-table">
+                    <thead>
+                        <tr>
+                            <th class="col-num">#</th>
+                            <th class="col-thumb"></th>
+                            <th class="col-name">Name</th>
+                            <th class="col-seasons">Seasons</th>
+                            <th class="col-lang">Language</th>
+                            <th class="col-stars">Stars</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state"><p>Loading…</p></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        async function loadSharedCategories() {
+            const tabsBar = document.getElementById("tabsBar");
+            const container = document.getElementById("categoriesContainer");
+
+            try {
+                const resp = await fetch(`/api/shared/${shareId}/categories/`);
+                if (!resp.ok) throw new Error("Failed to load categories");
+                const data = await resp.json();
+                const categories = data.categories || [];
+
+                if (categories.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><p>This list has no categories yet.</p></div>`;
+                    return;
+                }
+
+                tabsBar.innerHTML = categories.map(cat =>
+                    `<div class="tab-wrapper" data-cat-id="${cat.id}">
+                        <button class="tab" data-cat-id="${cat.id}">${cat.name}</button>
+                    </div>`
+                ).join("");
+
+                container.innerHTML = categories.map(cat => buildCategoryPanel(cat.id)).join("");
+
+                document.querySelectorAll(".tab").forEach(tab => {
+                    tab.addEventListener("click", () => {
+                        switchTab(tab.dataset.catId);
+                        loadCategoryShared(tab.dataset.catId);
+                    });
+                });
+
+                const firstCatId = categories[0].id;
+                switchTab(firstCatId);
+
+                const loadPromises = categories.map(cat => loadCategoryShared(cat.id));
+                await Promise.all(loadPromises);
+            } catch (err) {
+                container.innerHTML = `<div class="empty-state"><p>Error loading list. <button class="btn btn-ghost btn-sm" onclick="loadSharedCategories()">Retry</button></p></div>`;
+            }
+        }
+
         function setupLocalSearchShared() {
             const input = document.getElementById("localSearchInput");
             const resultsBox = document.getElementById("localSearchResults");
@@ -231,7 +262,8 @@
                 if (q.length > 0) {
                     document.querySelectorAll(`.category-panel`).forEach(panel => {
                         const rows = panel.querySelectorAll("tbody tr[data-id]");
-                        const catName = document.querySelector(`.tab[data-cat-id="${panel.dataset.catId}"]`).textContent;
+                        const catTab = document.querySelector(`.tab[data-cat-id="${panel.dataset.catId}"]`);
+                        const catName = catTab ? catTab.textContent : "";
 
                         rows.forEach(tr => {
                             const titleEl = tr.querySelector(".anime-title");
@@ -435,7 +467,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            // Mobile menu toggle
             const mobileMenuBtn = document.getElementById("mobileMenuBtn");
             const headerActions = document.getElementById("headerActions");
             if (mobileMenuBtn && headerActions) {
@@ -446,26 +477,7 @@
 
             setupLocalSearchShared();
             setupMobileSearchShared();
-            const firstTab = document.querySelector(".tab");
-            if (firstTab) {
-                switchTab(firstTab.dataset.catId);
-                loadCategoryShared(firstTab.dataset.catId);
-            }
-
-            document.querySelectorAll(".tab").forEach(tab => {
-                tab.addEventListener("click", () => {
-                    switchTab(tab.dataset.catId);
-                    loadCategoryShared(tab.dataset.catId);
-                });
-            });
-
-            // Preload all
-            document.querySelectorAll(".category-panel").forEach(panel => {
-                const catId = panel.dataset.catId;
-                if (catId && catId !== (firstTab && firstTab.dataset.catId)) {
-                    loadCategoryShared(catId);
-                }
-            });
+            loadSharedCategories();
         });
         </script>
     </body>
