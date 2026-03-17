@@ -2,6 +2,11 @@
 
 A Django web app to manage your anime watchlist with a tabbed, spreadsheet-style interface.
 
+## Screenshots
+
+![Login Screen](screenshots/login.png)
+![Home Screen](screenshots/home.png)
+
 ## Features
 
 - Tabbed categories imported from your ODS file
@@ -14,3 +19,4 @@ A Django web app to manage your anime watchlist with a tabbed, spreadsheet-style
 ## Setup
 
 Please refer to [SETUP.md](SETUP.md) for detailed setup instructions.
+
