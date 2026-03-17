@@ -1,4 +1,4 @@
-# My Anime List
+# AniListShare
 
 A Django web app to manage your anime watchlist with a tabbed, spreadsheet-style interface.
 
@@ -73,7 +73,7 @@ Follow these steps to enable **Sign in with Google**:
 3. Navigate to **APIs & Services → Credentials**.
 4. Click **Create Credentials → OAuth client ID**.
 5. Select **Web application** as the application type.
-6. Give it a name (e.g., `My Anime List`).
+6. Give it a name (e.g., `AniListShare`).
 
 ### 2. Add Authorized Redirect URIs
 
