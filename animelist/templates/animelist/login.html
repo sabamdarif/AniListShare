@@ -328,7 +328,18 @@
                                placeholder="you@example.com">
                     </div>
                     <div class="form-group">
-                        <label>Password</label>
+                        <div style="display: flex;
+                                    justify-content: space-between;
+                                    align-items: baseline;
+                                    margin-bottom: 6px">
+                            <label style="margin-bottom: 0;">Password</label>
+                            <a href="#"
+                               id="forgot-password-link"
+                               style="font-size: 0.85em;
+                                      color: var(--accent);
+                                      text-decoration: none;
+                                      font-weight: 600">Forgot Password?</a>
+                        </div>
                         <input type="password" name="password" class="form-input" required>
                     </div>
                     <button type="submit" class="btn btn-accent">Log In with Email</button>
@@ -338,5 +349,48 @@
                 </div>
             </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const forgotBtn = document.getElementById('forgot-password-link');
+                const emailInput = document.querySelector('input[name="email"]');
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                forgotBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const email = emailInput.value.trim();
+
+                    if (!email) {
+                        emailInput.style.borderColor = 'var(--danger)';
+                        emailInput.style.borderWidth = '2px';
+                        emailInput.focus();
+                    } else {
+                        // Submit a POST request to forgot password with the email
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = "{% url 'forgot_password' %}";
+
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = 'csrfmiddlewaretoken';
+                        csrfInput.value = csrfToken;
+
+                        const emailInputHidden = document.createElement('input');
+                        emailInputHidden.type = 'hidden';
+                        emailInputHidden.name = 'email';
+                        emailInputHidden.value = email;
+
+                        form.appendChild(csrfInput);
+                        form.appendChild(emailInputHidden);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+
+                emailInput.addEventListener('input', () => {
+                    emailInput.style.borderColor = 'var(--border)';
+                    emailInput.style.borderWidth = '1px';
+                });
+            });
+        </script>
     </body>
 </html>

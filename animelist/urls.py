@@ -6,6 +6,13 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("signup/", views.signup_view, name="signup"),
     path("login/", views.login_view, name="login"),
+    path("forgot-password/", views.forgot_password_view, name="forgot_password"),
+    path(
+        "verify-forgot-password/",
+        views.verify_forgot_password_view,
+        name="verify_forgot_password",
+    ),
+    path("reset-password/", views.reset_password_view, name="reset_password"),
     path("verify/", views.verify_otp_view, name="verify_otp"),
     path("logout/", views.logout_view, name="logout"),
     path("api/anime/", views.api_anime_list, name="api_anime_list"),

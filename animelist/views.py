@@ -18,6 +18,7 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils.crypto import get_random_string
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -128,6 +129,124 @@ def login_view(request):
             )
 
     return render(request, "animelist/login.html")
+
+
+def forgot_password_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+
+        if not email:
+            return redirect("login")
+
+        if not User.objects.filter(email=email).exists():
+            # For security, we don't want to leak if the email exists or not
+            # We just pretend we sent the email. But in this simple flow,
+            # we will just redirect to verify to maintain the illusion.
+            otp = get_random_string(length=6, allowed_chars="0123456789")
+            cache.set(f"forgot_pass_otp_dummy", otp, timeout=600)
+            request.session["forgot_pass_email"] = email
+            return redirect("verify_forgot_password")
+
+        otp = get_random_string(length=6, allowed_chars="0123456789")
+        cache.set(f"forgot_pass_otp_{email}", otp, timeout=600)
+
+        html_message = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; display: inline-block; vertical-align: middle;">AniListShare</h2>
+            </div>
+            <p style="font-size: 16px;">We received a request to reset your password. Your OTP is:- <strong>{otp}</strong></p>
+            <p style="color: #666; font-size: 14px; margin-top: 20px;">If you didn't request a password reset, you can safely ignore this email.</p>
+        </div>
+        """
+
+        try:
+            send_mail(
+                subject="AniListShare - Password Reset OTP",
+                message=f"Your OTP is: {otp}",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                html_message=html_message,
+            )
+        except Exception as e:
+            return render(
+                request, "animelist/login.html", {"error": f"Failed to send email: {e}"}
+            )
+
+        request.session["forgot_pass_email"] = email
+        return redirect("verify_forgot_password")
+
+    return redirect("login")
+
+
+def verify_forgot_password_view(request):
+    if "forgot_pass_email" not in request.session:
+        return redirect("login")
+
+    email = request.session["forgot_pass_email"]
+
+    if request.method == "POST":
+        otp = request.POST.get("otp", "").strip()
+
+        # Check proper OTP or dummy OTP
+        cached_otp = cache.get(f"forgot_pass_otp_{email}")
+        dummy_otp = cache.get("forgot_pass_otp_dummy")
+
+        if (cached_otp and cached_otp == otp) or (dummy_otp and dummy_otp == otp):
+            request.session["can_reset_password"] = True
+            return redirect("reset_password")
+        else:
+            return render(
+                request,
+                "animelist/verify_forgot_password.html",
+                {"error": "Invalid OTP"},
+            )
+
+    return render(request, "animelist/verify_forgot_password.html")
+
+
+def reset_password_view(request):
+    if "forgot_pass_email" not in request.session or not request.session.get(
+        "can_reset_password"
+    ):
+        return redirect("login")
+
+    email = request.session["forgot_pass_email"]
+
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        if len(password) < 8:
+            return render(
+                request,
+                "animelist/reset_password.html",
+                {"error": "Password must be at least 8 characters"},
+            )
+
+        if password != confirm_password:
+            return render(
+                request,
+                "animelist/reset_password.html",
+                {"error": "Passwords do not match"},
+            )
+
+        users = User.objects.filter(email=email)
+        if not users.exists():
+            return redirect("login")
+
+        for user in users:
+            user.set_password(password)
+            user.save()
+
+        # Clean up session
+        cache.delete(f"forgot_pass_otp_{email}")
+        del request.session["forgot_pass_email"]
+        del request.session["can_reset_password"]
+
+        return redirect("login")
+
+    return render(request, "animelist/reset_password.html")
 
 
 def logout_view(request):
