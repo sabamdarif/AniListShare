@@ -24,31 +24,115 @@ from django.views.decorators.http import require_http_methods
 from .models import Anime, Category, Season, SharedListProfile
 
 
-def social_login_view(request):
-    """Social login page with Google and Facebook buttons."""
+def signup_view(request):
     if request.user.is_authenticated:
         return redirect("index")
-    return render(request, "animelist/social_login.html")
 
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password", "")
+        if not email or not password:
+            return render(
+                request,
+                "animelist/signup.html",
+                {"error": "Email and password required"},
+            )
+        if User.objects.filter(username=email).exists():
+            return render(
+                request, "animelist/signup.html", {"error": "Email already registered"}
+            )
 
-def signup_view(request):
-    """Legacy signup – redirect to social login."""
-    return redirect("social_login")
+        otp = str(random.randint(100000, 999999))
+
+        # Store pending signup data in cache for 10 minutes
+        cache.set(
+            f"signup_data_{email}", {"password": password, "otp": otp}, timeout=600
+        )
+
+        html_message = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; display: inline-block; vertical-align: middle;">AniListShare</h2>
+            </div>
+            <p style="font-size: 16px;">Your OTP is:- <strong>{otp}</strong></p>
+        </div>
+        """
+
+        send_mail(
+            subject="Your AniListShare OTP Code",
+            message=f"Your OTP is:- {otp}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+            html_message=html_message,
+        )
+
+        request.session["verify_email"] = email
+        return redirect("verify_otp")
+
+    return render(request, "animelist/signup.html")
 
 
 def verify_otp_view(request):
-    """Legacy OTP verification – redirect to social login."""
-    return redirect("social_login")
+    email = request.session.get("verify_email")
+    if not email:
+        return redirect("signup")
+
+    if request.method == "POST":
+        otp = request.POST.get("otp", "").strip()
+        signup_data = cache.get(f"signup_data_{email}")
+
+        if not signup_data:
+            return render(
+                request,
+                "animelist/verify_otp.html",
+                {"error": "OTP expired. Please sign up again."},
+            )
+
+        if signup_data["otp"] == otp:
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=signup_data["password"],
+                is_active=True,
+            )
+
+            cache.delete(f"signup_data_{email}")
+            del request.session["verify_email"]
+
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            return redirect("index")
+        else:
+            return render(
+                request, "animelist/verify_otp.html", {"error": "Invalid OTP"}
+            )
+
+    return render(request, "animelist/verify_otp.html")
 
 
 def login_view(request):
-    """Legacy login – redirect to social login."""
-    return redirect("social_login")
+    if request.user.is_authenticated:
+        return redirect("index")
+
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password", "")
+
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            return redirect("index")
+        else:
+            return render(
+                request, "animelist/login.html", {"error": "Invalid email or password"}
+            )
+
+    return render(request, "animelist/login.html")
 
 
 def logout_view(request):
     logout(request)
-    return redirect("social_login")
+    return redirect("login")
 
 
 @login_required
