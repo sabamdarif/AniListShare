@@ -1166,7 +1166,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const tabsBar = document.querySelector(".tabs-bar");
   if (tabsBar) {
-    Sortable.create(tabsBar, {
+    const tabsSortable = Sortable.create(tabsBar, {
       animation: 150,
       filter: ".edit-cat-btn",
       onEnd: async function (evt) {
@@ -1189,6 +1189,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       },
     });
+
+    const checkTabsSortable = () => {
+      if (window.innerWidth <= 768) {
+        tabsSortable.option("disabled", true);
+      } else {
+        tabsSortable.option("disabled", false);
+      }
+    };
+    checkTabsSortable();
+    window.addEventListener("resize", checkTabsSortable);
   }
 
   const mobileMenuBtn = document.getElementById("mobileMenuBtn");
