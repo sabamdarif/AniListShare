@@ -60,7 +60,8 @@
                     <i class="fa-solid fa-folder-plus"></i>
                     Category
                 </button>
-                <button class="btn btn-accent" onclick="openAddModal()">
+                <button class="btn btn-accent"
+                        {% if not categories %} style="opacity: 0.5; cursor: not-allowed;" onclick="showToast('Please create a category first'); return false;" title="Please create a category first" {% else %} onclick="openAddModal()" {% endif %}>
                     <i class="fa-solid fa-plus"></i> Add Anime
                 </button>
             </div>
