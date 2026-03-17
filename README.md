@@ -1,13 +1,13 @@
 # AniListShare
 
-A Django web app to manage your anime watchlist with a tabbed, spreadsheet-style interface.
+A web app to manage your anime watchlist.
 
 ## Screenshots
 
 ![Login Screen](screenshots/login.png)
 ![Home Screen](screenshots/home.png)
 
-## Features
+## Featiures
 
 - Tabbed categories imported from your ODS file
 - Table view: thumbnail, name, seasons (with comments), language, stars (0–10)
@@ -18,5 +18,4 @@ A Django web app to manage your anime watchlist with a tabbed, spreadsheet-style
 
 ## Setup
 
-Please refer to [SETUP.md](SETUP.md) for detailed setup instructions.
-
+Please refer to [SETUP.md](SETUP.md) to host it yourself
