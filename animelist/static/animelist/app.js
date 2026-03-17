@@ -151,11 +151,45 @@ async function fetchThumbnail(animeId) {
   }
 }
 
+function buildSkeletonTableRows(count = 3) {
+  let html = "";
+  for (let i = 0; i < count; i++) {
+    html += `
+    <tr>
+      <td class="col-num"><div class="skeleton skeleton-text" style="width: 20px; display: inline-block; margin: 0 auto;"></div></td>
+      <td class="col-thumb"><div class="skeleton skeleton-thumb"></div></td>
+      <td class="col-name">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-text" style="width: 40%"></div>
+      </td>
+      <td class="col-seasons">
+        <div class="skeleton skeleton-badge" style="width: 65px"></div>
+        <div class="skeleton skeleton-badge" style="width: 80px"></div>
+      </td>
+      <td class="col-lang">
+        <div class="skeleton skeleton-badge" style="width: 45px"></div>
+      </td>
+      <td class="col-stars">
+        <div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div>
+      </td>
+      <td class="col-actions">
+        <div class="actions-cell">
+           <div class="skeleton" style="width: 30px; height: 30px; border-radius: 6px;"></div>
+        </div>
+      </td>
+    </tr>`;
+  }
+  return html;
+}
+
 async function loadCategory(catId) {
   const panel = document.querySelector(
     `.category-panel[data-cat-id="${catId}"]`,
   );
   const tbody = panel.querySelector("tbody");
+
+  tbody.innerHTML = buildSkeletonTableRows(3);
+
   try {
     const resp = await fetch(`/api/anime/?category_id=${catId}`);
     const data = await resp.json();

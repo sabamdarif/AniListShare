@@ -171,9 +171,38 @@
             </tr>`;
         }
 
+        function buildSkeletonTableRowsReadOnly(count = 3) {
+            let html = '';
+            for(let i=0; i<count; i++) {
+                html += `
+                <tr>
+                    <td class="col-num"><div class="skeleton skeleton-text" style="width: 20px; display: inline-block; margin: 0 auto;"></div></td>
+                    <td class="col-thumb"><div class="skeleton skeleton-thumb"></div></td>
+                    <td class="col-name">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-text" style="width: 40%"></div>
+                    </td>
+                    <td class="col-seasons">
+                        <div class="skeleton skeleton-badge" style="width: 65px"></div>
+                        <div class="skeleton skeleton-badge" style="width: 80px"></div>
+                    </td>
+                    <td class="col-lang">
+                        <div class="skeleton skeleton-badge" style="width: 45px"></div>
+                    </td>
+                    <td class="col-stars">
+                        <div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div><div class="skeleton skeleton-star"></div>
+                    </td>
+                </tr>`;
+            }
+            return html;
+        }
+
         async function loadCategoryShared(catId) {
             const panel = document.querySelector(`.category-panel[data-cat-id="${catId}"]`);
             const tbody = panel.querySelector("tbody");
+
+            tbody.innerHTML = buildSkeletonTableRowsReadOnly(3);
+
             try {
                 const resp = await fetch(`/api/shared/${shareId}/anime/?category_id=${catId}`);
                 if (!resp.ok) throw new Error("Failed to load");
@@ -202,11 +231,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td colspan="6">
-                                <div class="empty-state"><p>Loading…</p></div>
-                            </td>
-                        </tr>
+                        ${buildSkeletonTableRowsReadOnly(3)}
                     </tbody>
                 </table>
             </div>`;

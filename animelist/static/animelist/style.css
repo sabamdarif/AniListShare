@@ -1539,3 +1539,50 @@ select.form-input {
 .mobile-search-no-results p {
   font-size: 0.9rem;
 }
+
+/* Skeleton Loader */
+@keyframes skeleton-loading {
+  0% {
+    background-color: var(--surface2);
+  }
+  100% {
+    background-color: var(--border);
+  }
+}
+
+.skeleton {
+  animation: skeleton-loading 1s linear infinite alternate;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 14px;
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 18px;
+  width: 70%;
+  margin-bottom: 8px;
+}
+
+.skeleton-thumb {
+  width: 80px;
+  height: 112px;
+  border-radius: 6px;
+}
+
+.skeleton-badge {
+  display: inline-block;
+  height: 24px;
+  border-radius: 6px;
+  margin: 2px 3px;
+}
+
+.skeleton-star {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin: 0 1px;
+}
