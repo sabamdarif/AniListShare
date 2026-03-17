@@ -366,18 +366,37 @@ async function saveQuickSeason() {
     seasons: seasonsPayload,
   };
 
-  const resp = await fetch(`/api/anime/${anime.id}/`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const saveBtn = document.querySelector(
+    "#quickSeasonModalOverlay .modal-footer .btn-accent",
+  );
+  let originalText = "";
+  if (saveBtn) {
+    originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+  }
 
-  if (resp.ok) {
-    closeQuickSeasonModal();
-    showToast("Progress Saved!");
-    await loadCategory(currentCategoryId);
-  } else {
-    showToast("Failed to save progress.");
+  try {
+    const resp = await fetch(`/api/anime/${anime.id}/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.ok) {
+      closeQuickSeasonModal();
+      showToast("Progress Saved!");
+      await loadCategory(currentCategoryId);
+    } else {
+      showToast("Failed to save progress.");
+    }
+  } catch (error) {
+    showToast("Error connecting to server");
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalText;
   }
 }
 
@@ -421,6 +440,35 @@ function addSeasonRow(label = "", watched = "", total = "", comment = "") {
 
 async function saveAnime() {
   const id = document.getElementById("animeIdField").value;
+  const categoryId = parseInt(document.getElementById("categorySelect").value);
+
+  if (!id) {
+    const panel = document.querySelector(
+      `.category-panel[data-cat-id="${categoryId}"]`,
+    );
+    if (panel && panel._animeData) {
+      const name = document
+        .getElementById("nameInput")
+        .value.trim()
+        .toLowerCase();
+      const malId =
+        parseInt(document.getElementById("malIdInput").value) || null;
+
+      if (name) {
+        const exists = panel._animeData.some((a) => {
+          if (malId && a.mal_id === malId) return true;
+          if (a.name.toLowerCase() === name) return true;
+          return false;
+        });
+
+        if (exists) {
+          showToast("This anime is already added to this category!");
+          return;
+        }
+      }
+    }
+  }
+
   const seasons = [];
   document.querySelectorAll(".season-row").forEach((row) => {
     const label = row.querySelector(".season-label").value.trim();
@@ -440,7 +488,7 @@ async function saveAnime() {
 
   const starsVal = document.getElementById("starsInput").value;
   const body = {
-    category_id: parseInt(document.getElementById("categorySelect").value),
+    category_id: categoryId,
     name: document.getElementById("nameInput").value.trim(),
     thumbnail_url: document.getElementById("thumbnailInput").value.trim(),
     mal_id: parseInt(document.getElementById("malIdInput").value) || null,
@@ -459,6 +507,16 @@ async function saveAnime() {
     return;
   }
 
+  const saveBtn = document.querySelector(
+    "#modalOverlay .modal-footer .btn-accent",
+  );
+  let originalText = "";
+  if (saveBtn) {
+    originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+  }
+
   let url, method;
   if (id) {
     url = `/api/anime/${id}/`;
@@ -468,19 +526,28 @@ async function saveAnime() {
     method = "POST";
   }
 
-  const resp = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await resp.json();
+  try {
+    const resp = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
 
-  if (resp.ok) {
-    closeModal();
-    showToast(id ? "Updated!" : "Added!");
-    await loadCategory(currentCategoryId);
-  } else {
-    showToast(data.error || "Error");
+    if (resp.ok) {
+      closeModal();
+      showToast(id ? "Updated!" : "Added!");
+      await loadCategory(currentCategoryId);
+    } else {
+      showToast(data.error || "Error");
+    }
+  } catch (error) {
+    showToast("Error connecting to server");
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalText;
   }
 }
 
@@ -489,11 +556,31 @@ async function deleteAnime() {
   if (!id) return;
   if (!confirm("Delete this anime entry?")) return;
 
-  const resp = await fetch(`/api/anime/${id}/delete/`, { method: "DELETE" });
-  if (resp.ok) {
-    closeModal();
-    showToast("Deleted");
-    await loadCategory(currentCategoryId);
+  const delBtn = document.querySelector("#deleteSection .btn-danger");
+  let originalText = "";
+  if (delBtn) {
+    originalText = delBtn.innerHTML;
+    delBtn.disabled = true;
+    delBtn.innerHTML =
+      '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
+  }
+
+  try {
+    const resp = await fetch(`/api/anime/${id}/delete/`, { method: "DELETE" });
+    if (resp.ok) {
+      closeModal();
+      showToast("Deleted");
+      await loadCategory(currentCategoryId);
+    } else {
+      showToast("Failed to delete");
+    }
+  } catch (error) {
+    showToast("Error connecting to server");
+  }
+
+  if (delBtn) {
+    delBtn.disabled = false;
+    delBtn.innerHTML = originalText;
   }
 }
 
@@ -540,31 +627,55 @@ async function saveCategoryModal() {
     return;
   }
 
-  var resp;
-  if (editingCatId) {
-    resp = await fetch("/api/category/" + editingCatId + "/update/", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name }),
-    });
-    if (!resp.ok) {
-      showToast("Failed to rename category");
-      return;
-    }
-  } else {
-    resp = await fetch("/api/category/create/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name }),
-    });
-    if (!resp.ok) {
-      showToast("Failed to create category");
-      return;
-    }
+  const saveBtn = document.querySelector("#categoryModalFooter .btn-accent");
+  let originalText = "";
+  if (saveBtn) {
+    originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
   }
 
-  closeCategoryModal();
-  location.reload();
+  try {
+    var resp;
+    if (editingCatId) {
+      resp = await fetch("/api/category/" + editingCatId + "/update/", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      });
+      if (!resp.ok) {
+        showToast("Failed to rename category");
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalText;
+        }
+        return;
+      }
+    } else {
+      resp = await fetch("/api/category/create/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      });
+      if (!resp.ok) {
+        showToast("Failed to create category");
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalText;
+        }
+        return;
+      }
+    }
+
+    closeCategoryModal();
+    location.reload();
+  } catch (error) {
+    showToast("Error connecting to server");
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalText;
+    }
+  }
 }
 
 function startDeleteCategory() {
@@ -586,16 +697,34 @@ function cancelDeleteCategory() {
 async function confirmDeleteCategory() {
   if (!editingCatId) return;
 
-  var resp = await fetch("/api/category/" + editingCatId + "/delete/", {
-    method: "DELETE",
-  });
+  const delBtn = document.querySelector("#categoryDeleteConfirm .btn-danger");
+  let originalText = "";
+  if (delBtn) {
+    originalText = delBtn.innerHTML;
+    delBtn.disabled = true;
+    delBtn.innerHTML =
+      '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
+  }
 
-  if (resp.ok) {
-    closeCategoryModal();
-    showToast("Category deleted");
-    location.reload();
-  } else {
-    showToast("Failed to delete category");
+  try {
+    var resp = await fetch("/api/category/" + editingCatId + "/delete/", {
+      method: "DELETE",
+    });
+
+    if (resp.ok) {
+      closeCategoryModal();
+      showToast("Category deleted");
+      location.reload();
+    } else {
+      showToast("Failed to delete category");
+    }
+  } catch (error) {
+    showToast("Error connecting to server");
+  }
+
+  if (delBtn) {
+    delBtn.disabled = false;
+    delBtn.innerHTML = originalText;
   }
 }
 
