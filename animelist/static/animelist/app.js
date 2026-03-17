@@ -114,7 +114,6 @@ async function fetchThumbnail(animeId) {
   const placeholder = document.getElementById(`thumb-${animeId}`);
   if (!placeholder) return;
 
-  // Show loading state
   const btn = placeholder.querySelector(".thumb-load-btn");
   if (btn) {
     btn.disabled = true;
@@ -128,12 +127,10 @@ async function fetchThumbnail(animeId) {
     const data = await resp.json();
 
     if (data.thumbnail_url) {
-      // Replace placeholder with actual image
       const td = placeholder.parentElement;
       td.innerHTML = `<img class="thumb" src="${data.thumbnail_url}" alt="" loading="lazy">`;
       showToast("Thumbnail loaded!");
     } else {
-      // Restore button with error state
       if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Not found';
         btn.classList.add("error");
@@ -166,7 +163,6 @@ async function loadCategory(catId) {
     } else {
       tbody.innerHTML = data.anime.map((a, i) => buildTableRow(a, i)).join("");
 
-      // Initialize SortableJS
       if (tbody._sortable) {
         tbody._sortable.destroy();
       }
@@ -180,18 +176,11 @@ async function loadCategory(catId) {
           const animeId = itemEl.dataset.id;
           const direction = evt.newIndex > evt.oldIndex ? "down" : "up";
 
-          // Simple hack: since original reorder was up/down, we might need a distinct reorder logic
-          // or just loop calling reorder. To do it visually immediately without flash:
           const rows = tbody.querySelectorAll("tr[data-id]");
           rows.forEach((row, i) => {
             row.querySelector(".col-num").textContent = i + 1;
           });
 
-          // But backend reorder originally takes just direction. Wait, if we drag from 0 to 5, direction 'down' will only swap 0 and 1.
-          // This implies we should implement a new drag reorder endpoint. For now, since we modified backend/frontend,
-          // let's send standard requests or change the backend to accept new index. Actually I'll implement a fast array update.
-
-          // Let's implement full reorder locally:
           const siblingIds = Array.from(rows).map((r) =>
             parseInt(r.dataset.id),
           );
@@ -336,7 +325,6 @@ function openQuickSeasonModal(
   const anime = panel._animeData.find((a) => a.id === animeId);
   if (!anime) return;
 
-  // Set modal fields
   document.getElementById("qsLabel").textContent = "Edit " + label;
   document.getElementById("qsTotalInput").value = total;
   document.getElementById("qsWatchedInput").value = watched;
@@ -360,7 +348,6 @@ async function saveQuickSeason() {
   const t = tStr !== "" ? parseInt(tStr, 10) : null;
   const cStr = document.getElementById("qsCommentInput").value.trim();
 
-  // Create a deep copy of seasons, find target, update it
   const seasonsPayload = anime.seasons.map((s) => ({
     label: s.label,
     comment: s.id === quickEditSeasonId ? cStr : s.comment,
@@ -369,7 +356,7 @@ async function saveQuickSeason() {
   }));
 
   const body = {
-    category_id: parseInt(anime.category_id || currentCategoryId, 10), // fallback
+    category_id: parseInt(anime.category_id || currentCategoryId, 10),
     name: anime.name,
     thumbnail_url: anime.thumbnail_url || "",
     mal_id: anime.mal_id,
@@ -510,10 +497,6 @@ async function deleteAnime() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Category Modal (Add / Edit / Delete)
-// ---------------------------------------------------------------------------
-
 let editingCatId = null;
 
 function openCategoryModal(catId, catName) {
@@ -528,14 +511,12 @@ function openCategoryModal(catId, catName) {
     ? ""
     : "none";
 
-  // Reset to form view (in case delete confirm was showing)
   document.getElementById("categoryFormSection").style.display = "";
   document.getElementById("categoryDeleteConfirm").style.display = "none";
   document.getElementById("categoryModalFooter").style.display = "";
 
   document.getElementById("categoryModalOverlay").classList.add("open");
 
-  // Focus the input after the modal opens
   setTimeout(function () {
     document.getElementById("categoryNameInput").focus();
   }, 50);
@@ -658,7 +639,6 @@ function setupAutocomplete() {
             const enTitle = item.dataset.english.toLowerCase();
             const query = input.value.trim().toLowerCase();
 
-            // Select the english title if it's a closer match to the user's query, otherwise fallback to japanese
             if (
               item.dataset.english &&
               enTitle.includes(query) &&
@@ -735,7 +715,6 @@ function setupLocalSearch() {
       return;
     }
 
-    // Collect all loaded anime from DOM dataset
     const allAnime = [];
     document.querySelectorAll(".category-panel").forEach((panel) => {
       if (panel._animeData) {
@@ -755,7 +734,6 @@ function setupLocalSearch() {
       return;
     }
 
-    // Fuzzy search: simple inclusion test across name, english title (if available)
     const matches = allAnime.filter((a) => {
       const nameMatch = a.name && a.name.toLowerCase().includes(q);
       const enMatch =
@@ -793,7 +771,6 @@ function setupLocalSearch() {
         const catId = item.dataset.catId;
         const animeId = item.dataset.id;
 
-        // Switch to the correct tab if needed
         if (currentCategoryId !== catId) {
           switchTab(catId);
         }
@@ -801,19 +778,15 @@ function setupLocalSearch() {
         results.classList.remove("show");
         input.value = "";
 
-        // Wait a small tick for the DOM to be visible if we just switched tabs
         setTimeout(() => {
           const row = document.querySelector(`tr[data-id="${animeId}"]`);
           if (row) {
             row.scrollIntoView({ behavior: "smooth", block: "center" });
 
-            // Add highlight animation class
             row.classList.remove("highlighted-row");
-            // Trigger reflow to restart animation if it was already playing
             void row.offsetWidth;
             row.classList.add("highlighted-row");
 
-            // Remove class after animation finishes so it can be retriggered later
             setTimeout(() => row.classList.remove("highlighted-row"), 2000);
           }
         }, 100);
@@ -835,32 +808,23 @@ function setupLocalSearch() {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Mobile Full-Screen Search
-// ---------------------------------------------------------------------------
-
 function openMobileSearch() {
   const overlay = document.getElementById("mobileSearchOverlay");
   const input = document.getElementById("mobileSearchInput");
   const results = document.getElementById("mobileSearchResults");
 
-  // Reset state
   input.value = "";
   results.innerHTML = `<div class="mobile-search-placeholder">
     <i class="fa-solid fa-magnifying-glass"></i>
     <p>Type to search your anime list</p>
   </div>`;
 
-  // Show overlay with animation
   overlay.style.display = "flex";
-  // Force reflow for animation
   void overlay.offsetWidth;
   overlay.classList.add("open");
 
-  // Prevent body scrolling
   document.body.style.overflow = "hidden";
 
-  // Focus input after animation
   setTimeout(() => input.focus(), 100);
 }
 
@@ -869,7 +833,6 @@ function closeMobileSearch() {
   overlay.classList.remove("open");
   document.body.style.overflow = "";
 
-  // Hide after transition
   setTimeout(() => {
     if (!overlay.classList.contains("open")) {
       overlay.style.display = "none";
@@ -909,7 +872,6 @@ function setupMobileSearch() {
       return;
     }
 
-    // Collect all loaded anime
     const allAnime = [];
     document.querySelectorAll(".category-panel").forEach((panel) => {
       if (panel._animeData) {
@@ -970,7 +932,6 @@ function setupMobileSearch() {
       })
       .join("");
 
-    // Attach click handlers
     results.querySelectorAll(".mobile-search-card").forEach((card) => {
       card.addEventListener("click", () => {
         const catId = card.dataset.catId;
@@ -978,12 +939,10 @@ function setupMobileSearch() {
 
         closeMobileSearch();
 
-        // Switch tab if needed
         if (currentCategoryId !== catId) {
           switchTab(catId);
         }
 
-        // Scroll to and highlight the anime row
         setTimeout(() => {
           const row = document.querySelector(`tr[data-id="${animeId}"]`);
           if (row) {
@@ -1009,10 +968,6 @@ function setupMobileSearch() {
     }
   });
 }
-
-// ---------------------------------------------------------------------------
-// Import / Export ODS
-// ---------------------------------------------------------------------------
 
 let importSelectedFile = null;
 
@@ -1125,7 +1080,6 @@ async function uploadImportFile() {
 }
 
 function showFetchProgressOverlay() {
-  // Open the import modal and show the progress section
   document.getElementById("importModalOverlay").classList.add("open");
   document.getElementById("dropZone").style.display = "none";
   document.getElementById("importFileInfo").style.display = "none";
@@ -1171,9 +1125,7 @@ function pollThumbnailStatus() {
         progressText.textContent = "Done! Reloading…";
         setTimeout(() => location.reload(), 1000);
       }
-    } catch {
-      // Ignore transient network errors during polling
-    }
+    } catch {}
   }, 3000);
 }
 
@@ -1185,9 +1137,7 @@ async function checkActiveFetchTask() {
       showFetchProgressOverlay();
       pollThumbnailStatus();
     }
-  } catch {
-    // Ignore — no active task or network error
-  }
+  } catch {}
 }
 
 function exportOds() {
@@ -1200,7 +1150,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupMobileSearch();
   setupInteractiveStars();
 
-  // Check for an active thumbnail fetch task on page load
   checkActiveFetchTask();
 
   const firstTab = document.querySelector(".tab");
@@ -1242,7 +1191,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mobile menu toggle
   const mobileMenuBtn = document.getElementById("mobileMenuBtn");
   const headerActions = document.getElementById("headerActions");
   if (mobileMenuBtn && headerActions) {
@@ -1251,7 +1199,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Preload all category data for search
   document.querySelectorAll(".category-panel").forEach((panel) => {
     const catId = panel.dataset.catId;
     if (catId && catId !== (firstTab && firstTab.dataset.catId)) {
@@ -1259,10 +1206,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Category modal: close on Escape key
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
-      // Close mobile search overlay first if open
       var mobileOverlay = document.getElementById("mobileSearchOverlay");
       if (mobileOverlay && mobileOverlay.classList.contains("open")) {
         closeMobileSearch();
@@ -1276,7 +1221,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Category modal: close on overlay click
   var catOverlay = document.getElementById("categoryModalOverlay");
   if (catOverlay) {
     catOverlay.addEventListener("click", function (e) {
@@ -1286,7 +1230,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Share modal: close on Escape key
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
       var shareOverlay = document.getElementById("shareModalOverlay");
@@ -1296,7 +1239,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Share modal: close on overlay click
   var shareOverlay = document.getElementById("shareModalOverlay");
   if (shareOverlay) {
     shareOverlay.addEventListener("click", function (e) {
@@ -1306,10 +1248,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-// -----------------------------------------
-// Share Functionality
-// -----------------------------------------
 
 function openShareModal() {
   document.getElementById("shareModalOverlay").classList.add("open");
@@ -1346,7 +1284,7 @@ function toggleShareState(isEnabled) {
     .then((data) => {
       if (data.error) {
         showToast("Error toggling share state");
-        document.getElementById("shareToggleInput").checked = !isEnabled; // Revert
+        document.getElementById("shareToggleInput").checked = !isEnabled;
         return;
       }
       document.getElementById("shareLinkInput").value = data.share_url;
@@ -1356,7 +1294,7 @@ function toggleShareState(isEnabled) {
     })
     .catch((err) => {
       showToast("Error connecting to server");
-      document.getElementById("shareToggleInput").checked = !isEnabled; // Revert
+      document.getElementById("shareToggleInput").checked = !isEnabled;
     });
 }
 

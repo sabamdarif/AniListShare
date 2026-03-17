@@ -45,7 +45,6 @@ def signup_view(request):
 
         otp = str(random.randint(100000, 999999))
 
-        # Store pending signup data in cache for 10 minutes
         cache.set(
             f"signup_data_{email}", {"password": password, "otp": otp}, timeout=600
         )
@@ -139,9 +138,6 @@ def forgot_password_view(request):
             return redirect("login")
 
         if not User.objects.filter(email=email).exists():
-            # For security, we don't want to leak if the email exists or not
-            # We just pretend we sent the email. But in this simple flow,
-            # we will just redirect to verify to maintain the illusion.
             otp = get_random_string(length=6, allowed_chars="0123456789")
             cache.set(f"forgot_pass_otp_dummy", otp, timeout=600)
             request.session["forgot_pass_email"] = email
@@ -188,7 +184,6 @@ def verify_forgot_password_view(request):
     if request.method == "POST":
         otp = request.POST.get("otp", "").strip()
 
-        # Check proper OTP or dummy OTP
         cached_otp = cache.get(f"forgot_pass_otp_{email}")
         dummy_otp = cache.get("forgot_pass_otp_dummy")
 
@@ -239,7 +234,6 @@ def reset_password_view(request):
             user.set_password(password)
             user.save()
 
-        # Clean up session
         cache.delete(f"forgot_pass_otp_{email}")
         del request.session["forgot_pass_email"]
         del request.session["can_reset_password"]
@@ -500,7 +494,6 @@ def api_anime_reorder_bulk(request):
     if not isinstance(anime_ids, list):
         return JsonResponse({"error": "anime_ids must be a list"}, status=400)
 
-    # Note: normally we might check if they belong to same category
     for i, a_id in enumerate(anime_ids):
         Anime.objects.filter(id=a_id, category__user=request.user).update(order=i)
 
@@ -638,15 +631,9 @@ def api_fetch_thumbnail(request, anime_id):  # type: ignore[no-untyped-def]
     return JsonResponse({"status": "not_found", "thumbnail_url": "", "mal_id": None})
 
 
-# ---------------------------------------------------------------------------
-# ODS Import / Export
-# ---------------------------------------------------------------------------
-
-
 def _fetch_thumbnail(name, retries=3):
     """Fetch thumbnail URL and MAL ID from Jikan API for a given anime name."""
     encoded_name = urllib.parse.quote(name)
-    # Don't use sfw=true — it filters out hentai titles entirely
     url = f"https://api.jikan.moe/v4/anime?q={encoded_name}&limit=1"
     for attempt in range(retries):
         try:
@@ -684,7 +671,7 @@ def _fire_next_batch(host, task_id):
         req = urllib.request.Request(url, method="POST", data=b"")
         urllib.request.urlopen(req, timeout=3, context=ctx)
     except Exception:
-        pass  # Fire-and-forget: the request was sent, that's all we need
+        pass
 
 
 def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type-arg]
@@ -706,7 +693,6 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
     if not uploaded.name.endswith(".ods"):
         return JsonResponse({"error": "Only .ods files are supported"}, status=400)
 
-    # Write to a temp file so pyexcel_ods3 can read it
     with tempfile.NamedTemporaryFile(suffix=".ods", delete=False, mode="wb") as tmp:
         for chunk in uploaded.chunks():
             tmp.write(chunk)  # type: ignore[arg-type]
@@ -718,13 +704,11 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
         os.unlink(tmp_path)
         return JsonResponse({"error": f"Failed to read ODS: {e}"}, status=400)
     finally:
-        # Clean up temp file after reading
         try:
             os.unlink(tmp_path)
         except OSError:
             pass
 
-    # Clear existing data
     Category.objects.filter(user=request.user).delete()
 
     total_imported = 0
@@ -735,14 +719,10 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
         cat = Category.objects.create(name=sheet_name, order=order, user=request.user)
 
-        # Auto-detect format: export format has 'Name' as first cell of row 0
         first_cell = str(rows[0][0]).strip() if rows[0] else ""
         is_export_format = first_cell == "Name"
 
         if is_export_format:
-            # ── Export format ──────────────────────────────────────
-            # Row 0: header (Name | Thumbnail URL | MAL ID | ...)
-            # Row 1+: data
             for idx, row in enumerate(rows[1:]):
                 if not row or not str(row[0]).strip():
                     continue
@@ -792,7 +772,6 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
                     extra_notes=extra_notes,
                 )
 
-                # Parse season columns (groups of 4: label, comment, watched, total)
                 s_start = 8
                 s_idx = 0
                 while s_start < len(row):
@@ -838,18 +817,12 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
                 total_imported += 1
 
         else:
-            # ── Original format ───────────────────────────────────
-            # Row 0: ['Anime List']
-            # Row 1: ['SERIES'] / ['Movie '] / ['DROP'] / ['Trash'] etc.
-            # Row 2: ['Name', 'Seasons', ..., 'Extra']  (or just ['Name'] for Movies)
-            # Row 3+: data
             sheet_type_cell = (
                 str(rows[1][0]).strip().upper() if len(rows) > 1 and rows[1] else ""
             )
             is_movies = "MOVIE" in sheet_type_cell
             is_trash = "TRASH" in sheet_type_cell
 
-            # Movies have 2 header rows, everything else has 3
             header_count = 2 if is_movies else 3
             data_rows = rows[header_count:]
 
@@ -862,7 +835,6 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
                     continue
 
                 if is_movies:
-                    # Movies: just the name
                     anime = Anime.objects.create(
                         category=cat,
                         name=name,
@@ -871,12 +843,10 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
                     total_imported += 1
                     continue
 
-                # Series / Drop / Trash: parse seasons + language
                 language = ""
                 reason = ""
 
                 if is_trash:
-                    # Trash: Name | Seasons(1-4) | Reason(5) | ?(6) | Extra(7)
                     seasons = []
                     for i in range(1, 5):
                         val = _ods_cell(row, i)
@@ -885,8 +855,6 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
                     reason = _ods_cell(row, 5)
                     language = _ods_cell(row, 7) if len(row) > 7 else ""
                 else:
-                    # Regular series: Name | Seasons(1..N) | Extra(last col)
-                    # Language is in column 12 if 13+ cols, else the last col
                     if len(row) >= 13:
                         language = _ods_cell(row, 12)
                     elif len(row) > 2:
@@ -941,7 +909,6 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
             }
             cache.set(f"thumb_task:{task_id}", task_data, timeout=7200)
             cache.set(f"thumb_active:{request.user.id}", task_id, timeout=7200)
-            # Kick off the self-invoking processing chain
             _fire_next_batch(request.get_host(), task_id)
 
     return JsonResponse(
@@ -970,7 +937,6 @@ def api_process_thumbnail_batch(request):
 
     user_id = task["user_id"]
 
-    # Find the next anime without a thumbnail
     anime = (
         Anime.objects.filter(thumbnail_url="", category__user_id=user_id)
         .order_by("id")
@@ -978,13 +944,11 @@ def api_process_thumbnail_batch(request):
     )
 
     if not anime:
-        # All done
         task["done"] = True
         task["current"] = task["total"]
         cache.set(f"thumb_task:{task_id}", task, timeout=7200)
         return JsonResponse(task)
 
-    # Fetch thumbnail for this anime
     thumb_url, mal_id = _fetch_thumbnail(anime.name)
     if thumb_url:
         anime.thumbnail_url = thumb_url
@@ -992,14 +956,12 @@ def api_process_thumbnail_batch(request):
             anime.mal_id = mal_id
         anime.save(update_fields=["thumbnail_url", "mal_id"])
     else:
-        # Mark as attempted so we don't retry forever
         anime.thumbnail_url = "none"
         anime.save(update_fields=["thumbnail_url"])
 
     task["current"] += 1
     task["current_name"] = anime.name
 
-    # Check if we're done
     remaining = Anime.objects.filter(
         thumbnail_url="", category__user_id=user_id
     ).count()
@@ -1008,9 +970,8 @@ def api_process_thumbnail_batch(request):
 
     cache.set(f"thumb_task:{task_id}", task, timeout=7200)
 
-    # Self-invoke to continue the chain (fire-and-forget)
     if not task["done"]:
-        time.sleep(1.5)  # Jikan rate limit
+        time.sleep(1.5)
         _fire_next_batch(request.get_host(), task_id)
 
     return JsonResponse(task)
@@ -1056,7 +1017,6 @@ def api_export_ods(request):
             "Order",
         ]
 
-        # Determine max number of seasons in this category to set header columns
         max_seasons = 0
         anime_list = list(cat.anime_entries.order_by("order"))
         for anime in anime_list:
@@ -1135,7 +1095,7 @@ def api_toggle_share(request):
             profile.is_enabled = bool(is_enabled)
             profile.save()
     except json.JSONDecodeError:
-        pass  # Just toggle if no body provided
+        pass
 
     url = request.build_absolute_uri(f"/shared/{profile.share_id}/")
     return JsonResponse({"is_enabled": profile.is_enabled, "share_url": url})
