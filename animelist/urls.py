@@ -50,23 +50,7 @@ urlpatterns = [
         views.api_category_delete,
         name="api_category_delete",
     ),
-    path("api/mal-search/", views.api_mal_search, name="api_mal_search"),
-    path(
-        "api/anime/<int:anime_id>/fetch-thumbnail/",
-        views.api_fetch_thumbnail,
-        name="api_fetch_thumbnail",
-    ),
     path("api/import-ods/", views.api_import_ods, name="api_import_ods"),
-    path(
-        "api/process-thumbnail-batch/",
-        views.api_process_thumbnail_batch,
-        name="api_process_thumbnail_batch",
-    ),
-    path(
-        "api/thumbnail-fetch-status/",
-        views.api_thumbnail_fetch_status,
-        name="api_thumbnail_fetch_status",
-    ),
     path("api/export-ods/", views.api_export_ods, name="api_export_ods"),
     path("api/share/toggle/", views.api_toggle_share, name="api_toggle_share"),
     path("api/share/status/", views.api_get_share_status, name="api_get_share_status"),

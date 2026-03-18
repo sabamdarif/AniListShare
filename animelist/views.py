@@ -1,14 +1,8 @@
 import json
+import logging
 import os
 import random
-import ssl
 import tempfile
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
-import uuid
-import logging
 
 import pyexcel_ods3
 from django.conf import settings
@@ -22,7 +16,6 @@ from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.crypto import get_random_string
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Anime, Category, Season, SharedListProfile
@@ -619,106 +612,6 @@ def api_category_delete(request, category_id):
     return JsonResponse({"message": "Category deleted"})
 
 
-@require_http_methods(["GET"])
-def api_mal_search(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Unauthorized"}, status=401)
-    query = request.GET.get("q", "").strip()
-    if not query or len(query) < 2:
-        return JsonResponse({"results": []})
-
-    encoded_q = urllib.parse.quote(query)
-    url = f"https://api.jikan.moe/v4/anime?q={encoded_q}&limit=6"
-
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "AnimeListApp/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-        results = []
-        for item in data.get("data", []):
-            results.append(
-                {
-                    "mal_id": item.get("mal_id"),
-                    "title": item.get("title", ""),
-                    "title_english": item.get("title_english", ""),
-                    "image_url": item.get("images", {})
-                    .get("jpg", {})
-                    .get("image_url", ""),
-                    "episodes": item.get("episodes"),
-                    "type": item.get("type", ""),
-                }
-            )
-        return JsonResponse({"results": results})
-    except Exception:
-        return JsonResponse({"results": []})
-
-
-@require_http_methods(["POST"])
-def api_fetch_thumbnail(request, anime_id):  # type: ignore[no-untyped-def]
-    """Fetch thumbnail from Jikan API for a single anime entry."""
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Unauthorized"}, status=401)
-
-    try:
-        anime = Anime.objects.get(id=anime_id, category__user=request.user)
-    except Anime.DoesNotExist:
-        return JsonResponse({"error": "Not found"}, status=404)
-
-    thumb_url, mal_id = _fetch_thumbnail(anime.name)
-    if thumb_url:
-        anime.thumbnail_url = thumb_url
-        if mal_id:
-            anime.mal_id = mal_id
-        anime.save(update_fields=["thumbnail_url", "mal_id"])
-        return JsonResponse(
-            {"status": "ok", "thumbnail_url": thumb_url, "mal_id": mal_id}
-        )
-    return JsonResponse({"status": "not_found", "thumbnail_url": "", "mal_id": None})
-
-
-def _fetch_thumbnail(name, retries=3):
-    """Fetch thumbnail URL and MAL ID from Jikan API for a given anime name."""
-    encoded_name = urllib.parse.quote(name)
-    url = f"https://api.jikan.moe/v4/anime?q={encoded_name}&limit=1"
-    for attempt in range(retries):
-        try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": "AnimeListMigration/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read().decode())
-            results = data.get("data", [])
-            if results:
-                item = results[0]
-                return (
-                    item.get("images", {}).get("jpg", {}).get("image_url", ""),
-                    item.get("mal_id"),
-                )
-            return "", None
-        except urllib.error.HTTPError as e:
-            if e.code == 429:
-                time.sleep(2 ** (attempt + 1))
-                continue
-            return "", None
-        except Exception:
-            if attempt < retries - 1:
-                time.sleep(1)
-                continue
-            return "", None
-    return "", None
-
-
-def _fire_next_batch(host, task_id):
-    """Fire-and-forget HTTP request to process the next thumbnail batch."""
-    url = f"https://{host}/api/process-thumbnail-batch/?task_id={task_id}"
-    try:
-        ctx = ssl.create_default_context()
-        req = urllib.request.Request(url, method="POST", data=b"")
-        urllib.request.urlopen(req, timeout=3, context=ctx)
-    except Exception:
-        pass
-
-
 def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type-arg]
     """Safely extract and strip a cell value from an ODS row."""
     return str(row[i]).strip() if i < len(row) and row[i] != "" else default
@@ -936,110 +829,12 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
                 total_imported += 1
 
-    auto_fetch = request.POST.get("auto_fetch", "false") == "true"
-    thumbnails_needed = 0
-    task_id = None
-
-    if auto_fetch and total_imported > 0:
-        thumbnails_needed = Anime.objects.filter(
-            thumbnail_url="", category__user=request.user
-        ).count()
-
-        if thumbnails_needed > 0:
-            task_id = str(uuid.uuid4())
-            task_data = {
-                "task_id": task_id,
-                "user_id": request.user.id,
-                "total": thumbnails_needed,
-                "current": 0,
-                "current_name": "",
-                "done": False,
-            }
-            cache.set(f"thumb_task:{task_id}", task_data, timeout=7200)
-            cache.set(f"thumb_active:{request.user.id}", task_id, timeout=7200)
-            _fire_next_batch(request.get_host(), task_id)
-
     return JsonResponse(
         {
             "status": "ok",
             "imported": total_imported,
-            "thumbnails_needed": thumbnails_needed,
-            "task_id": task_id,
         }
     )
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def api_process_thumbnail_batch(request):
-    """Internal endpoint: process 1 thumbnail and self-invoke to continue.
-
-    No user auth required — the task_id serves as the auth token.
-    """
-    task_id = request.GET.get("task_id", "")
-    task = cache.get(f"thumb_task:{task_id}")
-    if not task:
-        return JsonResponse({"error": "Unknown task"}, status=404)
-    if task["done"]:
-        return JsonResponse(task)
-
-    user_id = task["user_id"]
-
-    anime = (
-        Anime.objects.filter(thumbnail_url="", category__user_id=user_id)
-        .order_by("id")
-        .first()
-    )
-
-    if not anime:
-        task["done"] = True
-        task["current"] = task["total"]
-        cache.set(f"thumb_task:{task_id}", task, timeout=7200)
-        return JsonResponse(task)
-
-    thumb_url, mal_id = _fetch_thumbnail(anime.name)
-    if thumb_url:
-        anime.thumbnail_url = thumb_url
-        if mal_id:
-            anime.mal_id = mal_id
-        anime.save(update_fields=["thumbnail_url", "mal_id"])
-    else:
-        anime.thumbnail_url = "none"
-        anime.save(update_fields=["thumbnail_url"])
-
-    task["current"] += 1
-    task["current_name"] = anime.name
-
-    remaining = Anime.objects.filter(
-        thumbnail_url="", category__user_id=user_id
-    ).count()
-    if remaining == 0:
-        task["done"] = True
-
-    cache.set(f"thumb_task:{task_id}", task, timeout=7200)
-
-    if not task["done"]:
-        time.sleep(1.5)
-        _fire_next_batch(request.get_host(), task_id)
-
-    return JsonResponse(task)
-
-
-@require_http_methods(["GET"])
-def api_thumbnail_fetch_status(request):
-    """Return the current thumbnail-fetch task progress for the logged-in user."""
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Unauthorized"}, status=401)
-
-    task_id = cache.get(f"thumb_active:{request.user.id}")
-    if not task_id:
-        return JsonResponse({"active": False})
-
-    task = cache.get(f"thumb_task:{task_id}")
-    if not task:
-        return JsonResponse({"active": False})
-
-    return JsonResponse({"active": True, **task})
 
 
 @require_http_methods(["GET"])

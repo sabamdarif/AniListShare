@@ -138,26 +138,71 @@ async function fetchThumbnail(animeId) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   }
 
-  try {
-    const resp = await fetch(`/api/anime/${animeId}/fetch-thumbnail/`, {
-      method: "POST",
-    });
-    const data = await resp.json();
+  // Find anime name from current panel data
+  const panel = document.querySelector(
+    `.category-panel[data-cat-id="${currentCategoryId}"]`,
+  );
+  const animeData =
+    panel && panel._animeData
+      ? panel._animeData.find((a) => a.id === animeId)
+      : null;
 
-    if (data.thumbnail_url) {
-      const td = placeholder.parentElement;
-      td.innerHTML = `<img class="thumb" src="${data.thumbnail_url}" alt="" loading="lazy">`;
-      showToast("Thumbnail loaded!");
-    } else {
-      if (btn) {
-        btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Not found';
-        btn.classList.add("error");
-        setTimeout(() => {
-          btn.innerHTML = '<i class="fa-solid fa-download"></i> Load';
-          btn.classList.remove("error");
-          btn.disabled = false;
-        }, 2000);
+  if (!animeData) {
+    if (btn) {
+      btn.innerHTML = '<i class="fa-solid fa-download"></i> Load';
+      btn.disabled = false;
+    }
+    showToast("Could not find anime data");
+    return;
+  }
+
+  try {
+    // Call Jikan API directly from the browser
+    const jikanResp = await fetch(
+      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeData.name)}&limit=1`,
+    );
+    const jikanData = await jikanResp.json();
+    const results = jikanData.data || [];
+
+    if (results.length > 0) {
+      const item = results[0];
+      const thumbUrl =
+        (item.images && item.images.jpg && item.images.jpg.image_url) || "";
+      const malId = item.mal_id || null;
+
+      if (thumbUrl) {
+        // Save to DB via existing PUT endpoint
+        await fetch(`/api/anime/${animeId}/`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            thumbnail_url: thumbUrl,
+            mal_id: malId,
+            name: animeData.name,
+          }),
+        });
+
+        const td = placeholder.parentElement;
+        td.innerHTML = `<img class="thumb" src="${thumbUrl}" alt="" loading="lazy">`;
+        showToast("Thumbnail loaded!");
+        // Update cached data
+        if (animeData) {
+          animeData.thumbnail_url = thumbUrl;
+          animeData.mal_id = malId;
+        }
+        return;
       }
+    }
+
+    // Not found
+    if (btn) {
+      btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Not found';
+      btn.classList.add("error");
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fa-solid fa-download"></i> Load';
+        btn.classList.remove("error");
+        btn.disabled = false;
+      }, 2000);
     }
   } catch {
     if (btn) {
@@ -794,24 +839,35 @@ function setupAutocomplete() {
     }
     searchTimeout = setTimeout(async () => {
       try {
-        const resp = await fetch(`/api/mal-search/?q=${encodeURIComponent(q)}`);
-        const data = await resp.json();
-        if (data.results.length === 0) {
+        // Call Jikan API directly from the browser
+        const resp = await fetch(
+          `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&limit=6`,
+        );
+        const jikanData = await resp.json();
+        const items = jikanData.data || [];
+        if (items.length === 0) {
           results.classList.remove("show");
           return;
         }
-        results.innerHTML = data.results
-          .map(
-            (r) => `
-          <div class="autocomplete-item" data-mal-id="${r.mal_id}" data-title="${(r.title || "").replace(/"/g, "&quot;")}" data-english="${(r.title_english || "").replace(/"/g, "&quot;")}" data-image="${r.image_url || ""}">
-            <img src="${r.image_url || ""}" alt="" onerror="this.style.display='none'">
+        results.innerHTML = items
+          .map((r) => {
+            const imageUrl =
+              (r.images && r.images.jpg && r.images.jpg.image_url) || "";
+            const title = r.title || "";
+            const titleEnglish = r.title_english || "";
+            const malId = r.mal_id || "";
+            const type = r.type || "";
+            const episodes = r.episodes || "?";
+            return `
+          <div class="autocomplete-item" data-mal-id="${malId}" data-title="${title.replace(/"/g, "&quot;")}" data-english="${titleEnglish.replace(/"/g, "&quot;")}" data-image="${imageUrl}">
+            <img src="${imageUrl}" alt="" onerror="this.style.display='none'">
             <div class="ac-info">
-              <div class="ac-title">${r.title}</div>
-              <div class="ac-sub">${r.title_english ? r.title_english + " · " : ""}${r.type || ""} · ${r.episodes || "?"} eps</div>
+              <div class="ac-title">${title}</div>
+              <div class="ac-sub">${titleEnglish ? titleEnglish + " · " : ""}${type} · ${episodes} eps</div>
             </div>
           </div>
-        `,
-          )
+        `;
+          })
           .join("");
         results.classList.add("show");
         results.querySelectorAll(".autocomplete-item").forEach((item) => {
@@ -1227,7 +1283,6 @@ async function uploadImportFile() {
 
   const formData = new FormData();
   formData.append("file", importSelectedFile);
-  formData.append("auto_fetch", autoFetch ? "true" : "false");
 
   try {
     const resp = await fetch("/api/import-ods/", {
@@ -1243,12 +1298,10 @@ async function uploadImportFile() {
       return;
     }
 
-    if (data.task_id && data.thumbnails_needed > 0) {
-      showToast(
-        `Imported ${data.imported} anime! Fetching ${data.thumbnails_needed} thumbnails…`,
-      );
+    if (autoFetch && data.imported > 0) {
+      showToast(`Imported ${data.imported} anime! Fetching thumbnails…`);
       showFetchProgressOverlay();
-      pollThumbnailStatus();
+      clientSideBatchFetchThumbnails();
     } else {
       showToast(`Imported ${data.imported} anime!`);
       location.reload();
@@ -1268,57 +1321,89 @@ function showFetchProgressOverlay() {
   document.getElementById("importUploadBtn").style.display = "none";
 }
 
-let _pollTimer = null;
-
-function pollThumbnailStatus() {
-  if (_pollTimer) clearInterval(_pollTimer);
-
+async function clientSideBatchFetchThumbnails() {
   const progressFill = document.getElementById("progressBarFill");
   const progressCount = document.getElementById("progressCount");
   const progressText = document.getElementById("progressText");
 
-  _pollTimer = setInterval(async () => {
-    try {
-      const resp = await fetch("/api/thumbnail-fetch-status/");
-      const info = await resp.json();
-
-      if (!info.active) {
-        clearInterval(_pollTimer);
-        _pollTimer = null;
-        progressFill.style.width = "100%";
-        progressText.textContent = "Done! Reloading…";
-        setTimeout(() => location.reload(), 1000);
-        return;
-      }
-
-      const pct =
-        info.total > 0 ? Math.round((info.current / info.total) * 100) : 0;
-      progressFill.style.width = pct + "%";
-      progressCount.textContent = `${info.current} / ${info.total}`;
-      progressText.textContent = info.current_name
-        ? `${pct}% — ${info.current_name}`
-        : `${pct}% complete`;
-
-      if (info.done) {
-        clearInterval(_pollTimer);
-        _pollTimer = null;
-        progressFill.style.width = "100%";
-        progressText.textContent = "Done! Reloading…";
-        setTimeout(() => location.reload(), 1000);
-      }
-    } catch {}
-  }, 3000);
-}
-
-async function checkActiveFetchTask() {
+  // Load all categories and find anime without thumbnails
+  let animesToFetch = [];
   try {
-    const resp = await fetch("/api/thumbnail-fetch-status/");
-    const info = await resp.json();
-    if (info.active && !info.done) {
-      showFetchProgressOverlay();
-      pollThumbnailStatus();
+    const catPanels = document.querySelectorAll(".category-panel");
+    const catIds = Array.from(catPanels).map((p) => p.dataset.catId);
+
+    for (const catId of catIds) {
+      const resp = await fetch(`/api/anime/?category_id=${catId}`);
+      const data = await resp.json();
+      for (const a of data.anime || []) {
+        if (!a.thumbnail_url || a.thumbnail_url === "none") {
+          animesToFetch.push(a);
+        }
+      }
     }
-  } catch {}
+  } catch {
+    progressText.textContent = "Error loading anime list";
+    setTimeout(() => location.reload(), 2000);
+    return;
+  }
+
+  const total = animesToFetch.length;
+  if (total === 0) {
+    progressFill.style.width = "100%";
+    progressText.textContent = "No thumbnails needed. Reloading…";
+    setTimeout(() => location.reload(), 1000);
+    return;
+  }
+
+  progressCount.textContent = `0 / ${total}`;
+  progressText.textContent = "0% — Starting…";
+
+  for (let i = 0; i < total; i++) {
+    const anime = animesToFetch[i];
+    const pct = Math.round(((i + 1) / total) * 100);
+
+    progressText.textContent = `${pct}% — ${anime.name}`;
+    progressCount.textContent = `${i + 1} / ${total}`;
+    progressFill.style.width = pct + "%";
+
+    try {
+      const jikanResp = await fetch(
+        `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(anime.name)}&limit=1`,
+      );
+      const jikanData = await jikanResp.json();
+      const results = jikanData.data || [];
+
+      if (results.length > 0) {
+        const item = results[0];
+        const thumbUrl =
+          (item.images && item.images.jpg && item.images.jpg.image_url) || "";
+        const malId = item.mal_id || null;
+
+        if (thumbUrl) {
+          await fetch(`/api/anime/${anime.id}/`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              thumbnail_url: thumbUrl,
+              mal_id: malId,
+              name: anime.name,
+            }),
+          });
+        }
+      }
+    } catch {
+      // Skip failures and continue
+    }
+
+    // Rate-limit: wait 1.5 seconds between Jikan API calls
+    if (i < total - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+
+  progressFill.style.width = "100%";
+  progressText.textContent = "Done! Reloading…";
+  setTimeout(() => location.reload(), 1000);
 }
 
 function exportOds() {
@@ -1330,8 +1415,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLocalSearch();
   setupMobileSearch();
   setupInteractiveStars();
-
-  checkActiveFetchTask();
 
   let activeTab = document.querySelector(".tab");
   const lastCatId = localStorage.getItem("lastCategoryId");
