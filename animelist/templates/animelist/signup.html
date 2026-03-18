@@ -262,6 +262,67 @@
             text-decoration: underline;
         }
 
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        .toggle-password:hover {
+            color: var(--accent);
+        }
+
+        .password-requirements {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .req-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s ease;
+        }
+
+        .req-item i {
+            width: 14px;
+            text-align: center;
+        }
+
+        .req-item.valid {
+            color: var(--success, #4caf50);
+        }
+
+        .req-item.invalid {
+            color: var(--danger, #f44336);
+        }
+
+        .form-input.password-mismatch {
+            border-color: var(--danger, #f44336);
+        }
+
+        .form-input.password-match {
+            border-color: var(--success, #4caf50);
+        }
+
         @media (max-width: 480px) {
             .auth-card {
                 padding: 32px 24px;
@@ -324,18 +385,136 @@
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password"
-                           name="password"
-                           class="form-input"
-                           required
-                           minlength="8"
-                           placeholder="At least 8 characters">
+                    <div class="password-input-wrapper">
+                        <input type="password"
+                               id="signup-password"
+                               name="password"
+                               class="form-input"
+                               required
+                               minlength="8"
+                               placeholder="At least 8 characters">
+                        <button type="button"
+                                class="toggle-password"
+                                data-target="signup-password"
+                                tabindex="-1">
+                            <i class="far fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-requirements" id="password-reqs">
+                        <div class="req-item invalid" id="req-length">
+                            <i class="fas fa-times"></i> At least 8 characters
+                        </div>
+                        <div class="req-item invalid" id="req-letter">
+                            <i class="fas fa-times"></i> At least one letter
+                        </div>
+                        <div class="req-item invalid" id="req-number">
+                            <i class="fas fa-times"></i> At least one number
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-accent">Sign Up with Email</button>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password"
+                               id="signup-confirm-password"
+                               name="confirm_password"
+                               class="form-input"
+                               required
+                               minlength="8"
+                               placeholder="Confirm your password">
+                        <button type="button"
+                                class="toggle-password"
+                                data-target="signup-confirm-password"
+                                tabindex="-1">
+                            <i class="far fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" id="signup-submit-btn" class="btn btn-accent" disabled>Sign Up with Email</button>
             </form>
             <div class="auth-links">
                 Already have an account? <a href="{% url 'login' %}">Log in</a>
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.getElementById('signup-password');
+            const confirmInput = document.getElementById('signup-confirm-password');
+            const submitBtn = document.getElementById('signup-submit-btn');
+
+            const reqLength = document.getElementById('req-length');
+            const reqLetter = document.getElementById('req-letter');
+            const reqNumber = document.getElementById('req-number');
+
+            function updateRequirement(element, isValid) {
+                const icon = element.querySelector('i');
+                if (isValid) {
+                    element.classList.remove('invalid');
+                    element.classList.add('valid');
+                    icon.className = 'fas fa-check';
+                } else {
+                    element.classList.remove('valid');
+                    element.classList.add('invalid');
+                    icon.className = 'fas fa-times';
+                }
+            }
+
+            function validateForm() {
+                const p = passwordInput.value;
+                const c = confirmInput.value;
+
+                // Password rules
+                const hasLength = p.length >= 8;
+                const hasLetter = /[a-zA-Z]/.test(p);
+                const hasNumber = /[0-9]/.test(p);
+
+                updateRequirement(reqLength, hasLength);
+                updateRequirement(reqLetter, hasLetter);
+                updateRequirement(reqNumber, hasNumber);
+
+                const passwordValid = hasLength && hasLetter && hasNumber;
+
+                // Match checking
+                let matchValid = false;
+                if (c.length > 0) {
+                    if (p === c) {
+                        confirmInput.classList.remove('password-mismatch');
+                        confirmInput.classList.add('password-match');
+                        matchValid = true;
+                    } else {
+                        confirmInput.classList.remove('password-match');
+                        confirmInput.classList.add('password-mismatch');
+                    }
+                } else {
+                    confirmInput.classList.remove('password-match', 'password-mismatch');
+                }
+
+                // Enable/disable submit
+                submitBtn.disabled = !(passwordValid && matchValid);
+            }
+
+            passwordInput.addEventListener('input', validateForm);
+            confirmInput.addEventListener('input', validateForm);
+
+            // Toggle password visibility
+            document.querySelectorAll('.toggle-password').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const targetInput = document.getElementById(targetId);
+                    const icon = this.querySelector('i');
+
+                    if (targetInput.type === 'password') {
+                        targetInput.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        targetInput.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            });
+        });
+    </script>
 {% endblock %}

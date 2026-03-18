@@ -15,6 +15,11 @@ urlpatterns = [
     path("reset-password/", views.reset_password_view, name="reset_password"),
     path("verify/", views.verify_otp_view, name="verify_otp"),
     path("logout/", views.logout_view, name="logout"),
+    path(
+        "api/validate-password/",
+        views.api_validate_password,
+        name="api_validate_password",
+    ),
     path("api/anime/", views.api_anime_list, name="api_anime_list"),
     path("api/anime/create/", views.api_anime_create, name="api_anime_create"),
     path("api/anime/<int:anime_id>/", views.api_anime_update, name="api_anime_update"),

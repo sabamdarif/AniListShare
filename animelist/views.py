@@ -34,11 +34,19 @@ def signup_view(request):
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
         if not email or not password:
             return render(
                 request,
                 "animelist/signup.html",
                 {"error": "Email and password required"},
+            )
+
+        if password != confirm_password:
+            return render(
+                request,
+                "animelist/signup.html",
+                {"error": "Passwords do not match"},
             )
         if User.objects.filter(username=email).exists():
             return render(
@@ -1230,3 +1238,23 @@ def api_shared_anime_list(request, share_id):
             }
         )
     return JsonResponse({"anime": data})
+
+
+@require_http_methods(["POST"])
+def api_validate_password(request):
+    try:
+        body = json.loads(request.body)
+        password = body.get("password", "")
+        email = body.get("email", "")
+    except json.JSONDecodeError:
+        return JsonResponse({"valid": False, "errors": ["Invalid JSON"]})
+
+    if not password:
+        return JsonResponse({"valid": False, "errors": ["Password required"]})
+
+    user_temp = User(username=email, email=email)
+    try:
+        validate_password(password, user=user_temp)
+        return JsonResponse({"valid": True, "errors": []})
+    except ValidationError as e:
+        return JsonResponse({"valid": False, "errors": list(e.messages)})
