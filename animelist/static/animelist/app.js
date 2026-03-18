@@ -275,10 +275,6 @@ async function loadCategory(catId) {
         onEnd: async function (evt) {
           if (evt.oldIndex === evt.newIndex) return;
 
-          const itemEl = evt.item;
-          const animeId = itemEl.dataset.id;
-          const direction = evt.newIndex > evt.oldIndex ? "down" : "up";
-
           const rows = tbody.querySelectorAll("tr[data-id]");
           rows.forEach((row, i) => {
             row.querySelector(".col-num").textContent = i + 1;

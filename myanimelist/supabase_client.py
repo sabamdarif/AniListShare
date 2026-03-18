@@ -16,27 +16,19 @@ Usage::
 """
 
 import logging
+from functools import lru_cache
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-_client = None
-_initialised = False
 
-
+@lru_cache(maxsize=1)
 def get_supabase_client():
     """Return a Supabase client instance, or ``None`` if credentials are missing.
 
     The client is created once and cached for the lifetime of the process.
     """
-    global _client, _initialised  # noqa: PLW0603
-
-    if _initialised:
-        return _client
-
-    _initialised = True
-
     url = getattr(settings, "SUPABASE_URL", "") or ""
     key = getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "") or ""
 
@@ -50,8 +42,9 @@ def get_supabase_client():
     try:
         from supabase import create_client  # type: ignore[import-untyped]
 
-        _client = create_client(url, key)
+        client = create_client(url, key)
         logger.info("Supabase client initialised successfully.")
+        return client
     except ImportError:
         logger.error(
             "The 'supabase' package is not installed. Run: pip install supabase"
@@ -59,4 +52,4 @@ def get_supabase_client():
     except Exception:
         logger.exception("Failed to initialise Supabase client.")
 
-    return _client
+    return None

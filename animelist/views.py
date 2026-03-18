@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import random
 import tempfile
 
 import pyexcel_ods3
