@@ -879,7 +879,7 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
                     continue
 
                 if is_movies:
-                    anime = Anime.objects.create(
+                    Anime.objects.create(
                         category=cat,
                         name=name,
                         order=idx,
