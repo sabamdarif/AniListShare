@@ -15,6 +15,12 @@ window.fetch = function () {
   return originalFetch.apply(this, arguments);
 };
 
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
 let currentCategoryId = null;
 
 function switchTab(catId) {
@@ -306,7 +312,7 @@ async function updateOrderBackend(animeIds) {
 function updateThumbnailPreview() {
   const url = document.getElementById("thumbnailInput").value.trim();
   const preview = document.getElementById("thumbnailPreview");
-  if (url) {
+  if (url && (url.startsWith("https://") || url.startsWith("http://"))) {
     preview.src = url;
   } else {
     preview.style.display = "none";
@@ -324,7 +330,7 @@ function updateLanguagePreview() {
 
   const langs = input.split(",").filter((l) => l.trim() !== "");
   preview.innerHTML = langs
-    .map((lang) => `<span class="lang-badge">${lang.trim()}</span>`)
+    .map((lang) => `<span class="lang-badge">${escapeHtml(lang.trim())}</span>`)
     .join("");
 }
 
@@ -1137,7 +1143,7 @@ function setupMobileSearch() {
     if (matches.length === 0) {
       results.innerHTML = `<div class="mobile-search-no-results">
         <i class="fa-solid fa-face-sad-tear"></i>
-        <p>No matches found for "${input.value.trim()}"</p>
+        <p>No matches found for "${escapeHtml(input.value.trim())}"</p>
       </div>`;
       return;
     }
