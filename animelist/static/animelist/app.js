@@ -310,14 +310,20 @@ async function updateOrderBackend(animeIds) {
 }
 
 function updateThumbnailPreview() {
-  const url = document.getElementById("thumbnailInput").value.trim();
+  const urlStr = document.getElementById("thumbnailInput").value.trim();
   const preview = document.getElementById("thumbnailPreview");
-  if (url && (url.startsWith("https://") || url.startsWith("http://"))) {
-    preview.src = url;
-  } else {
-    preview.style.display = "none";
-    preview.src = "";
+  try {
+    const parsed = new URL(urlStr, window.location.origin);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      preview.src = parsed.href;
+      preview.style.display = "";
+      return;
+    }
+  } catch (e) {
+    // Ignore invalid URL
   }
+  preview.style.display = "none";
+  preview.src = "";
 }
 
 function updateLanguagePreview() {
