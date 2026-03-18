@@ -8,6 +8,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import logging
 
 import pyexcel_ods3
 from django.conf import settings
@@ -25,6 +26,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Anime, Category, Season, SharedListProfile
+
+logger = logging.getLogger(__name__)
 
 
 def signup_view(request):
@@ -744,9 +747,10 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
     try:
         data = pyexcel_ods3.get_data(tmp_path)
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to read ODS file")
         os.unlink(tmp_path)
-        return JsonResponse({"error": f"Failed to read ODS: {e}"}, status=400)
+        return JsonResponse({"error": "Failed to read ODS file"}, status=400)
     finally:
         try:
             os.unlink(tmp_path)
