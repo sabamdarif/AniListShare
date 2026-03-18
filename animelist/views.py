@@ -14,7 +14,9 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -43,7 +45,15 @@ def signup_view(request):
                 request, "animelist/signup.html", {"error": "Email already registered"}
             )
 
-        otp = str(random.randint(100000, 999999))
+        user_temp = User(username=email, email=email)
+        try:
+            validate_password(password, user=user_temp)
+        except ValidationError as e:
+            return render(
+                request, "animelist/signup.html", {"error": " ".join(e.messages)}
+            )
+
+        otp = get_random_string(length=6, allowed_chars="0123456789")
 
         cache.set(
             f"signup_data_{email}", {"password": password, "otp": otp}, timeout=600
@@ -89,6 +99,17 @@ def verify_otp_view(request):
                 {"error": "OTP expired. Please sign up again."},
             )
 
+        attempts_key = f"signup_attempts_{email}"
+        attempts = cache.get(attempts_key, 0)
+        if attempts >= 4:
+            cache.delete(f"signup_data_{email}")
+            cache.delete(attempts_key)
+            return render(
+                request,
+                "animelist/verify_otp.html",
+                {"error": "Too many invalid attempts. Please sign up again."},
+            )
+
         if signup_data["otp"] == otp:
             user = User.objects.create_user(
                 username=email,
@@ -98,11 +119,13 @@ def verify_otp_view(request):
             )
 
             cache.delete(f"signup_data_{email}")
+            cache.delete(attempts_key)
             del request.session["verify_email"]
 
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
             return redirect("index")
         else:
+            cache.set(attempts_key, attempts + 1, timeout=600)
             return render(
                 request, "animelist/verify_otp.html", {"error": "Invalid OTP"}
             )
@@ -184,13 +207,28 @@ def verify_forgot_password_view(request):
     if request.method == "POST":
         otp = request.POST.get("otp", "").strip()
 
+        attempts_key = f"forgot_pass_attempts_{email}"
+        attempts = cache.get(attempts_key, 0)
+        if attempts >= 4:
+            cache.delete(f"forgot_pass_otp_{email}")
+            cache.delete(attempts_key)
+            return render(
+                request,
+                "animelist/verify_forgot_password.html",
+                {
+                    "error": "Too many invalid attempts. Please request a new password reset."
+                },
+            )
+
         cached_otp = cache.get(f"forgot_pass_otp_{email}")
         dummy_otp = cache.get("forgot_pass_otp_dummy")
 
         if (cached_otp and cached_otp == otp) or (dummy_otp and dummy_otp == otp):
+            cache.delete(attempts_key)
             request.session["can_reset_password"] = True
             return redirect("reset_password")
         else:
+            cache.set(attempts_key, attempts + 1, timeout=600)
             return render(
                 request,
                 "animelist/verify_forgot_password.html",
@@ -212,18 +250,21 @@ def reset_password_view(request):
         password = request.POST.get("password", "")
         confirm_password = request.POST.get("confirm_password", "")
 
-        if len(password) < 8:
-            return render(
-                request,
-                "animelist/reset_password.html",
-                {"error": "Password must be at least 8 characters"},
-            )
-
         if password != confirm_password:
             return render(
                 request,
                 "animelist/reset_password.html",
                 {"error": "Passwords do not match"},
+            )
+
+        user_temp = User(username=email, email=email)
+        try:
+            validate_password(password, user=user_temp)
+        except ValidationError as e:
+            return render(
+                request,
+                "animelist/reset_password.html",
+                {"error": " ".join(e.messages)},
             )
 
         users = User.objects.filter(email=email)
@@ -258,7 +299,6 @@ def index(request):
     return render(request, "animelist/index.html", {"categories": categories})
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def api_anime_list(request):
     if not request.user.is_authenticated:
@@ -300,7 +340,6 @@ def api_anime_list(request):
     return JsonResponse({"anime": data})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_anime_create(request):
     if not request.user.is_authenticated:
@@ -353,7 +392,6 @@ def api_anime_create(request):
     return JsonResponse({"id": anime.id, "message": "Created"})
 
 
-@csrf_exempt
 @require_http_methods(["PUT"])
 def api_anime_update(request, anime_id):
     if not request.user.is_authenticated:
@@ -415,7 +453,6 @@ def api_anime_update(request, anime_id):
     return JsonResponse({"message": "Updated"})
 
 
-@csrf_exempt
 @require_http_methods(["DELETE"])
 def api_anime_delete(request, anime_id):
     if not request.user.is_authenticated:
@@ -436,7 +473,6 @@ def api_anime_delete(request, anime_id):
     return JsonResponse({"message": "Deleted"})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_anime_reorder(request):
     if not request.user.is_authenticated:
@@ -480,7 +516,6 @@ def api_anime_reorder(request):
     return JsonResponse({"message": "Reordered"})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_anime_reorder_bulk(request):
     if not request.user.is_authenticated:
@@ -500,7 +535,6 @@ def api_anime_reorder_bulk(request):
     return JsonResponse({"message": "Reordered"})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_category_create(request):
     if not request.user.is_authenticated:
@@ -519,7 +553,6 @@ def api_category_create(request):
     return JsonResponse({"id": cat.id, "name": cat.name, "message": "Created"})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_category_reorder(request):
     if not request.user.is_authenticated:
@@ -539,7 +572,6 @@ def api_category_reorder(request):
     return JsonResponse({"message": "Categories reordered"})
 
 
-@csrf_exempt
 @require_http_methods(["PUT"])
 def api_category_update(request, category_id):
     if not request.user.is_authenticated:
@@ -563,7 +595,6 @@ def api_category_update(request, category_id):
     return JsonResponse({"message": "Category updated"})
 
 
-@csrf_exempt
 @require_http_methods(["DELETE"])
 def api_category_delete(request, category_id):
     if not request.user.is_authenticated:
@@ -577,9 +608,10 @@ def api_category_delete(request, category_id):
     return JsonResponse({"message": "Category deleted"})
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def api_mal_search(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
     query = request.GET.get("q", "").strip()
     if not query or len(query) < 2:
         return JsonResponse({"results": []})
@@ -610,12 +642,14 @@ def api_mal_search(request):
         return JsonResponse({"results": []})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_fetch_thumbnail(request, anime_id):  # type: ignore[no-untyped-def]
     """Fetch thumbnail from Jikan API for a single anime entry."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
     try:
-        anime = Anime.objects.get(id=anime_id)
+        anime = Anime.objects.get(id=anime_id, category__user=request.user)
     except Anime.DoesNotExist:
         return JsonResponse({"error": "Not found"}, status=404)
 
@@ -679,7 +713,6 @@ def _ods_cell(row: list, i: int, default: str = "") -> str:  # type: ignore[type
     return str(row[i]).strip() if i < len(row) and row[i] != "" else default
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_import_ods(request):  # type: ignore[no-untyped-def]
     """Import anime list from an uploaded ODS file."""
@@ -692,6 +725,9 @@ def api_import_ods(request):  # type: ignore[no-untyped-def]
 
     if not uploaded.name.endswith(".ods"):
         return JsonResponse({"error": "Only .ods files are supported"}, status=400)
+
+    if uploaded.size > 5 * 1024 * 1024:
+        return JsonResponse({"error": "File too large (max 5MB)"}, status=400)
 
     with tempfile.NamedTemporaryFile(suffix=".ods", delete=False, mode="wb") as tmp:
         for chunk in uploaded.chunks():
@@ -977,7 +1013,6 @@ def api_process_thumbnail_batch(request):
     return JsonResponse(task)
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def api_thumbnail_fetch_status(request):
     """Return the current thumbnail-fetch task progress for the logged-in user."""
@@ -995,7 +1030,6 @@ def api_thumbnail_fetch_status(request):
     return JsonResponse({"active": True, **task})
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def api_export_ods(request):
     """Export the entire anime list as an ODS file download."""
@@ -1080,7 +1114,6 @@ def api_export_ods(request):
     return response
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def api_toggle_share(request):
     if not request.user.is_authenticated:
@@ -1136,7 +1169,6 @@ def shared_list_view(request, share_id):
     )
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def api_shared_categories(request, share_id):
     try:
@@ -1152,7 +1184,6 @@ def api_shared_categories(request, share_id):
     return JsonResponse({"categories": data})
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def api_shared_anime_list(request, share_id):
     try:

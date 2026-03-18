@@ -1,3 +1,20 @@
+const originalFetch = window.fetch;
+window.fetch = function () {
+  let [resource, config] = arguments;
+  if (
+    config &&
+    config.method &&
+    !["GET", "HEAD", "OPTIONS", "TRACE"].includes(config.method.toUpperCase())
+  ) {
+    config.headers = config.headers || {};
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) {
+      config.headers["X-CSRFToken"] = meta.getAttribute("content");
+    }
+  }
+  return originalFetch.apply(this, arguments);
+};
+
 let currentCategoryId = null;
 
 function switchTab(catId) {

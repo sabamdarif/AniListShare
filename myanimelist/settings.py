@@ -11,12 +11,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 # Security: Secret key from environment variable
 # ---------------------------------------------------------------------------
-SECRET_KEY = (
-    os.environ.get("DJANGO_SECRET_KEY", "")
-    or "django-insecure-anime-list-dev-key-change-in-production"
-)
-
 DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "yes")
+
+_SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not DEBUG and not _SECRET_KEY:
+    raise ValueError(
+        "DJANGO_SECRET_KEY environment variable must be set in production!"
+    )
+SECRET_KEY = _SECRET_KEY or "django-insecure-anime-list-dev-key-change-in-production"
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app", ".now.sh"]
 
@@ -202,8 +204,25 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+
+# ---------------------------------------------------------------------------
+# Password Validation
+# ---------------------------------------------------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 8},
+    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
