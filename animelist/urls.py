@@ -18,9 +18,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("", include("animelist.urls")),
-    # TMP: hot reloading
-    path("__reload__/", include("django_browser_reload.urls")),
-]
+from animelist import views
+
+urlpatterns = [path("", views.home, name="home_page")]
