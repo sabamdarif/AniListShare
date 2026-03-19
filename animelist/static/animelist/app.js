@@ -531,14 +531,14 @@ function addSeasonRow(label = "", watched = "", total = "", comment = "") {
   const t = total !== null ? total : "";
 
   row.innerHTML = `
-    <input type="text" class="form-input season-label" placeholder="e.g. S1, OVA" value="${label.replace(/"/g, "&quot;")}">
+    <input type="text" class="form-input season-label" placeholder="e.g. S1, OVA" value="${label.replace(/"/g, "&quot;")}" oninput="this.value=this.value.replace(/[<>]/g,'')">
     <div class="ep-inputs-wrapper">
       <input type="number" class="form-input season-ep watched" placeholder="Watched" value="${w}" min="0">
       <span class="ep-sep">/</span>
       <input type="number" class="form-input season-ep total" placeholder="Total" value="${t}" min="1">
       <button type="button" class="btn btn-accent btn-sm btn-complete" onclick="processCompleteButton(this)" title="Mark Complete"><i class="fa-solid fa-check-double"></i></button>
     </div>
-    <input type="text" class="form-input season-comment" placeholder="Comment (optional)" value="${comment.replace(/"/g, "&quot;")}">
+    <input type="text" class="form-input season-comment" placeholder="Comment (optional)" value="${comment.replace(/"/g, "&quot;")}" oninput="this.value=this.value.replace(/[<>]/g,'')">
     <button type="button" class="remove-season" onclick="this.parentElement.remove()" title="Remove Season"><i class="fa-solid fa-xmark"></i></button>`;
   sc.appendChild(row);
 }

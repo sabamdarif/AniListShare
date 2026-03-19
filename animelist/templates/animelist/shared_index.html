@@ -57,7 +57,8 @@
                        id="localSearchInput"
                        class="form-input"
                        placeholder="Search this list..."
-                       autocomplete="off">
+                       autocomplete="off"
+                       oninput="this.value=this.value.replace(/[<>]/g,'')">
                 <div class="autocomplete-results" id="localSearchResults"></div>
             </div>
             <button class="mobile-search-btn"
@@ -86,7 +87,8 @@
                        id="mobileSearchInputShared"
                        class="form-input"
                        placeholder="Search this list…"
-                       autocomplete="off">
+                       autocomplete="off"
+                       oninput="this.value=this.value.replace(/[<>]/g,'')">
                 <button class="mobile-search-close"
                         onclick="closeMobileSearchShared()"
                         aria-label="Close search">

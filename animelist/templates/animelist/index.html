@@ -17,7 +17,8 @@
                    id="localSearchInput"
                    class="form-input"
                    placeholder="Search your list..."
-                   autocomplete="off">
+                   autocomplete="off"
+                   oninput="this.value=this.value.replace(/[<>]/g,'')">
             <div class="autocomplete-results" id="localSearchResults"></div>
         </div>
         <button class="mobile-search-btn"
@@ -221,7 +222,8 @@
                                id="nameInput"
                                class="form-input"
                                placeholder="Search anime name…"
-                               autocomplete="off">
+                               autocomplete="off"
+                               oninput="this.value=this.value.replace(/[<>]/g,'')">
                         <div class="autocomplete-results" id="autocompleteResults"></div>
                     </div>
                     <div class="form-group">
@@ -236,7 +238,7 @@
                                    id="thumbnailInput"
                                    class="form-input"
                                    placeholder="https://..."
-                                   oninput="updateThumbnailPreview()">
+                                   oninput="this.value=this.value.replace(/[<>]/g,''); updateThumbnailPreview()">
                         </div>
                     </div>
                     <div class="form-group">
@@ -261,7 +263,7 @@
                                id="languageInput"
                                class="form-input"
                                placeholder="e.g. Eng, Hin, Jap"
-                               oninput="updateLanguagePreview()">
+                               oninput="this.value=this.value.replace(/[<>]/g,''); updateLanguagePreview()">
                         <div id="languagePreview"
                              style="margin-top: 8px;
                                     display: flex;
@@ -290,7 +292,8 @@
                         <input type="text"
                                id="reasonInput"
                                class="form-input"
-                               placeholder="Optional">
+                               placeholder="Optional"
+                               oninput="this.value=this.value.replace(/[<>]/g,'')">
                     </div>
                 </form>
             </div>
@@ -337,7 +340,8 @@
                     <input type="text"
                            id="qsCommentInput"
                            class="form-input"
-                           placeholder="Comment (optional)">
+                           placeholder="Comment (optional)"
+                           oninput="this.value=this.value.replace(/[<>]/g,'')">
                 </div>
             </div>
             <div class="modal-footer">
@@ -434,7 +438,8 @@
                                class="form-input"
                                placeholder="Enter category name…"
                                onkeydown="if(event.key==='Enter'){event.preventDefault();saveCategoryModal()}"
-                               autocomplete="off">
+                               autocomplete="off"
+                               oninput="this.value=this.value.replace(/[<>]/g,'')">
                     </div>
                 </div>
                 <div id="categoryDeleteConfirm"
@@ -529,7 +534,8 @@
                    id="mobileSearchInput"
                    class="form-input"
                    placeholder="Search your anime list…"
-                   autocomplete="off">
+                   autocomplete="off"
+                   oninput="this.value=this.value.replace(/[<>]/g,'')">
             <button class="mobile-search-close"
                     onclick="closeMobileSearch()"
                     aria-label="Close search">
