@@ -21,12 +21,11 @@ class Anime(models.Model):
     )
     name = models.CharField(max_length=500)
     thumbnail_url = models.URLField(max_length=1000, default="", blank=True)
-    mal_id = models.IntegerField(null=True, blank=True)
     language = models.CharField(max_length=200, blank=True, default="")
-    stars = models.IntegerField(null=True, blank=True)
+    stars = models.FloatField(null=True, blank=True)
     order = models.IntegerField(default=0)
-    comments = models.TextField(blank=True, default="")
-    season = models.CharField(max_length=200, blank=True, default="")
+    # comments = models.TextField(blank=True, default="")
+    season = models.CharField(max_length=300, blank=True, default="")
 
     class Meta:
         ordering = ["order"]

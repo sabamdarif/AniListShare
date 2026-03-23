@@ -1,9 +1,11 @@
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 
 from animelist.models import Anime, Category
 
 
+@login_required
 def home(request):
     categories = (
         Category.objects.filter(user=request.user)
@@ -18,25 +20,28 @@ def api_anime_list(request):
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     category_id = request.GET.get("category_id")
-    if not category_id:
+
+    if category_id == "all":
+        anime_queryset = Anime.objects.filter(category__user=request.user).order_by(
+            "category__order", "order"
+        )
+    elif category_id:
+        anime_queryset = Anime.objects.filter(
+            category_id=category_id, category__user=request.user
+        ).order_by("order")
+    else:
         return JsonResponse({"error": "category_id required"}, status=400)
 
-    anime_quarry = Anime.objects.filter(
-        category_id=category_id, category__user=request.user
-    ).order_by("order")
-
     data = []
-    for a in anime_quarry:
+    for a in anime_queryset:
         data.append(
             {
                 "id": a.id,
                 "name": a.name,
                 "thumbnail_url": a.thumbnail_url,
-                "mal_id": a.mal_id,
                 "language": a.language,
                 "stars": a.stars,
                 "order": a.order,
-                "comments": a.comments,
                 "season": a.season,
             }
         )

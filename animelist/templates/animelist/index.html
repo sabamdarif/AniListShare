@@ -22,15 +22,12 @@
             <button type="button" class="header_action_buttons btn_add_anime">
                 <i class="nf nf-oct-plus"></i>Add Anime
             </button>
-            <!-- User profile with dropdown -->
             <div class="user_profile_wrapper" id="user_profile_wrapper">
                 <button type="button"
                         id="user_profile_btn"
                         aria-haspopup="true"
                         aria-expanded="false">
                     <i class="nf nf-fa-circle_user"></i>
-                    <!-- Or use an img tag for a real avatar:
-                    <img src="{% static "animelist/logo.png" %}" alt="Profile" id="user_profile_icon"> -->
                 </button>
                 <div class="user_dropdown_menu" id="user_dropdown_menu" role="menu">
                     <div class="user_dropdown_header">
@@ -64,23 +61,33 @@
                     </div>
                 </div>
             </div>
-            <!-- end user profile -->
         </div>
     </header>
-    {% for cat in categories %}
-        <h2>{{ cat.name }}</h2>
-        {% for anime in cat.anime_related_data.all %}
-            <p>{{ anime.name }}</p>
-            <p>{{ anime.stars }}</p>
-            <p>{{ anime.language }}</p>
-            <p>{{ anime.comments }}</p>
-            <p>{{ anime.season }}</p>
-            <img src="{{ anime.thumbnail_url }}" alt="{{ anime.name }}">
-            <p>{{ anime.mal_id }}</p>
-            <p>{{ anime.order }}</p>
+    <nav class="category_tabs" id="category_tabs">
+        {% for cat in categories %}
+            <button class="category_tab" data-category-id="{{ cat.id }}">{{ cat.name }}</button>
         {% endfor %}
-    {% endfor %}
+        <button class="category_tab" data-category-id="all">All</button>
+    </nav>
+    <main class="anime_table_wrapper">
+        <table class="anime_table" id="anime_table">
+            <thead>
+                <tr>
+                    <th class="col_id">#</th>
+                    <th class="col_thumb">Thumbnail</th>
+                    <th class="col_name">Name</th>
+                    <th class="col_season">Season</th>
+                    <th class="col_lang">Language</th>
+                    <th class="col_stars">Stars</th>
+                    <th class="col_edit"></th>
+                </tr>
+            </thead>
+            <tbody id="anime_table_body">
+            </tbody>
+        </table>
+    </main>
 {% endblock body_content %}
 {% block scripts %}
     <script src="{% static 'animelist/header_dropdown.js' %}"></script>
+    <script src="{% static 'animelist/anime_table.js' %}"></script>
 {% endblock scripts %}

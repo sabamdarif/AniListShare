@@ -16,11 +16,9 @@ class AnimeAdmin(admin.ModelAdmin):
         "category",
         "get_user",
         "thumbnail_url",
-        "mal_id",
         "language",
         "stars",
         "order",
-        "comments",
         "season",
     )
     list_filter = ("category", "category__user")

@@ -313,3 +313,348 @@ header {
 .user_dropdown_logout:hover i {
   color: var(--danger);
 }
+
+/* ── Category Tabs ── */
+.category_tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category_tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.category_tab {
+  position: relative;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.2s ease,
+    background 0.15s ease;
+}
+
+.category_tab::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 60%;
+  height: 2.5px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  transition: transform 0.2s ease;
+}
+
+.category_tab:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.category_tab.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.category_tab.active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+/* ── Anime Table ── */
+.anime_table_wrapper {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.anime_table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+
+.anime_table thead th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border: none;
+}
+
+.anime_table tbody tr {
+  background: var(--surface);
+  transition: background 0.12s ease;
+}
+
+.anime_table tbody tr:hover {
+  background: var(--surface2);
+}
+
+.anime_table tbody td {
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+  vertical-align: middle;
+  border: none;
+}
+
+.anime_table tbody tr td:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.anime_table tbody tr td:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+/* Column widths */
+.col_id {
+  width: 40px;
+  text-align: center;
+  color: var(--text-muted) !important;
+  font-weight: 600;
+}
+
+.col_thumb {
+  width: 100px;
+}
+
+.col_name {
+  width: auto;
+  font-weight: 500;
+}
+
+.col_season {
+  width: 200px;
+}
+
+.col_lang {
+  width: 180px;
+}
+
+.col_stars {
+  width: 140px;
+}
+
+.col_edit {
+  width: 50px;
+  text-align: center;
+}
+
+/* Thumbnail */
+.thumb_img {
+  width: 56px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+/* ── Badges ── */
+.badge_wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge_season {
+  background: rgba(74, 124, 63, 0.15);
+  color: var(--accent);
+}
+
+.badge_season_done .badge_check {
+  color: var(--accent);
+  font-size: 0.65rem;
+}
+
+.badge_lang {
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ── Stars ── */
+.star_display {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.star {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.star.filled {
+  color: var(--star);
+}
+
+.star.half {
+  color: var(--star);
+  opacity: 0.55;
+}
+
+.star.empty {
+  color: var(--border);
+}
+
+.star_num {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── Edit button ── */
+.edit_btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(74, 124, 63, 0.12);
+  color: var(--accent);
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.edit_btn:hover {
+  background: rgba(74, 124, 63, 0.25);
+  transform: scale(1.08);
+}
+
+/* ── Empty message ── */
+.empty_msg {
+  text-align: center;
+  padding: 40px 12px !important;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ── Skeleton loading ── */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+.skel {
+  display: inline-block;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--surface2) 25%,
+    var(--border) 50%,
+    var(--surface2) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+.skel_thumb {
+  width: 40px;
+  height: 54px;
+  border-radius: 4px;
+}
+
+.skel_text {
+  width: 140px;
+  height: 14px;
+}
+
+.skel_badge {
+  width: 80px;
+  height: 20px;
+  border-radius: 12px;
+}
+
+.skel_text_sm {
+  width: 80px;
+  height: 14px;
+}
+
+.skel_btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.skeleton_row td {
+  padding: 10px 12px !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .anime_table_wrapper {
+    padding: 8px;
+  }
+
+  .col_season,
+  .col_lang {
+    display: none;
+  }
+
+  .anime_table thead .col_season,
+  .anime_table thead .col_lang {
+    display: none;
+  }
+
+  .category_tab {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .col_stars {
+    display: none;
+  }
+
+  .anime_table thead .col_stars {
+    display: none;
+  }
+
+  header {
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+
+  #header_search_section {
+    order: 3;
+    max-width: 100%;
+    margin: 4px 0 0;
+    flex-basis: 100%;
+  }
+}
