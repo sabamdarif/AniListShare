@@ -86,18 +86,22 @@
 
   function renderSeasonsDesktop(seasons) {
     if (!seasons || !seasons.length)
-      return '<span class="badge badge_season">—</span>';
+      return '<span class="season_pill" style="opacity:.5">—</span>';
     return seasons
       .map((s) => {
         if (s.completed) {
-          return `<span class="badge badge_season badge_season_done">
-                    S${s.number} <span class="badge_check">✓</span>
-                  </span>`;
+          return `<span class="season_pill">S${s.number}<span class="s_check">✓</span></span>`;
         }
-        return `<span class="badge badge_season badge_season_ip">
-                  S${s.number}
-                  <span class="badge_ep">${s.watched}/${s.total}</span>
-                </span>`;
+        const pct = s.total > 0 ? Math.round((s.watched / s.total) * 100) : 0;
+        return `<span class="season_progress_box">
+          <span class="season_progress_top">
+            <span class="season_progress_label">S${s.number}</span>
+            <span class="season_progress_frac">${s.watched}/${s.total}</span>
+          </span>
+          <span class="season_progress_track">
+            <span class="season_progress_fill" style="width:${pct}%"></span>
+          </span>
+        </span>`;
       })
       .join("");
   }
@@ -158,7 +162,7 @@
           <img src="${a.thumbnail_url}" alt="${a.name}" class="thumb_img" loading="lazy" onerror="this.style.display='none'">
         </td>
         <td class="col_name">${a.name}</td>
-        <td class="col_season"><div class="badge_wrap">${seasonBadges}</div></td>
+        <td class="col_season"><div class="season_wrap">${seasonBadges}</div></td>
         <td class="col_lang"><div class="badge_wrap">${langBadges}</div></td>
         <td class="col_stars">${renderStars(a.stars)}</td>
         <td class="col_edit">
