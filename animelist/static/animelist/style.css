@@ -491,6 +491,20 @@ header {
   font-size: 0.65rem;
 }
 
+/* In-progress season badge — outlined pill */
+.badge_season_ip {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+}
+
+.badge_ep {
+  margin-left: 2px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
 .badge_lang {
   background: var(--surface2);
   color: var(--text-muted);
@@ -565,6 +579,7 @@ header {
   0% {
     background-position: -200px 0;
   }
+
   100% {
     background-position: 200px 0;
   }
@@ -658,3 +673,4 @@ header {
     flex-basis: 100%;
   }
 }
+

@@ -27,18 +27,6 @@
     tableBody.innerHTML = html;
   }
 
-  function parseSeasons(raw) {
-    if (!raw) return [];
-    return raw
-      .split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-      .map((s) => {
-        const m = s.match(/s?(?:eason)?\s*(\d+)/i);
-        return m ? `S${m[1]}` : s.toUpperCase();
-      });
-  }
-
   function parseLanguages(raw) {
     if (!raw) return [];
     const map = {
@@ -58,6 +46,26 @@
       .map((l) => l.trim().toLowerCase())
       .filter(Boolean)
       .map((l) => map[l] || l.charAt(0).toUpperCase() + l.slice(1));
+  }
+
+  function renderSeasons(seasons) {
+    if (!seasons || !seasons.length)
+      return '<span class="badge badge_season">—</span>';
+
+    return seasons
+      .map((s) => {
+        if (s.completed) {
+          return `<span class="badge badge_season badge_season_done">
+                    S${s.number} <span class="badge_check">✓</span>
+                  </span>`;
+        } else {
+          return `<span class="badge badge_season badge_season_ip">
+                    S${s.number}
+                    <span class="badge_ep">${s.watched}/${s.total}</span>
+                  </span>`;
+        }
+      })
+      .join("");
   }
 
   function renderStars(val) {
@@ -85,15 +93,9 @@
 
     let html = "";
     animeList.forEach((a, idx) => {
-      const seasons = parseSeasons(a.season);
       const langs = parseLanguages(a.language);
 
-      const seasonBadges = seasons
-        .map(
-          (s, si) =>
-            `<span class="badge badge_season${si < seasons.length ? " badge_season_done" : ""}">${s} <span class="badge_check">✓</span></span>`,
-        )
-        .join("");
+      const seasonBadges = renderSeasons(a.seasons);
 
       const langBadges = langs
         .map((l) => `<span class="badge badge_lang">${l}</span>`)

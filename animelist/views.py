@@ -21,14 +21,12 @@ def api_anime_list(request):
 
     category_id = request.GET.get("category_id")
 
-    if category_id == "all":
-        anime_queryset = Anime.objects.filter(category__user=request.user).order_by(
-            "category__order", "order"
+    if category_id:
+        anime_queryset = (
+            Anime.objects.filter(category_id=category_id, category__user=request.user)
+            .prefetch_related("seasons")
+            .order_by("order")
         )
-    elif category_id:
-        anime_queryset = Anime.objects.filter(
-            category_id=category_id, category__user=request.user
-        ).order_by("order")
     else:
         return JsonResponse({"error": "category_id required"}, status=400)
 
@@ -42,7 +40,15 @@ def api_anime_list(request):
                 "language": a.language,
                 "stars": a.stars,
                 "order": a.order,
-                "season": a.season,
+                "seasons": [
+                    {
+                        "number": s.number,
+                        "watched": s.watched_episodes,
+                        "total": s.total_episodes,
+                        "completed": s.is_completed,
+                    }
+                    for s in a.seasons.all()
+                ],
             }
         )
 

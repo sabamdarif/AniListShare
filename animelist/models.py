@@ -25,10 +25,27 @@ class Anime(models.Model):
     stars = models.FloatField(null=True, blank=True)
     order = models.IntegerField(default=0)
     # comments = models.TextField(blank=True, default="")
-    season = models.CharField(max_length=300, blank=True, default="")
 
     class Meta:
         ordering = ["order"]
 
     def __str__(self) -> str:
         return str(self.name)
+
+
+class Season(models.Model):
+    anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name="seasons")
+    number = models.PositiveIntegerField(default=1)
+    total_episodes = models.PositiveIntegerField(default=0)
+    watched_episodes = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["number"]
+        unique_together = ("anime", "number")
+
+    def __str__(self):
+        return f"{self.anime.name} - S{self.number} ({self.watched_episodes}/{self.total_episodes})"
+
+    @property
+    def is_completed(self):
+        return self.total_episodes > 0 and self.watched_episodes >= self.total_episodes
