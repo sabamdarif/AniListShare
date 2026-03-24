@@ -13,11 +13,17 @@
   --text-muted: #737373;
   --accent: #4a7c3f;
   --accent2: #5a7a5e;
+  --accent-fg: #1a1a1a;
+  --accent-contrast: #ffffff;
   --primary: #d4d4d4;
   --primary-light: #e5e5e5;
   --danger: #c75050;
   --danger-hover: #e05555;
   --star: #d4900a;
+  --comment-accent: #7a9e7e;
+  --comment-bg: #2a2a2a;
+  --comment-text: #c8c8c8;
+  --overlay: rgba(0, 0, 0, 0.4);
   --radius: 8px;
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
@@ -32,11 +38,17 @@
     --text-muted: #a3a3a3;
     --accent: #9ab87a;
     --accent2: #708b75;
+    --accent-fg: #1a1a1a;
+    --accent-contrast: #ffffff;
     --primary: #404040;
     --primary-light: #525252;
     --danger: #c75050;
     --danger-hover: #e05555;
     --star: #e8b84b;
+    --comment-accent: #86a789;
+    --comment-bg: #1e1e1e;
+    --comment-text: #d1d1d1;
+    --overlay: rgba(0, 0, 0, 0.5);
     --radius: 8px;
     --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
@@ -146,7 +158,7 @@ header {
 
 .btn_add_anime {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
   font-weight: 600;
 }
 
@@ -191,7 +203,6 @@ header {
   display: block;
 }
 
-/* ── Dropdown menu ── */
 .user_dropdown_menu {
   position: absolute;
   top: calc(100% + 8px);
@@ -202,8 +213,6 @@ header {
   border-radius: 12px;
   box-shadow: var(--shadow);
   z-index: 200;
-
-  /* Hidden state */
   opacity: 0;
   pointer-events: none;
   transform: translateY(-6px) scale(0.97);
@@ -306,7 +315,7 @@ header {
 }
 
 .user_dropdown_logout:hover {
-  background: rgba(199, 80, 80, 0.1);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--danger);
 }
 
@@ -314,7 +323,6 @@ header {
   color: var(--danger);
 }
 
-/* ── Category Tabs ── */
 .category_tabs {
   display: flex;
   align-items: center;
@@ -372,7 +380,6 @@ header {
   transform: translateX(-50%) scaleX(1);
 }
 
-/* ── Anime Table ── */
 .anime_table_wrapper {
   padding: 16px;
   overflow-x: auto;
@@ -420,7 +427,6 @@ header {
   border-radius: 0 8px 8px 0;
 }
 
-/* Column widths */
 .col_id {
   width: 40px;
   text-align: center;
@@ -440,6 +446,7 @@ header {
 .col_season {
   width: auto;
   min-width: 200px;
+  overflow: visible;
 }
 
 .col_lang {
@@ -455,7 +462,6 @@ header {
   text-align: center;
 }
 
-/* Thumbnail */
 .thumb_img {
   width: 56px;
   height: 78px;
@@ -464,12 +470,12 @@ header {
   display: block;
 }
 
-/* ── Season column (desktop) ── */
 .season_wrap {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  overflow: visible;
   font-family:
     "Inter",
     system-ui,
@@ -477,7 +483,12 @@ header {
     sans-serif;
 }
 
-/* -- Completed pill -- */
+.season_pill,
+.season_progress_box {
+  position: relative;
+  overflow: visible;
+}
+
 .season_pill {
   display: inline-flex;
   align-items: center;
@@ -485,7 +496,7 @@ header {
   padding: 5px 10px;
   border-radius: 20px;
   background: var(--accent);
-  color: #1a1a1a;
+  color: var(--accent-fg);
   font-size: 0.75rem;
   font-weight: 700;
   white-space: nowrap;
@@ -499,13 +510,12 @@ header {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--accent-contrast) 30%, transparent);
   font-size: 0.6rem;
-  color: #1a1a1a;
+  color: var(--accent-fg);
   line-height: 1;
 }
 
-/* -- In-progress box -- */
 .season_progress_box {
   display: inline-flex;
   flex-direction: column;
@@ -574,7 +584,6 @@ header {
   border: 1px solid var(--border);
 }
 
-/* ── Stars ── */
 .star_display {
   display: inline-flex;
   align-items: center;
@@ -606,14 +615,13 @@ header {
   color: var(--text-muted);
 }
 
-/* ── Edit button ── */
 .edit_btn {
   width: 34px;
   height: 34px;
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
   font-size: 0.85rem;
   display: inline-flex;
   align-items: center;
@@ -629,7 +637,6 @@ header {
   transform: scale(1.08);
 }
 
-/* ── Empty message ── */
 .empty_msg {
   text-align: center;
   padding: 40px 12px !important;
@@ -637,12 +644,10 @@ header {
   font-size: 0.9rem;
 }
 
-/* ── Skeleton loading ── */
 @keyframes shimmer {
   0% {
     background-position: -200px 0;
   }
-
   100% {
     background-position: 200px 0;
   }
@@ -693,7 +698,6 @@ header {
   padding: 10px 12px !important;
 }
 
-/* ── Mobile-only elements (hidden on desktop) ── */
 .m_header_search_btn {
   display: none;
 }
@@ -702,7 +706,223 @@ header {
   display: none;
 }
 
-/* ── Responsive — Mobile card layout ── */
+/* ── Season Comment Anchor Icon ── */
+.season_comment_icon {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  pointer-events: none;
+  line-height: 1;
+  z-index: 2;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.season_has_comment:hover .season_comment_icon {
+  color: var(--comment-accent);
+  border-color: var(--comment-accent);
+  background: var(--surface);
+}
+
+.season_has_tooltip[data-comment],
+.m_season_has_popup[data-comment] {
+  cursor: pointer;
+}
+
+.m_season_comment_icon {
+  font-size: 0.65rem;
+  margin-left: 6px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.m_season_has_popup[data-comment]:active .m_season_comment_icon {
+  opacity: 1;
+  color: var(--comment-accent);
+}
+
+/* ── Desktop Comment Tooltip ── */
+.season_comment_tooltip {
+  position: absolute;
+  z-index: 9999;
+  min-width: 240px;
+  max-width: 340px;
+  border-radius: var(--radius);
+  overflow: visible;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--comment-accent) 15%, transparent),
+    0 0 16px color-mix(in srgb, var(--comment-accent) 20%, transparent),
+    0 8px 32px var(--overlay);
+  animation: tooltipFadeIn 0.18s ease;
+  pointer-events: auto;
+}
+
+.season_comment_stem {
+  position: absolute;
+  top: -10px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid var(--comment-accent);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.season_comment_header {
+  background: var(--comment-accent);
+  color: var(--accent-fg);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  letter-spacing: 0.01em;
+}
+
+.season_comment_body {
+  background: var(--comment-bg);
+  color: var(--comment-text);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 16px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.season_comment_footer {
+  background: var(--comment-bg);
+  padding: 0 16px 12px;
+  display: flex;
+  justify-content: flex-end;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.season_comment_close_btn {
+  background: transparent;
+  border: 1.5px solid var(--comment-accent);
+  color: var(--comment-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.season_comment_close_btn:hover {
+  background: var(--comment-accent);
+  color: var(--accent-fg);
+}
+
+/* ── Mobile Comment Popup ── */
+.m_season_popup_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.m_season_popup_overlay.m_popup_visible {
+  opacity: 1;
+}
+
+.m_season_popup_card {
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--comment-accent) 15%, transparent),
+    0 0 16px color-mix(in srgb, var(--comment-accent) 20%, transparent),
+    0 12px 40px var(--overlay);
+  max-width: 340px;
+  width: 100%;
+  overflow: hidden;
+  animation: popupScaleIn 0.2s ease;
+}
+
+@keyframes popupScaleIn {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.m_season_popup_title {
+  background: var(--comment-accent);
+  color: var(--accent-fg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 12px 16px;
+}
+
+.m_season_popup_body {
+  background: var(--comment-bg);
+  color: var(--comment-text);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  word-break: break-word;
+  white-space: pre-wrap;
+  padding: 16px;
+}
+
+.m_season_popup_close {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 12px;
+  padding: 10px;
+  background: var(--comment-bg);
+  border: 1.5px solid var(--comment-accent);
+  border-radius: 6px;
+  color: var(--comment-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.m_season_popup_close:hover {
+  background: var(--comment-accent);
+  color: var(--accent-fg);
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
   header {
     padding: 8px 12px;
@@ -895,12 +1115,12 @@ header {
     border-radius: 50%;
     border: none;
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-contrast);
     font-size: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 14px rgba(74, 124, 63, 0.45);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent);
     cursor: pointer;
     z-index: 90;
     transition:
@@ -910,7 +1130,7 @@ header {
 
   .m_fab:hover {
     transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(74, 124, 63, 0.55);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 55%, transparent);
   }
 
   .m_card_skel {
@@ -951,3 +1171,4 @@ header {
     font-size: 0.75rem;
   }
 }
+

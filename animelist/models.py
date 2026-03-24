@@ -24,7 +24,6 @@ class Anime(models.Model):
     language = models.CharField(max_length=200, blank=True, default="")
     stars = models.FloatField(null=True, blank=True)
     order = models.IntegerField(default=0)
-    # comments = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["order"]
@@ -38,6 +37,7 @@ class Season(models.Model):
     number = models.PositiveIntegerField(default=1)
     total_episodes = models.PositiveIntegerField(default=0)
     watched_episodes = models.PositiveIntegerField(default=0)
+    comment = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["number"]

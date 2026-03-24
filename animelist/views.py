@@ -46,6 +46,7 @@ def api_anime_list(request):
                         "watched": s.watched_episodes,
                         "total": s.total_episodes,
                         "completed": s.is_completed,
+                        "comment": s.comment,
                     }
                     for s in a.seasons.all()
                 ],
