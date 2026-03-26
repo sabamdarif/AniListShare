@@ -1728,6 +1728,12 @@ header {
     font-size: 0.8rem;
   }
   .aam_top_row {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .aam_top_row .aam_thumb_box {
+    width: 90px;
+    height: 120px;
   }
 }
