@@ -282,13 +282,23 @@
   tabs.forEach((btn) => {
     btn.addEventListener("click", () => {
       setActiveTab(btn);
+      try { localStorage.setItem("active_category", btn.dataset.categoryId); } catch(e) {}
       loadCategory(btn.dataset.categoryId);
     });
   });
 
   if (tabs.length > 0) {
-    setActiveTab(tabs[0]);
-    loadCategory(tabs[0].dataset.categoryId);
+    // Restore active category from localStorage if available
+    let startTab = tabs[0];
+    try {
+      const savedId = localStorage.getItem("active_category");
+      if (savedId) {
+        const found = [...tabs].find((t) => t.dataset.categoryId === savedId);
+        if (found) startTab = found;
+      }
+    } catch(e) {}
+    setActiveTab(startTab);
+    loadCategory(startTab.dataset.categoryId);
   }
 
   let activeTooltip = null;

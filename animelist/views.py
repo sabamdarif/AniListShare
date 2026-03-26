@@ -149,3 +149,35 @@ def api_add_anime(request):
             )
 
     return JsonResponse({"success": True, "anime_id": anime.id}, status=201)
+
+
+@require_POST
+@login_required
+def api_add_category(request):
+    """Create a new Category for the authenticated user."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JsonResponse({"error": "name is required"}, status=400)
+
+    max_order = (
+        Category.objects.filter(user=request.user)
+        .order_by("-order")
+        .values_list("order", flat=True)
+        .first()
+    ) or 0
+
+    category = Category.objects.create(
+        user=request.user,
+        name=name[:200],
+        order=max_order + 1,
+    )
+
+    return JsonResponse(
+        {"success": True, "category_id": category.id, "name": category.name},
+        status=201,
+    )

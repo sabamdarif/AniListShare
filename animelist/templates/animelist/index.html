@@ -90,13 +90,50 @@
             <tbody id="anime_table_body">
             </tbody>
         </table>
-        <button type="button" class="m_fab" id="m_fab_btn" aria-label="Add anime">
-            <i class="nf nf-oct-plus"></i>
-        </button>
+        <div class="m_fab_container" id="m_fab_container">
+            <button type="button"
+                    class="m_fab_option"
+                    id="m_fab_add_category"
+                    aria-label="Add Category">
+                <i class="nf nf-oct-plus"></i> Category
+            </button>
+            <button type="button"
+                    class="m_fab_option"
+                    id="m_fab_add_anime"
+                    aria-label="Add Anime">
+                <i class="nf nf-oct-plus"></i> Add Anime
+            </button>
+            <button type="button"
+                    class="m_fab_main"
+                    id="m_fab_main_btn"
+                    aria-label="Actions">
+                <i class="nf nf-oct-plus"></i>
+            </button>
+        </div>
     </main>
 {% endblock body_content %}
 {% block scripts %}
     <script src="{% static 'animelist/js/header_dropdown.js' %}"></script>
     <script src="{% static 'animelist/js/anime_table.js' %}"></script>
+    <script src="{% static 'animelist/js/add_category_modal.js' %}"></script>
     <script src="{% static 'animelist/js/add_anime_modal.js' %}"></script>
+    <script>
+        // Mobile FAB toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('m_fab_container');
+            const mainBtn = document.getElementById('m_fab_main_btn');
+            if (!mainBtn || !container) return;
+
+            mainBtn.addEventListener('click', () => {
+                container.classList.toggle('m_fab_open');
+            });
+
+            // Close FAB when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!container.contains(e.target)) {
+                    container.classList.remove('m_fab_open');
+                }
+            });
+        });
+    </script>
 {% endblock scripts %}

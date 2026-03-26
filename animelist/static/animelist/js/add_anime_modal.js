@@ -158,7 +158,13 @@
 
     // ★ Now these will always find the buttons because DOM is ready
     document.querySelector(".btn_add_anime")?.addEventListener("click", open);
-    document.getElementById("m_fab_btn")?.addEventListener("click", open);
+    document
+      .getElementById("m_fab_add_anime")
+      ?.addEventListener("click", () => {
+        const container = document.getElementById("m_fab_container");
+        if (container) container.classList.remove("m_fab_open");
+        open();
+      });
 
     /* ── reset ── */
     function reset() {
@@ -185,6 +191,7 @@
     /* ── categories ── */
     function populateCategories() {
       const tabs = document.querySelectorAll(".category_tab");
+      const activeTab = document.querySelector(".category_tab.active");
       catSelect.innerHTML = "";
       tabs.forEach((t) => {
         const o = document.createElement("option");
@@ -192,6 +199,10 @@
         o.textContent = t.textContent.trim();
         catSelect.appendChild(o);
       });
+      // Pre-select the currently active category
+      if (activeTab) {
+        catSelect.value = activeTab.dataset.categoryId;
+      }
     }
 
     /* ── name search (Jikan) ── */
@@ -502,6 +513,11 @@
           return;
         }
         close();
+        // Preserve active category across reload
+        const activeTab = document.querySelector(".category_tab.active");
+        if (activeTab) {
+          try { localStorage.setItem("active_category", activeTab.dataset.categoryId); } catch(e) {}
+        }
         location.reload();
       } catch {
         errorEl.textContent = "Network error";
