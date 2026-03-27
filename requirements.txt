@@ -1,4 +1,0 @@
-Django==6.0.3
-django-browser-reload==1.21.0
-django-stubs==6.0.1
-django-watchfiles==1.4.0

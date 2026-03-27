@@ -1,0 +1,12 @@
+[project]
+name = "anilistshare-new"
+version = "0.1.0"
+description = "A fun way to store your anime watchlist"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.0.3",
+    "django-browser-reload>=1.21.0",
+    "django-stubs>=6.0.1",
+    "django-watchfiles>=1.4.0",
+]
