@@ -12,7 +12,7 @@
   "use strict";
 
   const STORAGE_KEY = "pending_anime_queue";
-  const FLUSH_INTERVAL_MS = 30_000; // 30 seconds
+  const FLUSH_INTERVAL_MS = 5_000; // 5 seconds
   const BULK_API = "/api/bulk-add-anime/";
 
   let _flushTimer = null;
