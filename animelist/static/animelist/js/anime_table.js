@@ -7,6 +7,7 @@
   const tabs = tabsContainer.querySelectorAll(".category_tab");
   const MOBILE_BP = 768;
   let lastList = [];
+  let _currentCategoryId = null;
 
   const isMobile = () => window.innerWidth <= MOBILE_BP;
 
@@ -244,14 +245,47 @@
     else renderTable(animeList);
   }
 
+  /**
+   * Convert a pending queue item into the shape that render() expects.
+   */
+  function pendingToAnime(q, idx) {
+    return {
+      id: q._tempId || "pending_" + idx,
+      name: q.name,
+      thumbnail_url: q.thumbnail_url || "",
+      language: q.language || "",
+      stars: q.stars,
+      seasons: (q.seasons || []).map((s) => ({
+        number: s.number,
+        total: s.total_episodes || 0,
+        watched: s.watched_episodes || 0,
+        completed:
+          s.total_episodes > 0 && s.watched_episodes >= s.total_episodes,
+        comment: s.comment || "",
+      })),
+      _pending: true,
+    };
+  }
+
   async function loadCategory(categoryId) {
+    _currentCategoryId = categoryId;
     showSkeleton(4);
     try {
       const res = await fetch(
         `/api/anime-list/?category_id=${encodeURIComponent(categoryId)}`,
       );
       const data = await res.json();
-      render(data.anime || []);
+      const serverList = data.anime || [];
+
+      // Merge pending queue items for this category
+      let pending = [];
+      if (window.AnimeSaveQueue) {
+        pending = window.AnimeSaveQueue.getPending(categoryId).map((q, i) =>
+          pendingToAnime(q, i),
+        );
+      }
+
+      render([...serverList, ...pending]);
     } catch {
       if (isMobile()) {
         removeMobileList();
@@ -270,6 +304,21 @@
     }
   }
 
+  /* ── expose global refresh for the add-anime modal ── */
+  window.refreshCurrentCategory = function () {
+    if (_currentCategoryId != null) {
+      loadCategory(_currentCategoryId);
+    }
+  };
+
+  /* ── listen for sync events to auto-refresh after flush ── */
+  window.addEventListener("anime-sync", (e) => {
+    const { type } = e.detail || {};
+    if (type === "flush-ok" && _currentCategoryId != null) {
+      loadCategory(_currentCategoryId);
+    }
+  });
+
   let wasMobile = isMobile();
   window.addEventListener("resize", () => {
     const nowMobile = isMobile();
@@ -282,7 +331,9 @@
   tabs.forEach((btn) => {
     btn.addEventListener("click", () => {
       setActiveTab(btn);
-      try { localStorage.setItem("active_category", btn.dataset.categoryId); } catch(e) {}
+      try {
+        localStorage.setItem("active_category", btn.dataset.categoryId);
+      } catch (e) {}
       loadCategory(btn.dataset.categoryId);
     });
   });
@@ -296,7 +347,7 @@
         const found = [...tabs].find((t) => t.dataset.categoryId === savedId);
         if (found) startTab = found;
       }
-    } catch(e) {}
+    } catch (e) {}
     setActiveTab(startTab);
     loadCategory(startTab.dataset.categoryId);
   }
@@ -444,4 +495,3 @@
     requestAnimationFrame(() => popup.classList.add("m_popup_visible"));
   });
 })();
-

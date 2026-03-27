@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from animelist.models import Anime, Category, Season
@@ -60,95 +61,113 @@ def api_anime_list(request):
     return JsonResponse({"anime": data})
 
 
+@csrf_exempt
 @require_POST
 @login_required
-def api_add_anime(request):
-    """Create a new Anime (+ Seasons) for the authenticated user.
+def api_bulk_add_anime(request):
+    """Create multiple Anime (+ Seasons) in a single request.
 
-    Security gates (in order):
-      1. @login_required  → 401 / redirect if not logged in
-      2. Django CsrfViewMiddleware → 403 if CSRF token invalid
-      3. Category ownership check → 403 if category doesn't belong to user
-      4. Input validation → 400 on missing / bad data
+    Accepts: { "items": [ ...same shape as single add-anime body ] }
+    Returns: { "success": true, "created": [ { "anime_id": ..., "name": ... } ] }
+    Caps at 50 items per request for safety.
     """
+    # sendBeacon doesn't send X-CSRFToken header, so exempt this endpoint
+    # and rely on @login_required + session cookie for auth.
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    # ── Required fields ──
-    name = (body.get("name") or "").strip()
-    category_id = body.get("category_id")
+    items = body.get("items")
+    if not isinstance(items, list) or not items:
+        return JsonResponse({"error": "items array is required"}, status=400)
 
-    if not name:
-        return JsonResponse({"error": "name is required"}, status=400)
-    if not category_id:
-        return JsonResponse({"error": "category_id is required"}, status=400)
+    items = items[:50]  # cap
 
-    # ── Authorization: category must belong to current user ──
-    try:
-        category = Category.objects.get(id=category_id, user=request.user)
-    except Category.DoesNotExist:
-        return JsonResponse(
-            {"error": "Category not found or access denied"}, status=403
-        )
+    created = []
+    errors = []
 
-    # ── Optional fields with sanitisation ──
-    thumbnail_url = (body.get("thumbnail_url") or "").strip()[:1000]
-    language = (body.get("language") or "").strip()[:200]
-    stars_raw = body.get("stars")
-    stars = None
-    if stars_raw is not None:
-        try:
-            stars = float(stars_raw)
-            if stars < 0 or stars > 5:
-                stars = max(0, min(5, stars))
-        except (TypeError, ValueError):
-            stars = None
-
-    seasons_raw = body.get("seasons") or []
-    if not isinstance(seasons_raw, list):
-        seasons_raw = []
-
-    # ── Atomic create ──
     with transaction.atomic():
-        max_order = (
-            Anime.objects.filter(category=category)
-            .order_by("-order")
-            .values_list("order", flat=True)
-            .first()
-        ) or 0
-
-        anime = Anime.objects.create(
-            category=category,
-            name=name[:500],
-            thumbnail_url=thumbnail_url,
-            language=language,
-            stars=stars,
-            order=max_order + 1,
-        )
-
-        for s in seasons_raw[:50]:  # cap at 50 seasons
-            if not isinstance(s, dict):
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                errors.append({"index": idx, "error": "invalid item"})
                 continue
+
+            name = (item.get("name") or "").strip()
+            category_id = item.get("category_id")
+
+            if not name:
+                errors.append({"index": idx, "error": "name is required"})
+                continue
+            if not category_id:
+                errors.append({"index": idx, "error": "category_id is required"})
+                continue
+
             try:
-                number = int(s.get("number", 1))
-                total = max(0, int(s.get("total_episodes", 0)))
-                watched = max(0, int(s.get("watched_episodes", 0)))
-            except (TypeError, ValueError):
+                category = Category.objects.get(id=category_id, user=request.user)
+            except Category.DoesNotExist:
+                errors.append(
+                    {"index": idx, "error": "Category not found or access denied"}
+                )
                 continue
 
-            comment = str(s.get("comment", ""))[:2000]
+            thumbnail_url = (item.get("thumbnail_url") or "").strip()[:1000]
+            language = (item.get("language") or "").strip()[:200]
+            stars_raw = item.get("stars")
+            stars = None
+            if stars_raw is not None:
+                try:
+                    stars = float(stars_raw)
+                    if stars < 0 or stars > 5:
+                        stars = max(0, min(5, stars))
+                except (TypeError, ValueError):
+                    stars = None
 
-            Season.objects.create(
-                anime=anime,
-                number=number,
-                total_episodes=total,
-                watched_episodes=min(watched, total),
-                comment=comment,
+            seasons_raw = item.get("seasons") or []
+            if not isinstance(seasons_raw, list):
+                seasons_raw = []
+
+            max_order = (
+                Anime.objects.filter(category=category)
+                .order_by("-order")
+                .values_list("order", flat=True)
+                .first()
+            ) or 0
+
+            anime = Anime.objects.create(
+                category=category,
+                name=name[:500],
+                thumbnail_url=thumbnail_url,
+                language=language,
+                stars=stars,
+                order=max_order + 1,
             )
 
-    return JsonResponse({"success": True, "anime_id": anime.id}, status=201)
+            for s in seasons_raw[:50]:
+                if not isinstance(s, dict):
+                    continue
+                try:
+                    number = int(s.get("number", 1))
+                    total = max(0, int(s.get("total_episodes", 0)))
+                    watched = max(0, int(s.get("watched_episodes", 0)))
+                except (TypeError, ValueError):
+                    continue
+
+                comment = str(s.get("comment", ""))[:2000]
+                Season.objects.create(
+                    anime=anime,
+                    number=number,
+                    total_episodes=total,
+                    watched_episodes=min(watched, total),
+                    comment=comment,
+                )
+
+            created.append({"anime_id": anime.id, "name": anime.name})
+
+    result = {"success": True, "created": created}
+    if errors:
+        result["errors"] = errors
+    return JsonResponse(result, status=201 if created else 400)
 
 
 @require_POST

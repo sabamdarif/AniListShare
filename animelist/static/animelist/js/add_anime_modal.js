@@ -470,7 +470,7 @@
     });
 
     /* ── save ── */
-    saveBtn.addEventListener("click", async () => {
+    saveBtn.addEventListener("click", () => {
       errorEl.textContent = "";
       const name = _selectedName || nameInput.value.trim();
       if (!name) {
@@ -497,33 +497,40 @@
         })),
       };
 
-      saveBtn.disabled = true;
-      try {
-        const r = await fetch("/api/add-anime/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": CSRF,
-          },
-          body: JSON.stringify(body),
-        });
-        const j = await r.json();
-        if (!r.ok) {
-          errorEl.textContent = j.error || "Save failed";
-          return;
-        }
-        close();
-        // Preserve active category across reload
-        const activeTab = document.querySelector(".category_tab.active");
-        if (activeTab) {
-          try { localStorage.setItem("active_category", activeTab.dataset.categoryId); } catch(e) {}
-        }
-        location.reload();
-      } catch {
-        errorEl.textContent = "Network error";
-      } finally {
-        saveBtn.disabled = false;
+      // Queue instead of direct POST — no page reload
+      if (window.AnimeSaveQueue) {
+        window.AnimeSaveQueue.enqueue(body);
       }
+
+      close();
+
+      // Refresh table to show the newly queued item
+      if (typeof window.refreshCurrentCategory === "function") {
+        window.refreshCurrentCategory();
+      }
+
+      // Show a brief success toast
+      showToast(`"${name}" added`);
     });
+
+    /* ── toast helper ── */
+    function showToast(msg) {
+      let container = document.getElementById("asq_toast_container");
+      if (!container) {
+        container = document.createElement("div");
+        container.id = "asq_toast_container";
+        container.className = "asq_toast_container";
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement("div");
+      toast.className = "asq_toast";
+      toast.textContent = msg;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add("asq_toast_visible"));
+      setTimeout(() => {
+        toast.classList.remove("asq_toast_visible");
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
   });
 })();
