@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% load allauth i18n static %}
+{% block extra_css %}
+    <link href="{% static 'accounts/css/base_accounts.css' %}" rel="stylesheet">
+    {% block account_extra_css %}{% endblock %}
+{% endblock %}
+{% block body_content %}
+    <div class="auth_container">
+        <div class="brand_title">
+            <img src="{% static 'core/logo.png' %}" alt="Logo">
+            AniListShare
+        </div>
+        <div class="auth_card">
+            <div class="auth_header">
+                <h1>
+                    {% block account_title %}
+                    {% endblock account_title %}
+                </h1>
+                <p>
+                    {% block account_subtitle %}
+                    {% endblock account_subtitle %}
+                </p>
+            </div>
+            {% block account_content %}{% endblock %}
+            {% block account_extra_actions %}{% endblock %}
+            {% block account_social_login %}
+            {% endblock account_social_login %}
+        </div>
+    </div>
+{% endblock body_content %}
+{% block scripts %}
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const inputs = document.querySelectorAll('.auth_form input:not([type="hidden"]):not([type="checkbox"])');
+        inputs.forEach(input => {
+            input.classList.add('form_input');
+            const label = document.querySelector(`label[for="${input.id}"]`);
+            if (label && !input.placeholder) {
+                input.placeholder = label.innerText;
+            }
+        });
+    });
+    </script>
+    {% block account_scripts %}
+    {% endblock account_scripts %}
+{% endblock scripts %}
