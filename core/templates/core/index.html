@@ -51,7 +51,7 @@
                     <div class="user_dropdown_header">
                         <i class="nf nf-fa-circle_user user_dropdown_avatar_icon"></i>
                         <div class="user_dropdown_info">
-                            <span class="user_dropdown_name">{{ request.user.username }}</span>
+                            <span class="user_dropdown_name">{{ request.user.get_full_name|default:request.user.username }}</span>
                             <span class="user_dropdown_sub">{{ request.user.email }}</span>
                         </div>
                     </div>
