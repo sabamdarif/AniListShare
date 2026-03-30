@@ -100,7 +100,6 @@
                 <div class="aam_lang_input_wrap">
                   <input class="aam_lang_input" type="text"
                          placeholder="Type to add language…" autocomplete="off">
-                  <div class="aam_lang_dropdown"></div>
                 </div>
               </div>
             </div>
@@ -133,8 +132,11 @@
     const addSeasonBtn = $(".aam_add_season_btn");
     const langTags = $(".aam_lang_tags");
     const langInput = $(".aam_lang_input");
-    const langDrop = $(".aam_lang_dropdown");
     const errorEl = $(".aam_error");
+
+    const langDrop = document.createElement("div");
+    langDrop.className = "aam_lang_dropdown";
+    OV.appendChild(langDrop);
     const saveBtn = $(".aam_save_btn");
 
     /* ── open / close ── */
@@ -395,6 +397,22 @@
 
     addSeasonBtn.addEventListener("click", addSeason);
 
+    function updateLangDropPos() {
+      if (langDrop.style.display === "none") return;
+      const wrapRect = langInput.parentElement.getBoundingClientRect();
+      const ovRect = OV.getBoundingClientRect();
+      langDrop.style.top = wrapRect.bottom - ovRect.top + 4 + "px";
+      langDrop.style.left = wrapRect.left - ovRect.left + "px";
+      langDrop.style.width = wrapRect.width + "px";
+    }
+
+    $(".aam_body").addEventListener("scroll", () => {
+      langDrop.style.display = "none";
+    });
+    window.addEventListener("resize", () => {
+      langDrop.style.display = "none";
+    });
+
     /* ── language tags ── */
     function renderLangTags() {
       langTags.innerHTML = _languages
@@ -432,7 +450,12 @@
         html += `<div class="aam_lang_opt aam_lang_custom" data-lang="${cap}">Add "${cap}"</div>`;
       }
       langDrop.innerHTML = html;
-      langDrop.style.display = html ? "block" : "none";
+      if (html) {
+        langDrop.style.display = "block";
+        updateLangDropPos();
+      } else {
+        langDrop.style.display = "none";
+      }
     });
 
     langInput.addEventListener("keydown", (e) => {
@@ -463,7 +486,10 @@
     });
 
     document.addEventListener("click", (e) => {
-      if (!e.target.closest(".aam_lang_input_wrap")) {
+      if (
+        !e.target.closest(".aam_lang_input_wrap") &&
+        !e.target.closest(".aam_lang_dropdown")
+      ) {
         langDrop.innerHTML = "";
         langDrop.style.display = "none";
       }
