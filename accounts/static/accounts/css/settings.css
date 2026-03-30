@@ -1,0 +1,150 @@
+.settings_wrapper {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+  color: var(--text);
+}
+
+.settings_main_title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+.settings_section {
+  margin-bottom: 24px;
+}
+
+.settings_section_title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+
+.danger_text {
+  color: var(--danger);
+}
+
+.settings_card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.danger_card {
+  border-color: var(--danger);
+}
+
+.settings_btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings_btn:hover {
+  background: var(--surface2);
+  border-color: var(--text-muted);
+}
+
+.settings_btn_outline_accent {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.settings_btn_outline_accent:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+}
+
+.settings_btn_primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 1px solid var(--accent);
+}
+
+.settings_btn_primary:hover {
+  opacity: 0.9;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.settings_btn_danger {
+  background: var(--danger);
+  color: var(--accent-fg);
+  border: 1px solid var(--danger);
+}
+
+.settings_btn_danger:hover {
+  opacity: 0.9;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.settings_toggle_label {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.settings_toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.settings_toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings_toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border);
+  transition: 0.4s;
+  border-radius: 20px;
+}
+
+.settings_toggle .slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.settings_toggle input:checked + .slider {
+  background-color: var(--accent);
+}
+
+.settings_toggle input:focus + .slider {
+  box-shadow: 0 0 1px var(--accent);
+}
+
+.settings_toggle input:checked + .slider:before {
+  transform: translateX(16px);
+}
+

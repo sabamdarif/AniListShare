@@ -1,0 +1,131 @@
+{% extends "account/base_account.html" %}
+{% load static allauth i18n %}
+{% block page_title %}
+    {% trans "Manage Emails" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Manage Emails" %}
+{% endblock account_title %}
+{% block account_content %}
+    {% if emailaddresses %}
+        <p style="margin-bottom: 12px;
+                  color: var(--text-muted);
+                  font-size: 0.95rem">{% trans 'Here are the email addresses associated with your account:' %}</p>
+        <form action="{% url 'account_email' %}" method="post">
+            {% csrf_token %}
+            <div style="display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        margin-bottom: 16px">
+                {% for radio in emailaddress_radios %}
+                    {% with emailaddress=radio.emailaddress %}
+                        <label style="display: flex;
+                                      align-items: center;
+                                      flex-wrap: wrap;
+                                      gap: 10px;
+                                      padding: 10px;
+                                      border: 1px solid var(--border);
+                                      border-radius: var(--radius);
+                                      background: var(--bg);
+                                      cursor: pointer">
+                            <input type="radio"
+                                   name="email"
+                                   {% if radio.checked %}checked="checked"{% endif %}
+                                   value="{{ emailaddress.email }}"
+                                   style="accent-color: var(--accent);
+                                          flex-shrink: 0">
+                            <span style="flex-grow: 1; word-break: break-all; font-size: 0.95rem;">{{ emailaddress.email }}</span>
+                            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                                {% if emailaddress.verified %}
+                                    <span class="badge"
+                                          style="background: var(--accent);
+                                                 color: var(--accent-fg);
+                                                 padding: 3px 6px;
+                                                 border-radius: 4px;
+                                                 font-size: 0.75rem">{% translate "Verified" %}</span>
+                                {% else %}
+                                    <span class="badge"
+                                          style="background: #eab308;
+                                                 color: #000;
+                                                 padding: 3px 6px;
+                                                 border-radius: 4px;
+                                                 font-size: 0.75rem">{% translate "Unverified" %}</span>
+                                {% endif %}
+                                {% if emailaddress.primary %}
+                                    <span class="badge"
+                                          style="background: var(--surface2);
+                                                 color: var(--text);
+                                                 border: 1px solid var(--border);
+                                                 padding: 2px 5px;
+                                                 border-radius: 4px;
+                                                 font-size: 0.75rem">{% translate "Primary" %}</span>
+                                {% endif %}
+                            </div>
+                        </label>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+            <div style="display: flex;
+                        gap: 8px;
+                        flex-wrap: wrap;
+                        margin-bottom: 24px">
+                <button type="submit"
+                        name="action_primary"
+                        class="auth_btn"
+                        style="flex: 1;
+                               min-width: 100px;
+                               padding: 8px;
+                               font-size: 0.85rem;
+                               margin-top: 0">{% trans 'Make Primary' %}</button>
+                <button type="submit"
+                        name="action_send"
+                        class="auth_btn"
+                        style="flex: 1.5;
+                               min-width: 130px;
+                               padding: 8px;
+                               font-size: 0.85rem;
+                               margin-top: 0;
+                               background: transparent;
+                               color: var(--text);
+                               border: 1px solid var(--border)">{% trans 'Re-send Verification' %}</button>
+                <button type="submit"
+                        name="action_remove"
+                        class="auth_btn"
+                        style="flex: 1;
+                               min-width: 100px;
+                               padding: 8px;
+                               font-size: 0.85rem;
+                               margin-top: 0;
+                               background: var(--danger);
+                               color: white">{% trans 'Remove' %}</button>
+            </div>
+        </form>
+    {% else %}
+        <p style="margin-bottom: 24px; color: var(--text-muted);">
+            <strong>{% trans 'Warning:' %}</strong> {% trans "You currently do not have any email address set up. Please add one to receive notifications and reset your password." %}
+        </p>
+    {% endif %}
+    {% if can_add_email %}
+        <div class="separator_container">
+            <div class="separator_line"></div>
+            <span class="separator_text">{% trans "Add Email" %}</span>
+        </div>
+        <form method="post" action="{% url 'account_email' %}" class="auth_form">
+            {% csrf_token %}
+            <div class="form_group">
+                <input type="email"
+                       name="email"
+                       placeholder="E-mail Address"
+                       class="form_input"
+                       required>
+            </div>
+            <button name="action_add" type="submit" class="auth_btn">{% trans "Add Email" %}</button>
+        </form>
+    {% endif %}
+    <div style="margin-top: 24px; text-align: center;">
+        <a href="{% url 'account_settings' %}"
+           style="color: var(--accent);
+                  text-decoration: none;
+                  font-size: 0.95rem">&larr; {% trans "Back to Settings" %}</a>
+    </div>
+{% endblock account_content %}

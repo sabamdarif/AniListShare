@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block page_title %}
+    Account Settings - {{ WEBSITE_NAME }}
+{% endblock page_title %}
+{% block extra_css %}
+    <link href="{% static 'accounts/css/base_accounts.css' %}" rel="stylesheet">
+    <link href="{% static 'accounts/css/settings.css' %}" rel="stylesheet">
+{% endblock %}
+{% block body_content %}
+    <div class="settings_wrapper">
+        <h1 class="settings_main_title">Account Settings</h1>
+        <div class="settings_section">
+            <h2 class="settings_section_title">Security</h2>
+            <div class="settings_card">
+                <a href="{% url 'account_change_password' %}"
+                   class="settings_btn settings_btn_outline_accent">Change Password</a>
+                <a href="{% url 'account_email' %}"
+                   class="settings_btn settings_btn_outline_accent">Manage Emails</a>
+                <a href="{% url 'socialaccount_connections' %}"
+                   class="settings_btn settings_btn_outline_accent">Third-Party Accounts</a>
+            </div>
+        </div>
+        <div class="settings_section">
+            <h2 class="settings_section_title">Two-Factor Authentication</h2>
+            <div class="settings_card">
+                <a href="{% url 'mfa_index' %}"
+                   class="settings_btn settings_btn_primary">Enable Multi-Factor Authentication</a>
+            </div>
+        </div>
+        <div class="settings_section">
+            <h2 class="settings_section_title danger_text">
+                <i class="nf nf-fa-warning"></i> Danger Zone
+            </h2>
+            <div class="settings_card danger_card">
+                <a href="{% url 'account_delete' %}"
+                   class="settings_btn settings_btn_danger">Delete Account (WIP)</a>
+            </div>
+        </div>
+        <div class="settings_section">
+            <h2 class="settings_section_title">Session</h2>
+            <div class="settings_card">
+                <a href="{% url 'account_logout' %}"
+                   class="settings_btn settings_btn_outline_accent">Logout</a>
+            </div>
+        </div>
+    </div>
+{% endblock body_content %}

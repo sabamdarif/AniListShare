@@ -1,0 +1,127 @@
+{% extends "account/base_account.html" %}
+{% load allauth i18n %}
+{% block page_title %}
+    {% trans "Two-Factor Authentication" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Two-Factor Authentication" %}
+{% endblock account_title %}
+{% block account_content %}
+    {% if "totp" in MFA_SUPPORTED_TYPES %}
+        <div style="border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    background: var(--surface2);
+                    padding: 16px;
+                    margin-bottom: 16px">
+            <h3 style="margin-bottom: 8px; font-size: 1.1rem;">{% translate "Authenticator App" %}</h3>
+            {% if authenticators.totp %}
+                <p style="margin-bottom: 12px;
+                          color: var(--text-muted);
+                          font-size: 0.9rem">{% translate "Authentication using an authenticator app is active." %}</p>
+                <a href="{% url 'mfa_deactivate_totp' %}"
+                   class="auth_btn"
+                   style="text-decoration:none;
+                          display:block;
+                          text-align:center;
+                          background: var(--danger);
+                          color: white">{% translate "Deactivate" %}</a>
+            {% else %}
+                <p style="margin-bottom: 12px;
+                          color: var(--text-muted);
+                          font-size: 0.9rem">{% translate "An authenticator app is not active." %}</p>
+                <a href="{% url 'mfa_activate_totp' %}"
+                   class="auth_btn"
+                   style="text-decoration:none;
+                          display:block;
+                          text-align:center">{% translate "Activate" %}</a>
+            {% endif %}
+        </div>
+    {% endif %}
+    {% if "webauthn" in MFA_SUPPORTED_TYPES %}
+        <div style="border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    background: var(--surface2);
+                    padding: 16px;
+                    margin-bottom: 16px">
+            <h3 style="margin-bottom: 8px; font-size: 1.1rem;">{% translate "Security Keys" %}</h3>
+            {% if authenticators.webauthn|length %}
+                <p style="margin-bottom: 12px;
+                          color: var(--text-muted);
+                          font-size: 0.9rem">
+                    {% blocktranslate count count=authenticators.webauthn|length %}You have added {{ count }} security key.{% plural %}You have added {{ count }} security keys.{% endblocktranslate %}
+                </p>
+                <a href="{% url 'mfa_list_webauthn' %}"
+                   class="auth_btn"
+                   style="text-decoration:none;
+                          display:block;
+                          text-align:center">{% translate "Manage" %}</a>
+            {% else %}
+                <p style="margin-bottom: 12px;
+                          color: var(--text-muted);
+                          font-size: 0.9rem">{% translate "No security keys have been added." %}</p>
+                <a href="{% url 'mfa_add_webauthn' %}"
+                   class="auth_btn"
+                   style="text-decoration:none;
+                          display:block;
+                          text-align:center">{% translate "Add" %}</a>
+            {% endif %}
+        </div>
+    {% endif %}
+    {% if "recovery_codes" in MFA_SUPPORTED_TYPES %}
+        {% with total_count=authenticators.recovery_codes.generate_codes|length unused_count=authenticators.recovery_codes.get_unused_codes|length %}
+            <div style="border: 1px solid var(--border);
+                        border-radius: var(--radius);
+                        background: var(--surface2);
+                        padding: 16px;
+                        margin-bottom: 16px">
+                <h3 style="margin-bottom: 8px; font-size: 1.1rem;">{% translate "Recovery Codes" %}</h3>
+                {% if authenticators.recovery_codes %}
+                    <p style="margin-bottom: 12px;
+                              color: var(--text-muted);
+                              font-size: 0.9rem">
+                        {% blocktranslate count unused_count=unused_count %}There is {{ unused_count }} out of {{ total_count }} recovery codes available.{% plural %}There are {{ unused_count }} out of {{ total_count }} recovery codes available.{% endblocktranslate %}
+                    </p>
+                    {% if is_mfa_enabled and unused_count > 0 %}
+                        <div style="display:flex; gap: 8px;">
+                            <a href="{% url 'mfa_view_recovery_codes' %}"
+                               class="auth_btn"
+                               style="flex:1;
+                                      text-decoration:none;
+                                      text-align:center">{% translate "View" %}</a>
+                            <a href="{% url 'mfa_download_recovery_codes' %}"
+                               class="auth_btn"
+                               style="flex:1;
+                                      text-decoration:none;
+                                      text-align:center;
+                                      background: transparent;
+                                      border: 1px solid var(--border);
+                                      color: var(--text)">{% translate "Download" %}</a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p style="margin-bottom: 12px;
+                              color: var(--text-muted);
+                              font-size: 0.9rem">{% translate "No recovery codes set up." %}</p>
+                {% endif %}
+                {% if is_mfa_enabled %}
+                    <div style="margin-top: {% if authenticators.recovery_codes %}12px{% else %}0px{% endif %}">
+                        <a href="{% url 'mfa_generate_recovery_codes' %}"
+                           class="auth_btn"
+                           style="text-decoration:none;
+                                  display:block;
+                                  text-align:center;
+                                  background: transparent;
+                                  border: 1px solid var(--border);
+                                  color: var(--text)">{% translate "Generate" %}</a>
+                    </div>
+                {% endif %}
+            </div>
+        {% endwith %}
+    {% endif %}
+    <div style="margin-top: 24px; text-align: center;">
+        <a href="{% url 'account_settings' %}"
+           style="color: var(--accent);
+                  text-decoration: none;
+                  font-size: 0.95rem">&larr; {% trans "Back to Settings" %}</a>
+    </div>
+{% endblock account_content %}

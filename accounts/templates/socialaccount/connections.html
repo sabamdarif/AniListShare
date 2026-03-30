@@ -1,0 +1,109 @@
+{% extends "account/base_account.html" %}
+{% load i18n allauth socialaccount %}
+{% block page_title %}
+    {% trans "Account Connections" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Account Connections" %}
+{% endblock account_title %}
+{% block account_content %}
+    {% if form.accounts %}
+        <p style="margin-bottom: 12px;
+                  color: var(--text-muted);
+                  font-size: 0.95rem">
+            {% blocktrans %}You can sign in to your account using any of the following third-party accounts:{% endblocktrans %}
+        </p>
+        <form action="{% url 'socialaccount_connections' %}" method="post">
+            {% csrf_token %}
+            <div style="display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        margin-bottom: 16px">
+                {% for acc in form.fields.account.choices %}
+                    {% with account=acc.0.instance.get_provider_account %}
+                        <label style="display: flex;
+                                      align-items: center;
+                                      gap: 10px;
+                                      padding: 10px;
+                                      border: 1px solid var(--border);
+                                      border-radius: var(--radius);
+                                      background: var(--bg);
+                                      cursor: pointer">
+                            <input type="radio"
+                                   name="account"
+                                   value="{{ account.account.pk }}"
+                                   style="accent-color: var(--accent);
+                                          flex-shrink: 0">
+                            <span style="flex-grow: 1; font-weight: 500;">{{ account }}</span>
+                            <span class="badge"
+                                  style="background: var(--surface2);
+                                         color: var(--text);
+                                         border: 1px solid var(--border);
+                                         padding: 3px 6px;
+                                         border-radius: 4px;
+                                         font-size: 0.75rem">{{ account.get_brand.name }}</span>
+                        </label>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+            <div style="margin-bottom: 24px;">
+                <button type="submit"
+                        class="auth_btn"
+                        style="background: var(--danger);
+                               color: white;
+                               width: 100%">{% trans 'Remove Selected Account' %}</button>
+            </div>
+            {% if form.non_field_errors %}
+                <ul class="errorlist">
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </form>
+    {% else %}
+        <p style="margin-bottom: 24px; color: var(--text-muted);">
+            {% trans 'You currently have no third-party accounts connected to this account.' %}
+        </p>
+    {% endif %}
+    <div class="separator_container">
+        <div class="separator_line"></div>
+        <span class="separator_text">{% trans "Add a Third-Party Account" %}</span>
+    </div>
+    <div style="display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 24px">
+        {% get_providers as socialaccount_providers %}
+        {% if socialaccount_providers %}
+            {% for provider in socialaccount_providers %}
+                {% provider_login_url provider process="connect" as href %}
+                <a href="{{ href }}"
+                   class="social_btn"
+                   style="justify-content: flex-start;
+                          padding: 12px 16px">
+                    {% if provider.id == 'google' %}
+                        <svg width="20"
+                             height="20"
+                             viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"
+                             style="margin-right: 8px">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
+                        </svg>
+                    {% else %}
+                        <i class="nf nf-md-login" style="margin-right: 8px;"></i>
+                    {% endif %}
+                    {% trans "Connect with" %} {{ provider.name }}
+                </a>
+            {% endfor %}
+        {% endif %}
+        {% include "socialaccount/snippets/login_extra.html" %}
+    </div>
+    <div style="text-align: center;">
+        <a href="{% url 'account_settings' %}"
+           style="color: var(--accent);
+                  text-decoration: none;
+                  font-size: 0.95rem">&larr; {% trans "Back to Settings" %}</a>
+    </div>
+{% endblock account_content %}

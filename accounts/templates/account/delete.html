@@ -1,0 +1,20 @@
+{% extends "account/base_account.html" %}
+{% block page_title %}
+    Delete Account
+{% endblock page_title %}
+{% block account_title %}
+    Delete Account
+{% endblock account_title %}
+{% block account_content %}
+    <p style="text-align: center;
+              color: var(--text-muted);
+              margin-bottom: 20px">
+        Account deletion is currently a Work In Progress. Please check back later or contact support.
+    </p>
+    <a href="{% url 'account_settings' %}"
+       class="auth_btn"
+       style="text-decoration: none;
+              display: flex;
+              align-items: center;
+              justify-content: center">Go Back to Settings</a>
+{% endblock account_content %}
