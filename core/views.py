@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from core.models import Anime, Category, Season
@@ -64,19 +63,16 @@ def api_anime_list(request):
     return JsonResponse({"anime": data})
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @verified_email_required
-def api_bulk_add_anime(request):
-    """Create multiple Anime (+ Seasons) in a single request.
+def api_add_anime(request):
+    """Create one or more Anime (+ Seasons) in a single request.
 
-    Accepts: { "items": [ ...same shape as single add-anime body ] }
+    Accepts: { "items": [ { name, category_id, ... }, ... ] }
     Returns: { "success": true, "created": [ { "anime_id": ..., "name": ... } ] }
     Caps at 50 items per request for safety.
     """
-    # sendBeacon doesn't send X-CSRFToken header, so exempt this endpoint
-    # and rely on @login_required + session cookie for auth.
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError, ValueError:
@@ -86,7 +82,7 @@ def api_bulk_add_anime(request):
     if not isinstance(items, list) or not items:
         return JsonResponse({"error": "items array is required"}, status=400)
 
-    items = items[:50]  # cap
+    items = items[:50]
 
     created = []
     errors = []
@@ -174,7 +170,6 @@ def api_bulk_add_anime(request):
     return JsonResponse(result, status=201 if created else 400)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @verified_email_required

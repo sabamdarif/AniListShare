@@ -17,6 +17,7 @@
           href="https://www.nerdfonts.com/assets/css/webfont.css">
 {% endblock extra_css %}
 {% block body_content %}
+    {% csrf_token %}
     <div class="sticky_header">
         <header>
             <div class="header_content" id="header_title_section">

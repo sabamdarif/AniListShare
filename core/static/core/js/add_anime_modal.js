@@ -3,6 +3,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     const JIKAN = "https://api.jikan.moe/v4/anime";
+    const ADD_ANIME_URL = "/api/add-anime/";
     const LANG_PRESETS = [
       "Japanese",
       "English",
@@ -15,20 +16,19 @@
       "Portuguese",
       "Italian",
     ];
+
+    let _debounce = null;
+    let _selectedName = "";
+    let _rating = 0;
+    let _seasons = [];
+    let _languages = [];
+
     function getCSRF() {
       const el = document.querySelector("[name=csrfmiddlewaretoken]");
       if (el) return el.value;
       const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
       return m ? decodeURIComponent(m[1]) : "";
     }
-    const CSRF = getCSRF();
-
-    let _debounce = null;
-    let _selected = null;
-    let _selectedName = "";
-    let _rating = 0;
-    let _seasons = [];
-    let _languages = [];
 
     /* ── build modal DOM ── */
     function createModal() {
@@ -158,7 +158,6 @@
       if (e.target === OV) close();
     });
 
-    // ★ Now these will always find the buttons because DOM is ready
     document.querySelector(".btn_add_anime")?.addEventListener("click", open);
     document
       .getElementById("m_fab_add_anime")
@@ -184,6 +183,8 @@
       urlEditor.style.display = "none";
       urlInput.value = "";
       errorEl.textContent = "";
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
       renderStars();
       renderSeasons();
       renderLangTags();
@@ -201,7 +202,6 @@
         o.textContent = t.textContent.trim();
         catSelect.appendChild(o);
       });
-      // Pre-select the currently active category
       if (activeTab) {
         catSelect.value = activeTab.dataset.categoryId;
       }
@@ -220,7 +220,6 @@
       _debounce = setTimeout(() => searchJikan(q), 400);
     });
 
-    /* ── Esc hides suggestions ── */
     nameInput.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && suggestions.innerHTML.trim()) {
         suggestions.innerHTML = "";
@@ -496,7 +495,7 @@
     });
 
     /* ── save ── */
-    saveBtn.addEventListener("click", () => {
+    saveBtn.addEventListener("click", async () => {
       errorEl.textContent = "";
       const name = _selectedName || nameInput.value.trim();
       if (!name) {
@@ -509,7 +508,7 @@
         return;
       }
 
-      const body = {
+      const item = {
         name,
         thumbnail_url: thumbImg.src || urlInput.value.trim(),
         category_id: +catId,
@@ -523,20 +522,43 @@
         })),
       };
 
-      // Queue instead of direct POST — no page reload
-      if (window.AnimeSaveQueue) {
-        window.AnimeSaveQueue.enqueue(body);
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+
+      try {
+        const resp = await fetch(ADD_ANIME_URL, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRF(),
+          },
+          body: JSON.stringify({ items: [item] }),
+        });
+
+        const data = await resp.json().catch(() => null);
+
+        if (!resp.ok) {
+          throw new Error(
+            data?.error ||
+              data?.errors?.[0]?.error ||
+              `Server error ${resp.status}`,
+          );
+        }
+
+        close();
+
+        if (typeof window.refreshCurrentCategory === "function") {
+          window.refreshCurrentCategory();
+        }
+
+        showToast(`"${name}" added`);
+      } catch (err) {
+        errorEl.textContent = err.message || "Save failed";
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
       }
-
-      close();
-
-      // Refresh table to show the newly queued item
-      if (typeof window.refreshCurrentCategory === "function") {
-        window.refreshCurrentCategory();
-      }
-
-      // Show a brief success toast
-      showToast(`"${name}" added`);
     });
 
     /* ── toast helper ── */
