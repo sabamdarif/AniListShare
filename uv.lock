@@ -9,7 +9,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "django" },
     { name = "django-allauth", extra = ["mfa", "socialaccount"] },
-    { name = "django-browser-reload" },
     { name = "django-stubs" },
     { name = "django-watchfiles" },
     { name = "jwt" },
@@ -17,17 +16,24 @@ dependencies = [
     { name = "requests" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "django-browser-reload" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=6.0.3" },
     { name = "django-allauth", extras = ["mfa", "socialaccount"], specifier = ">=65.15.0" },
-    { name = "django-browser-reload", specifier = ">=1.21.0" },
     { name = "django-stubs", specifier = ">=6.0.1" },
     { name = "django-watchfiles", specifier = ">=1.4.0" },
     { name = "jwt", specifier = ">=1.4.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = ">=2.32.5" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "django-browser-reload", specifier = ">=1.21.0" }]
 
 [[package]]
 name = "anyio"

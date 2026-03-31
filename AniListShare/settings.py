@@ -49,14 +49,10 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.mfa",
-    # TMP: hot reloading
-    "django_browser_reload",
-    "django_watchfiles",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "django_browser_reload.middleware.BrowserReloadMiddleware",  # TMP: hot reloading
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -65,6 +61,19 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+
+if DEBUG:
+    INSTALLED_APPS += [
+        # hot reloading
+        "django_browser_reload",
+        "django_watchfiles",
+    ]
+
+    MIDDLEWARE.insert(
+        1,
+        # hot reloading
+        "django_browser_reload.middleware.BrowserReloadMiddleware",
+    )
 
 ROOT_URLCONF = f"{WEBSITE_NAME}.urls"
 
