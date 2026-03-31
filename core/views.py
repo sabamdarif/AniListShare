@@ -15,9 +15,7 @@ from core.models import Anime, Category, Season
 @verified_email_required
 def home(request):
     categories = (
-        Category.objects.filter(user=request.user)
-        .prefetch_related("anime_related_data")
-        .all()
+        Category.objects.filter(user=request.user).prefetch_related("animes").all()
     )
     return render(request, "core/index.html", {"categories": categories})
 

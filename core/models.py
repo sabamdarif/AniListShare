@@ -17,7 +17,7 @@ class Category(models.Model):
 
 class Anime(models.Model):
     category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, related_name="anime_related_data"
+        Category, on_delete=models.CASCADE, related_name="animes"
     )
     name = models.CharField(max_length=500)
     thumbnail_url = models.URLField(max_length=1000, default="", blank=True)
