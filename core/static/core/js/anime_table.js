@@ -12,8 +12,22 @@
   const isMobile = () => window.innerWidth <= MOBILE_BP;
 
   function setActiveTab(btn) {
-    tabs.forEach((t) => t.classList.remove("active"));
+    tabs.forEach((t) => {
+      t.classList.remove("active");
+      if (
+        t.parentElement &&
+        t.parentElement.classList.contains("category_tab_wrapper")
+      ) {
+        t.parentElement.classList.remove("active");
+      }
+    });
     btn.classList.add("active");
+    if (
+      btn.parentElement &&
+      btn.parentElement.classList.contains("category_tab_wrapper")
+    ) {
+      btn.parentElement.classList.add("active");
+    }
   }
 
   function showSkeleton(rows) {

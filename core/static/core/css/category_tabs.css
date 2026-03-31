@@ -15,7 +15,7 @@
 
 .category_tab {
   position: relative;
-  padding: 12px 20px;
+  padding: 12px 12px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -23,36 +23,12 @@
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    color 0.2s ease,
-    background 0.15s ease;
-}
-
-.category_tab::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%) scaleX(0);
-  width: 60%;
-  height: 2.5px;
-  background: var(--accent);
-  border-radius: 2px 2px 0 0;
-  transition: transform 0.2s ease;
-}
-
-.category_tab:hover {
-  color: var(--text);
-  background: var(--surface2);
+  transition: color 0.2s ease;
 }
 
 .category_tab.active {
   color: var(--accent);
   font-weight: 600;
-}
-
-.category_tab.active::after {
-  transform: translateX(-50%) scaleX(1);
 }
 
 @media (max-width: 768px) {
@@ -66,5 +42,86 @@
   .category_tab {
     padding: 9px 10px;
     font-size: 0.75rem;
+  }
+}
+
+.category_tab_wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.category_tab_wrapper:hover {
+  background: var(--surface2);
+}
+
+.category_tab_wrapper:hover .category_tab {
+  color: var(--text);
+}
+
+.category_tab_wrapper::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 75%;
+  height: 2.5px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  transition: transform 0.2s ease;
+}
+
+.category_tab_wrapper.active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.category_edit_btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px 10px;
+  margin-right: 4px;
+  border-radius: 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.category_edit_btn:hover {
+  color: var(--accent);
+  background: rgba(128, 128, 128, 0.1);
+  transform: scale(1.1);
+}
+
+.category_edit_btn:active {
+  transform: scale(0.95);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .category_tab_wrapper:hover .category_edit_btn {
+    display: flex;
+    animation: fadeInRight 0.2s ease forwards;
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }

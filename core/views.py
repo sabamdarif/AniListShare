@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils.html import escape
 from django.views.decorators.http import require_POST
 
 from core.models import Anime, Category, Season
@@ -201,3 +202,65 @@ def api_add_category(request):
         {"success": True, "category_id": category.id, "name": category.name},
         status=201,
     )
+
+
+@require_POST
+@login_required
+@verified_email_required
+def api_edit_category(request):
+    """Edit an existing Category's name for the authenticated user."""
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError, ValueError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    category_id = body.get("category_id")
+    name = (body.get("name") or "").strip()
+
+    if not category_id:
+        return JsonResponse({"error": "category_id is required"}, status=400)
+    if not name:
+        return JsonResponse({"error": "name is required"}, status=400)
+
+    # Basic XSS protection: escape HTML characters
+    name = escape(name[:200])
+
+    try:
+        category = Category.objects.get(id=category_id, user=request.user)
+    except Category.DoesNotExist:
+        return JsonResponse(
+            {"error": "Category not found or access denied"}, status=404
+        )
+
+    category.name = name
+    category.save()
+
+    return JsonResponse(
+        {"success": True, "category_id": category.id, "name": category.name}
+    )
+
+
+@require_POST
+@login_required
+@verified_email_required
+def api_delete_category(request):
+    """Delete an existing Category for the authenticated user."""
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError, ValueError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    category_id = body.get("category_id")
+    if not category_id:
+        return JsonResponse({"error": "category_id is required"}, status=400)
+
+    try:
+        category = Category.objects.get(id=category_id, user=request.user)
+    except Category.DoesNotExist:
+        return JsonResponse(
+            {"error": "Category not found or access denied"}, status=404
+        )
+
+    category.delete()
+
+    return JsonResponse({"success": True})

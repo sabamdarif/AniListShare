@@ -108,7 +108,15 @@
         </header>
         <nav class="category_tabs" id="category_tabs">
             {% for cat in categories %}
-                <button class="category_tab" data-category-id="{{ cat.id }}">{{ cat.name }}</button>
+                <div class="category_tab_wrapper" data-category-id="{{ cat.id }}">
+                    <button class="category_tab" data-category-id="{{ cat.id }}">{{ cat.name }}</button>
+                    <button class="category_edit_btn"
+                            aria-label="Edit category"
+                            data-category-id="{{ cat.id }}"
+                            data-category-name="{{ cat.name }}">
+                        <i class="nf nf-fa-pencil"></i>
+                    </button>
+                </div>
             {% endfor %}
         </nav>
     </div>
@@ -156,6 +164,7 @@
     <script src="{% static 'core/js/anime_table.js' %}"></script>
     <script src="{% static 'core/js/add_category_modal.js' %}"></script>
     <script src="{% static 'core/js/add_anime_modal.js' %}"></script>
+    <script src="{% static 'core/js/edit_category_modal.js' %}"></script>
     <script>
         // Mobile FAB toggle
         document.addEventListener('DOMContentLoaded', () => {
