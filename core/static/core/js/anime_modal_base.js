@@ -201,7 +201,7 @@
       // Stars section
       const starSection = el("div", { className: "aam_section" });
       const starRow = el("div", { className: "aam_star_row" });
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 10; i++) {
         starRow.appendChild(
           el("span", {
             className: "aam_star",

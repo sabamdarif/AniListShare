@@ -236,7 +236,7 @@ window.AnimeRenderer = (function () {
   function renderStars(val) {
     var rating = val != null && !isNaN(parseFloat(val)) ? parseFloat(val) : 0;
     var stars = "";
-    for (var i = 1; i <= 5; i++) {
+    for (var i = 1; i <= 10; i++) {
       if (rating >= i) stars += '<span class="star filled">\u2605</span>';
       else if (rating >= i - 0.5)
         stars += '<span class="star half">\u2605</span>';
