@@ -23,4 +23,9 @@ urlpatterns = [
         views.AnimeDetailApiView.as_view(),
         name="anime_detail",
     ),
+    path(
+        "anime/search/",
+        views.SearchAnimeApiView.as_view(),
+        name="anime_search",
+    ),
 ]

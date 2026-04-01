@@ -387,7 +387,9 @@
         : "";
 
       html +=
-        "<tr>" +
+        '<tr data-anime-id="' +
+        a.id +
+        '">' +
         '<td class="col_id">' +
         (idx + 1) +
         "</td>" +
@@ -450,7 +452,9 @@
         : "";
 
       html +=
-        '<div class="m_card">' +
+        '<div class="m_card" data-anime-id="' +
+        a.id +
+        '">' +
         thumbHtml +
         '<div class="m_card_body">' +
         '<span class="m_card_id">ID: ' +

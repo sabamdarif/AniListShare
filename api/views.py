@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from core.models import Anime, Category
 
-from .serializers import AnimeSerializer, CategorySerializer
+from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSerializer
 
 
 class CategoryListCreateApiView(generics.ListCreateAPIView):
@@ -64,3 +64,18 @@ class AnimeDetailApiView(generics.RetrieveUpdateDestroyAPIView):
                 category_id=self.kwargs["category_id"],
             )
         )
+
+
+class SearchAnimeApiView(generics.ListAPIView):
+    """Return all anime across all categories for the authenticated user.
+
+    Used by the client-side search index — called once on page load.
+    """
+
+    queryset = Anime.objects.select_related("category")
+    serializer_class = SearchAnimeSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None  # Return everything in one response
+
+    def get_queryset(self):
+        return super().get_queryset().filter(category__user=self.request.user)

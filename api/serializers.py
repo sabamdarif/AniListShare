@@ -60,3 +60,13 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ("id", "name", "order")
         read_only_fields = ("id",)
+
+
+class SearchAnimeSerializer(serializers.ModelSerializer):
+    category_id = serializers.IntegerField(source="category.id", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = Anime
+        fields = ("id", "name", "thumbnail_url", "category_id", "category_name")
+        read_only_fields = fields

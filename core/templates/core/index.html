@@ -12,6 +12,7 @@
     <link href="{% static "core/css/add_anime.css" %}?v=2" rel="stylesheet">
     <link href="{% static "core/css/add_category.css" %}" rel="stylesheet">
     <link href="{% static "core/css/fab.css" %}" rel="stylesheet">
+    <link href="{% static "core/css/search.css" %}" rel="stylesheet">
     <link href="{% static "core/css/toast.css" %}" rel="stylesheet">
     <link rel="stylesheet"
           href="https://www.nerdfonts.com/assets/css/webfont.css">
@@ -28,13 +29,16 @@
             </div>
             <div class="header_content" id="header_search_section">
                 <i class="nf nf-seti-search"></i>
-                <input type="search" placeholder="Type Anime name to search...(WIP)">
+                <input type="search" placeholder="search anime from any category...">
+                <div class="search_loader" id="search_loader"></div>
+                <div id="search_suggestions"></div>
             </div>
             <div class="header_content" id="header_action_buttons">
                 <button type="button" class="header_action_buttons btn_category">
                     <i class="nf nf-fa-folder_plus"></i>Category
                 </button>
-                <button type="button" class="header_action_buttons btn_add_anime{% if not categories %} btn_add_anime_disabled{% endif %}">
+                <button type="button"
+                        class="header_action_buttons btn_add_anime{% if not categories %} btn_add_anime_disabled{% endif %}">
                     <i class="nf nf-oct-plus"></i>Add Anime
                 </button>
                 <button type="button"
@@ -157,6 +161,19 @@
             </button>
         </div>
     </main>
+    <!-- Mobile Search Panel -->
+    <div class="m_search_overlay" id="m_search_overlay"></div>
+    <div class="m_search_panel" id="m_search_panel">
+        <div class="m_search_handle"></div>
+        <div class="m_search_bar">
+            <input type="search" placeholder="search anime from any category...">
+            <button type="button" class="m_search_cancel">Cancel</button>
+        </div>
+        <div class="m_search_loader"></div>
+        <div class="m_search_results">
+            <div class="m_search_hint">Type to search across all categories</div>
+        </div>
+    </div>
 {% endblock body_content %}
 {% block scripts %}
     <script src="{% static 'core/js/header_dropdown.js' %}"></script>
@@ -164,6 +181,7 @@
     <script src="{% static 'core/js/add_category_modal.js' %}"></script>
     <script src="{% static 'core/js/add_anime_modal.js' %}"></script>
     <script src="{% static 'core/js/edit_category_modal.js' %}"></script>
+    <script src="{% static 'core/js/search.js' %}"></script>
     <script>
         // Mobile FAB toggle
         document.addEventListener('DOMContentLoaded', () => {
