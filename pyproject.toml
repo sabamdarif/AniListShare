@@ -5,14 +5,17 @@ description = "A fun way to store your anime watchlist"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "dj-database-url>=2.3.0",
     "django>=6.0.3",
     "django-allauth[mfa,socialaccount]>=65.15.0",
     "django-stubs>=6.0.1",
     "django-watchfiles>=1.4.0",
     "djangorestframework>=3.17.1",
     "jwt>=1.4.0",
+    "psycopg[binary]>=3.2.0",
     "python-dotenv>=1.2.2",
     "requests>=2.32.5",
+    "whitenoise>=6.8.0",
 ]
 
 [dependency-groups]
