@@ -129,21 +129,7 @@
         </nav>
     </div>
     <main class="anime_table_wrapper">
-        <table class="anime_table" id="anime_table">
-            <thead>
-                <tr>
-                    <th class="col_id">#</th>
-                    <th class="col_thumb">Thumbnail</th>
-                    <th class="col_name">Name</th>
-                    <th class="col_season">Season</th>
-                    <th class="col_lang">Language</th>
-                    <th class="col_stars">Stars</th>
-                    <th class="col_edit"></th>
-                </tr>
-            </thead>
-            <tbody id="anime_table_body">
-            </tbody>
-        </table>
+        {% include "core/_anime_table.html" with show_edit_column=True %}
         <div class="m_fab_container" id="m_fab_container">
             <button type="button"
                     class="m_fab_option"
@@ -181,6 +167,7 @@
 {% endblock body_content %}
 {% block scripts %}
     <script src="{% static 'core/js/header_dropdown.js' %}"></script>
+    <script src="{% static 'core/js/anime_renderer.js' %}"></script>
     <script src="{% static 'core/js/anime_table.js' %}"></script>
     <script src="{% static 'core/js/add_category_modal.js' %}"></script>
     <script src="{% static 'core/js/anime_modal_base.js' %}"></script>
