@@ -177,7 +177,13 @@ ACCOUNT_SIGNUP_FIELDS = [
 ]  # it's default but i still did it
 ACCOUNT_LOGIN_METHODS = {"email", "username"}  # login either using email or username
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST_USER = os.getenv("EMAIL_ADDRESS")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = f"{WEBSITE_NAME} <{EMAIL_HOST_USER}>"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
