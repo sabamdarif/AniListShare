@@ -49,3 +49,17 @@ class Season(models.Model):
     @property
     def is_completed(self):
         return self.total_episodes > 0 and self.watched_episodes >= self.total_episodes
+
+
+class ShareLink(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="share_link"
+    )
+    token = models.CharField(max_length=11, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "share link"
+
+    def __str__(self) -> str:
+        return f"ShareLink({self.token}) → {self.user.username}"

@@ -1,3 +1,5 @@
+import secrets
+
 from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
@@ -5,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Anime, Category
+from core.models import Anime, Category, ShareLink
 
 from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSerializer
 
@@ -169,3 +171,51 @@ class SearchAnimeApiView(generics.ListAPIView):
 
     def get_queryset(self):
         return super().get_queryset().filter(category__user=self.request.user)
+
+
+def _generate_share_token() -> str:
+    while True:
+        token = secrets.token_urlsafe(11)[:11]
+        if not ShareLink.objects.filter(token=token).exists():
+            return token
+
+
+class ShareStatusApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            link = request.user.share_link
+            return Response(
+                {
+                    "enabled": True,
+                    "token": link.token,
+                    "url": request.build_absolute_uri(f"/share/{link.token}/"),
+                }
+            )
+        except ShareLink.DoesNotExist:
+            return Response({"enabled": False})
+
+
+class ShareToggleApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        enable = request.data.get("enable", False)
+
+        if enable:
+            link, created = ShareLink.objects.get_or_create(
+                user=request.user,
+                defaults={"token": _generate_share_token()},
+            )
+            return Response(
+                {
+                    "enabled": True,
+                    "token": link.token,
+                    "url": request.build_absolute_uri(f"/share/{link.token}/"),
+                },
+                status=status.HTTP_200_OK,
+            )
+        else:
+            ShareLink.objects.filter(user=request.user).delete()
+            return Response({"enabled": False}, status=status.HTTP_200_OK)

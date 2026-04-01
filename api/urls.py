@@ -38,4 +38,14 @@ urlpatterns = [
         views.SearchAnimeApiView.as_view(),
         name="anime_search",
     ),
+    path(
+        "share/status/",
+        views.ShareStatusApiView.as_view(),
+        name="share_status",
+    ),
+    path(
+        "share/toggle/",
+        views.ShareToggleApiView.as_view(),
+        name="share_toggle",
+    ),
 ]

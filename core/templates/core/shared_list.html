@@ -1,0 +1,58 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block page_title %}
+    {{ owner_name }}'s List - {{ WEBSITE_NAME }}
+{% endblock page_title %}
+{% block extra_css %}
+    <link href="{% static 'core/css/header.css' %}" rel="stylesheet">
+    <link href="{% static 'core/css/category_tabs.css' %}" rel="stylesheet">
+    <link href="{% static 'core/css/anime_table.css' %}" rel="stylesheet">
+    <link href="{% static 'core/css/search.css' %}" rel="stylesheet">
+    <link href="{% static 'core/css/shared_list.css' %}" rel="stylesheet">
+    <link rel="stylesheet"
+          href="https://www.nerdfonts.com/assets/css/webfont.css">
+{% endblock extra_css %}
+{% block body_content %}
+    <div class="sticky_header">
+        <header>
+            <div class="header_content" id="header_title_section">
+                <img src="{% static 'core/logo.png' %}"
+                     alt="{{ WEBSITE_NAME }}-logo"
+                     id="header_web_logo">
+                <h2 id="header_web_title">{{ WEBSITE_NAME }}</h2>
+            </div>
+            <div class="header_content" id="header_search_section">
+                <i class="nf nf-seti-search"></i>
+                <input type="search" placeholder="search anime..." id="shared_search_input">
+            </div>
+            <div class="header_content" id="header_action_buttons">
+                <div class="shared_owner_badge">
+                    <i class="nf nf-fa-user"></i>
+                    <span>{{ owner_name }}'s List</span>
+                </div>
+            </div>
+        </header>
+        <nav class="category_tabs" id="category_tabs">
+        </nav>
+    </div>
+    <main class="anime_table_wrapper">
+        <table class="anime_table" id="anime_table">
+            <thead>
+                <tr>
+                    <th class="col_id">#</th>
+                    <th class="col_thumb">Thumbnail</th>
+                    <th class="col_name">Name</th>
+                    <th class="col_season">Season</th>
+                    <th class="col_lang">Language</th>
+                    <th class="col_stars">Stars</th>
+                </tr>
+            </thead>
+            <tbody id="anime_table_body">
+            </tbody>
+        </table>
+    </main>
+{% endblock body_content %}
+{% block scripts %}
+    <script>window.__SHARED_DATA__ = {{ categories_json|safe }};</script>
+    <script src="{% static 'core/js/shared_list.js' %}"></script>
+{% endblock scripts %}

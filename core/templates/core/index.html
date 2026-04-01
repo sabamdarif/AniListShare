@@ -13,6 +13,7 @@
     <link href="{% static "core/css/add_category.css" %}" rel="stylesheet">
     <link href="{% static "core/css/fab.css" %}" rel="stylesheet">
     <link href="{% static "core/css/search.css" %}" rel="stylesheet">
+    <link href="{% static "core/css/share_modal.css" %}" rel="stylesheet">
     <link href="{% static "core/css/toast.css" %}" rel="stylesheet">
     <link rel="stylesheet"
           href="https://www.nerdfonts.com/assets/css/webfont.css">
@@ -85,9 +86,12 @@
                         </div>
                         <div class="user_dropdown_divider"></div>
                         <div class="user_dropdown_body">
-                            <button type="button" class="user_dropdown_item" role="menuitem">
+                            <button type="button"
+                                    class="user_dropdown_item"
+                                    id="share_btn"
+                                    role="menuitem">
                                 <i class="nf nf-md-share_all"></i>
-                                <span>Share (WIP)</span>
+                                <span>Share</span>
                             </button>
                             <button type="button" class="user_dropdown_item" role="menuitem">
                                 <i class="nf nf-fae-file_import"></i>
@@ -184,6 +188,7 @@
     <script src="{% static 'core/js/edit_anime_modal.js' %}"></script>
     <script src="{% static 'core/js/edit_category_modal.js' %}"></script>
     <script src="{% static 'core/js/search.js' %}"></script>
+    <script src="{% static 'core/js/share_modal.js' %}"></script>
     <script>
         // Mobile FAB toggle
         document.addEventListener('DOMContentLoaded', () => {
