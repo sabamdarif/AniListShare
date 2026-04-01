@@ -14,12 +14,12 @@ urlpatterns = [
         name="category_detail",
     ),
     path(
-        "anime/category/list/<int:category_id>/",
+        "anime/list/category/<int:category_id>/",
         views.AnimeListCreateApiView.as_view(),
         name="anime_list_create",
     ),
     path(
-        "anime/category/list/<int:category_id>/<int:pk>/",
+        "anime/list/category/<int:category_id>/<int:pk>/",
         views.AnimeDetailApiView.as_view(),
         name="anime_detail",
     ),

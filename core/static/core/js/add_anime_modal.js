@@ -3,7 +3,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     const JIKAN = "https://api.jikan.moe/v4/anime";
-    const API_BASE = "/api/anime/category/list/";
+    const API_BASE = "/api/anime/list/category/";
     const LANG_PRESETS = [
       "Japanese",
       "English",
