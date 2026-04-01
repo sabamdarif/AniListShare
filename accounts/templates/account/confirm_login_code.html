@@ -1,0 +1,20 @@
+{% extends "account/base_confirm_code.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% translate "Sign In" %}
+{% endblock %}
+{% block account_title %}
+    {% translate "Enter Sign-In Code" %}
+{% endblock %}
+{% block recipient %}
+    {% if email %}
+        <a href="mailto:{{ email }}"
+           style="color: inherit;
+                  text-decoration: none">{{ email }}</a>
+    {% else %}
+        <a href="tel:{{ phone }}" style="color: inherit; text-decoration: none;">{{ phone }}</a>
+    {% endif %}
+{% endblock %}
+{% block action_url %}
+    {% url 'account_confirm_login_code' %}
+{% endblock %}

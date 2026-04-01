@@ -1,0 +1,25 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% trans "Verify Your Email Address" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Verify Your Email" %}
+{% endblock account_title %}
+{% block account_subtitle %}
+    {% trans "Please verify your email address to continue." %}
+{% endblock account_subtitle %}
+{% block account_content %}
+    <div style="text-align: center; color: var(--text-secondary, #b3b3b3);">
+        <p style="margin-bottom: 15px;">
+            {% blocktrans %}This part of the site requires us to verify that you are who you claim to be. For this purpose, we require that you verify ownership of your email address.{% endblocktrans %}
+        </p>
+        <p style="margin-bottom: 15px;">
+            {% blocktrans %}We have sent an email to you for verification. Please click on the link inside that email. If you do not see the verification email in your main inbox, check your spam folder. Otherwise contact us if you do not receive it within a few minutes.{% endblocktrans %}
+        </p>
+        {% url 'account_email' as email_url %}
+        <p style="margin-top: 20px;">
+            {% blocktrans %}<strong>Note:</strong> you can still <a href="{{ email_url }}" style="color: var(--accent-color, #1db954); text-decoration: none;">change your email address</a>.{% endblocktrans %}
+        </p>
+    </div>
+{% endblock account_content %}

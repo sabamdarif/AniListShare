@@ -1,0 +1,42 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% trans "Confirm Email Address" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Confirm Email" %}
+{% endblock account_title %}
+{% block account_subtitle %}
+    {% trans "Please confirm your email address to continue." %}
+{% endblock account_subtitle %}
+{% block account_content %}
+    {% if confirmation %}
+        {% user_display confirmation.email_address.user as user_display %}
+        {% if can_confirm %}
+            <p style="text-align: center;
+                      margin-bottom: 20px;
+                      color: var(--text-secondary, #b3b3b3)">
+                {% blocktrans with confirmation.email_address.email as email %}Please confirm that <strong style="color: var(--text-primary, #ffffff);">{{ email }}</strong> is an email address for user {{ user_display }}.{% endblocktrans %}
+            </p>
+            {% url 'account_confirm_email' confirmation.key as action_url %}
+            <form class="auth_form" method="post" action="{{ action_url }}">
+                {% csrf_token %}
+                {{ redirect_field }}
+                <button class="auth_btn" type="submit">{% trans 'Confirm Email' %}</button>
+            </form>
+        {% else %}
+            <p style="text-align: center;
+                      margin-bottom: 20px;
+                      color: var(--text-secondary, #b3b3b3)">
+                {% blocktrans %}Unable to confirm {{ email }} because it is already confirmed by a different account.{% endblocktrans %}
+            </p>
+        {% endif %}
+    {% else %}
+        {% url 'account_email' as email_url %}
+        <p style="text-align: center;
+                  margin-bottom: 20px;
+                  color: var(--text-secondary, #b3b3b3)">
+            {% blocktrans %}This email confirmation link expired or is invalid. Please <a href="{{ email_url }}" style="color: var(--accent-color, #1db954);">issue a new email confirmation request</a>.{% endblocktrans %}
+        </p>
+    {% endif %}
+{% endblock account_content %}

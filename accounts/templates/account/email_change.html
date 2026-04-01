@@ -1,0 +1,94 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% trans "Email Address" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Change Email" %}
+{% endblock account_title %}
+{% block account_content %}
+    {% if not emailaddresses %}
+        {% include "account/snippets/warn_no_email.html" %}
+    {% endif %}
+    {% url 'account_email' as action_url %}
+    <form class="auth_form" method="post" action="{{ action_url }}">
+        {% csrf_token %}
+        {% if current_emailaddress %}
+            <div class="form_group" style="margin-bottom: 15px;">
+                <label style="color: var(--text-secondary);
+                              display: block;
+                              margin-bottom: 5px">{% trans "Current Email" %}:</label>
+                <input class="form_input"
+                       type="email"
+                       value="{{ current_emailaddress.email }}"
+                       disabled
+                       style="opacity: 0.6;
+                              cursor: not-allowed">
+            </div>
+        {% endif %}
+        {% if new_emailaddress %}
+            <div class="form_group"
+                 style="margin-bottom: 15px;
+                        border-left: 2px solid var(--accent-color);
+                        padding-left: 10px">
+                <label style="color: var(--text-secondary);
+                              display: block;
+                              margin-bottom: 5px">
+                    {% if not current_emailaddress %}
+                        {% trans "Current email" %}:
+                    {% else %}
+                        {% trans "Pending change to" %}:
+                    {% endif %}
+                </label>
+                <input class="form_input"
+                       type="email"
+                       value="{{ new_emailaddress.email }}"
+                       disabled
+                       style="opacity: 0.6">
+                <p style="font-size: 0.8em;
+                          color: var(--text-secondary);
+                          margin-top: 5px">
+                    {% blocktranslate %}Your email address is still pending verification.{% endblocktranslate %}
+                </p>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button form="pending-email"
+                            type="submit"
+                            name="action_send"
+                            class="auth_btn"
+                            style="padding: 5px 10px;
+                                   font-size: 0.85em">{% trans 'Re-send Verification' %}</button>
+                    {% if current_emailaddress %}
+                        <button form="pending-email"
+                                type="submit"
+                                name="action_remove"
+                                class="auth_btn"
+                                style="padding: 5px 10px;
+                                       font-size: 0.85em;
+                                       background-color: #d32f2f">{% trans 'Cancel Change' %}</button>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+        <div class="form_group">
+            <label style="color: var(--text-secondary);
+                          display: block;
+                          margin-bottom: 5px">{% trans "Change to" %}:</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <ul class="errorlist">
+                    {% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        <button class="auth_btn" type="submit" name="action_add">{% trans "Change Email" %}</button>
+    </form>
+    {% if new_emailaddress %}
+        <form style="display: none"
+              id="pending-email"
+              method="post"
+              action="{% url 'account_email' %}">
+            {% csrf_token %}
+            <input type="hidden" name="email" value="{{ new_emailaddress.email }}">
+        </form>
+    {% endif %}
+{% endblock account_content %}

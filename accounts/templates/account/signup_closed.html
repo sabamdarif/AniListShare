@@ -1,0 +1,13 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% trans "Sign Up Closed" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Sign Up Closed" %}
+{% endblock account_title %}
+{% block account_content %}
+    <p style="text-align: center;
+              margin-bottom: 20px;
+              color: var(--text-secondary, #b3b3b3)">{% trans "We are sorry, but sign up is currently closed." %}</p>
+{% endblock account_content %}

@@ -1,0 +1,21 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% trans "Verify Your Email Address" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Verify Your Email" %}
+{% endblock account_title %}
+{% block account_subtitle %}
+    {% trans "We've sent you a verification link." %}
+{% endblock account_subtitle %}
+{% block account_content %}
+    <div style="text-align: center; color: var(--text-secondary, #b3b3b3);">
+        <p style="margin-bottom: 15px;">
+            {% blocktrans %}Follow the link provided to finalize the signup process. If you do not see the verification email in your main inbox, check your spam folder.{% endblocktrans %}
+        </p>
+        <p style="margin-bottom: 15px;">
+            {% blocktrans %}Please contact us if you do not receive the verification email within a few minutes.{% endblocktrans %}
+        </p>
+    </div>
+{% endblock account_content %}

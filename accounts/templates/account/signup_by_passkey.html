@@ -1,0 +1,44 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block page_title %}
+    {% trans "Sign Up" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Passkey Sign Up" %}
+{% endblock account_title %}
+{% block account_subtitle %}
+    {% setvar link %}
+    <a href="{{ login_url }}">
+    {% endsetvar %}
+    {% setvar end_link %}
+</a>
+{% endsetvar %}
+{% blocktranslate %}Already have an account? Then please {{ link }}sign in{{ end_link }}.{% endblocktranslate %}
+{% endblock account_subtitle %}
+{% block account_content %}
+    {% url 'account_signup_by_passkey' as action_url %}
+    <form class="auth_form" method="post" action="{{ action_url }}">
+        {% csrf_token %}
+        {{ redirect_field }}
+        {% for field in form %}
+            <div class="form_group">
+                {{ field }}
+                {% if field.errors %}
+                    <ul class="errorlist">
+                        {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button class="auth_btn" type="submit">{% trans "Sign Up" %}</button>
+    </form>
+    <div class="separator_container" style="margin: 20px 0;">
+        <div class="separator_line"></div>
+        <span class="separator_text">Or</span>
+    </div>
+    <a href="{{ signup_url }}"
+       class="social_btn"
+       style="text-align: center;
+              display: block;
+              text-decoration: none">{% trans "Other options" %}</a>
+{% endblock account_content %}

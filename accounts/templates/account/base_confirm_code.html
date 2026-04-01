@@ -1,0 +1,97 @@
+{% extends "account/base_account.html" %}
+{% load i18n account allauth %}
+{% block account_content %}
+    <p style="text-align: center;
+              margin-bottom: 20px;
+              color: var(--text-secondary, #b3b3b3)">
+        {% blocktranslate %}We've sent a code to <strong style="color: var(--text-primary, #ffffff);">{% block recipient %}{% endblock %}</strong>. The code expires shortly, so please enter it soon.{% endblocktranslate %}
+    </p>
+    <form class="auth_form"
+          method="post"
+          action="{% block action_url %}{% endblock %}">
+        {% csrf_token %}
+        {{ redirect_field }}
+        {% for field in verify_form %}
+            <div class="form_group">
+                {{ field }}
+                {% if field.errors %}
+                    <ul class="errorlist">
+                        {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="auth_btn" type="submit">{% translate "Confirm" %}</button>
+            {% if can_resend %}
+                <button type="submit"
+                        form="resend"
+                        class="auth_btn"
+                        style="background-color: transparent;
+                               border: 1px solid var(--border-color, #333);
+                               color: var(--text-primary, #fff)">{% translate "Request new code" %}</button>
+            {% endif %}
+            {% if cancel_url %}
+                <a href="{{ cancel_url }}"
+                   class="social_btn"
+                   style="text-align: center;
+                          text-decoration: none">{% translate "Cancel" %}</a>
+            {% else %}
+                <button type="submit"
+                        form="logout-from-stage"
+                        class="auth_btn"
+                        style="background-color: transparent;
+                               border: 1px solid var(--border-color, #333);
+                               color: var(--text-primary, #fff)">{% translate "Cancel" %}</button>
+            {% endif %}
+        </div>
+    </form>
+    <form id="resend"
+          method="post"
+          action="{% block action_url_resend %}{% block action_url %}{% endblock %}{% endblock action_url_resend %}"
+          style="display: none">
+        <input type="hidden" name="action" value="resend">
+        {{ redirect_field }}
+        {% csrf_token %}
+    </form>
+    {% if not cancel_url %}
+        <form id="logout-from-stage"
+              method="post"
+              action="{% url 'account_logout' %}"
+              style="display: none">
+            <input type="hidden" name="next" value="{% url 'account_login' %}">
+            {% csrf_token %}
+        </form>
+    {% endif %}
+    {% if can_change %}
+        <div class="separator_container" style="margin: 20px 0;">
+            <div class="separator_line"></div>
+            <span class="separator_text">Or</span>
+        </div>
+        <details>
+            <summary style="text-align: center;
+                            color: var(--accent-color, #1db954);
+                            cursor: pointer;
+                            margin-bottom: 15px">
+                {% block change_title %}{% endblock %}
+            </summary>
+            <form class="auth_form"
+                  method="post"
+                  action="{% block action_url_change %}{% block action_url %}{% endblock %}{% endblock action_url_change %}">
+                {% csrf_token %}
+                {{ redirect_field }}
+                {% for field in change_form %}
+                    <div class="form_group">
+                        {{ field }}
+                        {% if field.errors %}
+                            <ul class="errorlist">
+                                {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <button name="action" value="change" class="auth_btn" type="submit">Change</button>
+            </form>
+        </details>
+    {% endif %}
+{% endblock account_content %}
