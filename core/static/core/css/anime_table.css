@@ -334,6 +334,19 @@
   min-width: 90px;
 }
 
+/* OVA display styles */
+.season_ova.season_pill {
+  background: var(--accent2, var(--accent));
+}
+
+.season_ova.season_progress_box {
+  border-color: var(--accent2, var(--accent));
+}
+
+.season_ova .season_progress_fill {
+  background: var(--accent2, var(--accent));
+}
+
 .season_progress_top {
   display: flex;
   align-items: baseline;

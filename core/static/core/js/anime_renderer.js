@@ -78,12 +78,14 @@ window.AnimeRenderer = (function () {
           ? Boolean(s.completed)
           : total > 0 && watched >= total;
 
+    var num = Number(s.number) || 1;
     return {
-      number: Number(s.number) || 1,
+      number: num,
       total: total,
       watched: watched,
       completed: completed,
       comment: s.comment || "",
+      isOva: num % 1 !== 0,
     };
   }
 
@@ -112,27 +114,35 @@ window.AnimeRenderer = (function () {
     return seasons
       .map(function (s) {
         var has = hasSeasonComment(s);
+        var isOva = s.isOva || s.number % 1 !== 0;
+        var displayLabel = isOva
+          ? "OVA"
+          : "S" + escapeHtml(String(Math.floor(s.number)));
+        var dataSeasonLabel = isOva
+          ? "OVA"
+          : "S" + escapeHtml(String(Math.floor(s.number)));
         var icon = has
           ? '<i class="nf nf-fa-comment season_comment_icon"></i>'
           : "";
         var attr = has
           ? ' data-comment="' +
             escapeHtml(s.comment) +
-            '" data-season="S' +
-            escapeHtml(String(s.number)) +
+            '" data-season="' +
+            dataSeasonLabel +
             '"'
           : "";
         var cls = has ? " season_has_comment" : "";
-        var num = escapeHtml(String(s.number));
+        var ovaCls = isOva ? " season_ova" : "";
 
         if (s.completed) {
           return (
             '<span class="season_pill season_has_tooltip' +
             cls +
+            ovaCls +
             '"' +
             attr +
-            ">S" +
-            num +
+            ">" +
+            displayLabel +
             '<span class="s_check">\u2713</span>' +
             icon +
             "</span>"
@@ -143,12 +153,13 @@ window.AnimeRenderer = (function () {
         return (
           '<span class="season_progress_box season_has_tooltip' +
           cls +
+          ovaCls +
           '"' +
           attr +
           ">" +
           '<span class="season_progress_top">' +
-          '<span class="season_progress_label">S' +
-          num +
+          '<span class="season_progress_label">' +
+          displayLabel +
           "</span>" +
           '<span class="season_progress_frac">' +
           Number(s.watched) +
@@ -182,18 +193,20 @@ window.AnimeRenderer = (function () {
         var icon = has
           ? '<i class="nf nf-fa-comment m_season_comment_icon"></i>'
           : "";
+        var isOva = s.isOva || s.number % 1 !== 0;
+        var displayName = isOva
+          ? "OVA"
+          : "Season " + escapeHtml(String(Math.floor(s.number)));
         var attr = has
           ? ' data-comment="' +
             escapeHtml(s.comment) +
-            '" data-season="Season ' +
-            escapeHtml(String(s.number)) +
+            '" data-season="' +
+            displayName +
             '"'
           : "";
-        var num = escapeHtml(String(s.number));
         var label = s.completed
-          ? "Season " + num
-          : "Season " +
-            num +
+          ? displayName
+          : displayName +
             ' <span class="m_season_progress_text">' +
             Number(s.watched) +
             "/" +

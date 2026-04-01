@@ -115,7 +115,7 @@
     let _selected = null;
     let _selectedName = "";
     let _rating = 0;
-    let _seasons = [];
+    let _entries = []; // { type: 'season'|'ova', total, watched, comment }
     let _languages = [];
     let _editingAnimeId = null;
     let _editingCategoryId = null;
@@ -222,19 +222,29 @@
       seasonSection.appendChild(seasonsHeader);
 
       const seasonsCols = el("div", { className: "aam_seasons_cols" });
-      seasonsCols.appendChild(el("span", { text: "Season" }));
+      seasonsCols.appendChild(el("span", { text: "Season / OVA" }));
       seasonsCols.appendChild(el("span", { text: "Watched / Total" }));
-      seasonsCols.appendChild(el("span", { text: "Season Comment" }));
+      seasonsCols.appendChild(el("span", { text: "Comment" }));
       seasonSection.appendChild(seasonsCols);
 
       seasonSection.appendChild(el("div", { className: "aam_seasons_list" }));
-      seasonSection.appendChild(
+
+      const seasonBtns = el("div", { className: "aam_season_btns" });
+      seasonBtns.appendChild(
         el("button", {
           className: "aam_add_season_btn",
           attrs: { type: "button" },
           text: "+ Add Season",
         }),
       );
+      seasonBtns.appendChild(
+        el("button", {
+          className: "aam_add_ova_btn",
+          attrs: { type: "button" },
+          text: "+ Add OVA",
+        }),
+      );
+      seasonSection.appendChild(seasonBtns);
       body.appendChild(seasonSection);
 
       // Language section
@@ -305,6 +315,7 @@
     const starRow = $(".aam_star_row");
     const seasonsList = $(".aam_seasons_list");
     const addSeasonBtn = $(".aam_add_season_btn");
+    const addOvaBtn = $(".aam_add_ova_btn");
     const langTags = $(".aam_lang_tags");
     const langInput = $(".aam_lang_input");
     const errorEl = $(".aam_error");
@@ -346,15 +357,27 @@
         _rating = prefill.stars || 0;
         renderStars();
 
-        // Seasons
+        // Seasons & OVAs — reconstruct interleaved list
         if (prefill.seasons && prefill.seasons.length > 0) {
-          _seasons = prefill.seasons.map((s) => ({
-            total: s.total_episodes != null ? s.total_episodes : s.total || 0,
-            watched:
-              s.watched_episodes != null ? s.watched_episodes : s.watched || 0,
-            comment: s.comment || "",
-          }));
-          renderSeasons();
+          _entries = [];
+          // Sort by number to reconstruct order
+          const sorted = [...prefill.seasons].sort(
+            (a, b) => (Number(a.number) || 1) - (Number(b.number) || 1),
+          );
+          for (const s of sorted) {
+            const num = Number(s.number) || 1;
+            const isOva = num % 1 !== 0;
+            _entries.push({
+              type: isOva ? "ova" : "season",
+              total: s.total_episodes != null ? s.total_episodes : s.total || 0,
+              watched:
+                s.watched_episodes != null
+                  ? s.watched_episodes
+                  : s.watched || 0,
+              comment: s.comment || "",
+            });
+          }
+          renderEntries();
         }
 
         // Languages
@@ -389,7 +412,7 @@
       _selected = null;
       _selectedName = "";
       _rating = 0;
-      _seasons = [];
+      _entries = [];
       _languages = [];
       _editingAnimeId = null;
       _editingCategoryId = null;
@@ -409,7 +432,7 @@
         deleteBtn.textContent = "Delete";
       }
       renderStars();
-      renderSeasons();
+      renderEntries();
       renderLangTags();
       addSeason();
     }
@@ -584,29 +607,37 @@
       });
     }
 
-    /* ── seasons ── */
+    /* ── seasons & OVAs (unified list) ── */
     function addSeason() {
-      _seasons.push({ total: 0, watched: 0, comment: "" });
-      renderSeasons();
+      _entries.push({ type: "season", total: 0, watched: 0, comment: "" });
+      renderEntries();
     }
-    function removeSeason(i) {
-      _seasons.splice(i, 1);
-      renderSeasons();
+    function addOva() {
+      _entries.push({ type: "ova", total: 0, watched: 0, comment: "" });
+      renderEntries();
+    }
+    function removeEntry(i) {
+      _entries.splice(i, 1);
+      renderEntries();
     }
 
-    function renderSeasons() {
+    function renderEntries() {
       seasonsList.textContent = "";
+      let seasonCounter = 0;
 
-      _seasons.forEach((s, i) => {
-        const row = el("div", { className: "aam_season_row" });
+      _entries.forEach((entry, i) => {
+        const isOva = entry.type === "ova";
+        if (!isOva) seasonCounter++;
+
+        const rowCls = isOva ? "aam_season_row aam_ova_row" : "aam_season_row";
+        const row = el("div", { className: rowCls });
         row.dataset.idx = String(i);
 
-        row.appendChild(
-          el("span", {
-            className: "aam_season_label",
-            text: `Season ${i + 1}`,
-          }),
-        );
+        const labelCls = isOva
+          ? "aam_season_label aam_ova_label"
+          : "aam_season_label";
+        const labelText = isOva ? "OVA" : `Season ${seasonCounter}`;
+        row.appendChild(el("span", { className: labelCls, text: labelText }));
 
         const epCell = el("div", { className: "aam_ep_cell" });
 
@@ -615,7 +646,7 @@
           attrs: {
             type: "number",
             min: "0",
-            value: String(s.watched),
+            value: String(entry.watched),
             placeholder: "0",
           },
         });
@@ -630,7 +661,7 @@
           attrs: {
             type: "number",
             min: "0",
-            value: String(s.total),
+            value: String(entry.total),
             placeholder: "0",
           },
         });
@@ -642,10 +673,10 @@
           className: "aam_season_comment",
           attrs: { placeholder: "Enter your thoughts\u2026", rows: "1" },
         });
-        commentArea.value = s.comment;
+        commentArea.value = entry.comment;
         row.appendChild(commentArea);
 
-        if (_seasons.length > 1) {
+        if (_entries.length > 1) {
           const removeBtn = el("button", {
             className: "aam_season_remove",
             text: "\u00d7",
@@ -656,24 +687,22 @@
 
         watchedInput.addEventListener("change", () => {
           const val = Math.max(0, +watchedInput.value);
-          _seasons[i].watched = val;
-          // Clamp: watched cannot exceed total (if total is set)
-          if (_seasons[i].total > 0 && val > _seasons[i].total) {
-            _seasons[i].watched = _seasons[i].total;
-            watchedInput.value = String(_seasons[i].total);
+          _entries[i].watched = val;
+          if (_entries[i].total > 0 && val > _entries[i].total) {
+            _entries[i].watched = _entries[i].total;
+            watchedInput.value = String(_entries[i].total);
           }
         });
         totalInput.addEventListener("change", () => {
           const val = Math.max(0, +totalInput.value);
-          _seasons[i].total = val;
-          // Clamp: if total decreased below watched, adjust watched
-          if (val > 0 && _seasons[i].watched > val) {
-            _seasons[i].watched = val;
+          _entries[i].total = val;
+          if (val > 0 && _entries[i].watched > val) {
+            _entries[i].watched = val;
             watchedInput.value = String(val);
           }
         });
         commentArea.addEventListener("input", () => {
-          _seasons[i].comment = commentArea.value;
+          _entries[i].comment = commentArea.value;
         });
 
         seasonsList.appendChild(row);
@@ -681,12 +710,13 @@
 
       seasonsList.querySelectorAll(".aam_season_remove").forEach((btn) => {
         btn.addEventListener("click", (e) =>
-          removeSeason(+e.target.dataset.idx),
+          removeEntry(+e.target.dataset.idx),
         );
       });
     }
 
     addSeasonBtn.addEventListener("click", addSeason);
+    addOvaBtn.addEventListener("click", addOva);
 
     function updateLangDropPos() {
       if (langDrop.style.display === "none") return;
@@ -821,11 +851,38 @@
         return;
       }
 
-      // Validate: watched episodes must not exceed total
-      for (let i = 0; i < _seasons.length; i++) {
-        if (_seasons[i].total > 0 && _seasons[i].watched > _seasons[i].total) {
-          errorEl.textContent = `Season ${i + 1}: watched episodes cannot exceed total episodes`;
-          return;
+      // Validate & build seasons payload from unified entries
+      const seasonEntries = [];
+      let sNum = 0; // running season counter
+      let sLabel = 0;
+      for (let i = 0; i < _entries.length; i++) {
+        const e = _entries[i];
+        if (e.type === "season") {
+          sNum++;
+          sLabel++;
+          if (e.total > 0 && e.watched > e.total) {
+            errorEl.textContent = `Season ${sLabel}: watched cannot exceed total`;
+            return;
+          }
+          seasonEntries.push({
+            number: sNum,
+            total_episodes: e.total,
+            watched_episodes: e.watched,
+            comment: e.comment,
+          });
+        } else {
+          // OVA: number = lastSeason + 0.5 (e.g. 1.5 = OVA after Season 1)
+          const afterSeason = Math.max(sNum, 1);
+          if (e.total > 0 && e.watched > e.total) {
+            errorEl.textContent = `OVA: watched cannot exceed total`;
+            return;
+          }
+          seasonEntries.push({
+            number: afterSeason + 0.5,
+            total_episodes: e.total,
+            watched_episodes: e.watched,
+            comment: e.comment,
+          });
         }
       }
 
@@ -839,12 +896,7 @@
           "",
         language: _languages.join(", "),
         stars: _rating || null,
-        seasons: _seasons.map((s, i) => ({
-          number: i + 1,
-          total_episodes: s.total,
-          watched_episodes: s.watched,
-          comment: s.comment,
-        })),
+        seasons: seasonEntries,
       };
 
       saveBtn.disabled = true;

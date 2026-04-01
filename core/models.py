@@ -34,7 +34,7 @@ class Anime(models.Model):
 
 class Season(models.Model):
     anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name="seasons")
-    number = models.PositiveIntegerField(default=1)
+    number = models.FloatField(default=1)
     total_episodes = models.PositiveIntegerField(default=0)
     watched_episodes = models.PositiveIntegerField(default=0)
     comment = models.TextField(blank=True, default="")
@@ -43,8 +43,15 @@ class Season(models.Model):
         ordering = ["number"]
         unique_together = ("anime", "number")
 
+    @property
+    def is_ova(self):
+        return self.number % 1 != 0
+
     def __str__(self):
-        return f"{self.anime.name} - S{self.number} ({self.watched_episodes}/{self.total_episodes})"
+        if self.is_ova:
+            after = int(self.number)
+            return f"{self.anime.name} - OVA(after S{after}) ({self.watched_episodes}/{self.total_episodes})"
+        return f"{self.anime.name} - S{int(self.number)} ({self.watched_episodes}/{self.total_episodes})"
 
     @property
     def is_completed(self):

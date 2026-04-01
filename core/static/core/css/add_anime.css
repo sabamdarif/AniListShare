@@ -435,6 +435,44 @@
   background: var(--surface2);
 }
 
+.aam_season_btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.aam_add_ova_btn {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--accent2, var(--accent));
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.aam_add_ova_btn:hover {
+  background: var(--surface2);
+}
+
+.aam_ova_header {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.aam_ova_label {
+  color: var(--accent2, var(--accent));
+  font-weight: 600;
+}
+
+.aam_ova_row {
+  border-left: 2px solid var(--accent2, var(--accent));
+  padding-left: 8px;
+}
+
 .aam_lang_wrap {
   display: flex;
   align-items: flex-start;
@@ -565,7 +603,9 @@
   background: transparent;
   color: var(--danger);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .aam_delete_btn:hover {
