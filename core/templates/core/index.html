@@ -14,6 +14,7 @@
     <link href="{% static "core/css/fab.css" %}" rel="stylesheet">
     <link href="{% static "core/css/search.css" %}" rel="stylesheet">
     <link href="{% static "core/css/share_modal.css" %}" rel="stylesheet">
+    <link href="{% static "core/css/import_export.css" %}" rel="stylesheet">
     <link href="{% static "core/css/toast.css" %}" rel="stylesheet">
     <link rel="stylesheet"
           href="https://www.nerdfonts.com/assets/css/webfont.css">
@@ -64,6 +65,12 @@
                         {% else %}
                             <i class="nf nf-fa-circle_user"></i>
                         {% endif %}
+                        <span class="export_ring">
+                            <svg viewBox="0 0 40 40">
+                                <circle class="export_ring_track" cx="20" cy="20" r="18"></circle>
+                                <circle class="export_ring_fill" cx="20" cy="20" r="18"></circle>
+                            </svg>
+                        </span>
                     </button>
                     <div class="user_dropdown_menu" id="user_dropdown_menu" role="menu">
                         <div class="user_dropdown_header">
@@ -93,13 +100,19 @@
                                 <i class="nf nf-md-share_all"></i>
                                 <span>Share</span>
                             </button>
-                            <button type="button" class="user_dropdown_item" role="menuitem">
+                            <button type="button"
+                                    class="user_dropdown_item"
+                                    id="import_btn"
+                                    role="menuitem">
                                 <i class="nf nf-fae-file_import"></i>
-                                <span>Import (WIP)</span>
+                                <span>Import</span>
                             </button>
-                            <button type="button" class="user_dropdown_item" role="menuitem">
+                            <button type="button"
+                                    class="user_dropdown_item"
+                                    id="export_btn"
+                                    role="menuitem">
                                 <i class="nf nf-fae-file_export"></i>
-                                <span>Export (WIP)</span>
+                                <span>Export</span>
                             </button>
                             <div class="user_dropdown_divider"></div>
                             <button type="button"
@@ -164,6 +177,51 @@
             <div class="m_search_hint">Type to search across all categories</div>
         </div>
     </div>
+    <!-- Import Modal -->
+    <div class="import_overlay" id="import_overlay"></div>
+    <div class="import_modal" id="import_modal">
+        <div class="import_modal_header">
+            <h3>Import from ODS</h3>
+            <button type="button" class="import_close_btn" id="import_close_btn">
+                <i class="nf nf-cod-close"></i>
+            </button>
+        </div>
+        <div class="import_modal_body">
+            <div class="import_dropzone" id="import_dropzone">
+                <div class="import_dropzone_icon">
+                    <i class="nf nf-md-file_upload_outline"></i>
+                </div>
+                <div class="import_dropzone_text">
+                    <strong>Drop your .ods file here</strong>
+                    <br>
+                    or click to browse
+                </div>
+                <div class="import_dropzone_hint">Only .ods files exported from this app are supported</div>
+                <input type="file"
+                       class="import_file_input"
+                       id="import_file_input"
+                       accept=".ods">
+            </div>
+            <div class="import_file_info" id="import_file_info">
+                <i class="nf nf-md-file_document_outline"></i>
+                <span class="import_file_name" id="import_file_name"></span>
+                <button type="button" class="import_file_remove" id="import_file_remove">
+                    <i class="nf nf-cod-close"></i>
+                </button>
+            </div>
+            <button type="button" class="import_start_btn" id="import_start_btn">Start Import</button>
+            <div class="import_progress_wrapper" id="import_progress_wrapper">
+                <div class="import_progress_label">
+                    <span id="import_progress_text">Preparing…</span>
+                    <span id="import_progress_pct">0%</span>
+                </div>
+                <div class="import_progress_bar_bg">
+                    <div class="import_progress_bar_fill" id="import_progress_fill"></div>
+                </div>
+            </div>
+            <div class="import_status" id="import_status"></div>
+        </div>
+    </div>
 {% endblock body_content %}
 {% block scripts %}
     <script src="{% static 'core/js/header_dropdown.js' %}"></script>
@@ -176,6 +234,8 @@
     <script src="{% static 'core/js/edit_category_modal.js' %}"></script>
     <script src="{% static 'core/js/search.js' %}"></script>
     <script src="{% static 'core/js/share_modal.js' %}"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="{% static 'core/js/import_export.js' %}"></script>
     <script>
         // Mobile FAB toggle
         document.addEventListener('DOMContentLoaded', () => {

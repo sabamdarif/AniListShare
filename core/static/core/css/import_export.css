@@ -1,0 +1,315 @@
+#user_profile_btn {
+  position: relative;
+}
+
+#user_profile_btn.exporting {
+  border-color: transparent !important;
+}
+
+.export_ring {
+  display: none;
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#user_profile_btn.exporting .export_ring {
+  display: block;
+}
+
+.export_ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.export_ring_track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 3;
+}
+
+.export_ring_fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 113;
+  stroke-dashoffset: 113;
+  transition: stroke-dashoffset 0.35s ease;
+}
+
+@keyframes export_done_pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+#user_profile_btn.export_done {
+  animation: export_done_pulse 0.5s ease;
+}
+
+.import_overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.import_overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.import_modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  width: min(420px, 90vw);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  z-index: 901;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  overflow: hidden;
+}
+
+.import_modal.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.import_modal_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+
+.import_modal_header h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.import_close_btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.import_close_btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.import_modal_body {
+  padding: 0 20px 20px;
+}
+
+.import_dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+  position: relative;
+}
+
+.import_dropzone:hover,
+.import_dropzone.dragover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.import_dropzone_icon {
+  font-size: 2.5rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  transition: color 0.2s ease;
+}
+
+.import_dropzone:hover .import_dropzone_icon,
+.import_dropzone.dragover .import_dropzone_icon {
+  color: var(--accent);
+}
+
+.import_dropzone_text {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.import_dropzone_text strong {
+  color: var(--text);
+}
+
+.import_dropzone_hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.import_file_input {
+  display: none;
+}
+
+.import_file_info {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  margin-top: 14px;
+}
+
+.import_file_info.visible {
+  display: flex;
+}
+
+.import_file_info i {
+  font-size: 1.2rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.import_file_name {
+  font-size: 0.85rem;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import_file_remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px;
+  transition: color 0.15s ease;
+}
+
+.import_file_remove:hover {
+  color: var(--danger);
+}
+
+.import_progress_wrapper {
+  display: none;
+  margin-top: 16px;
+}
+
+.import_progress_wrapper.visible {
+  display: block;
+}
+
+.import_progress_label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.import_progress_bar_bg {
+  width: 100%;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.import_progress_bar_fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.import_start_btn {
+  display: none;
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.import_start_btn.visible {
+  display: block;
+}
+
+.import_start_btn:hover {
+  background: var(--accent2);
+}
+
+.import_start_btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.import_status {
+  display: none;
+  text-align: center;
+  padding: 12px;
+  margin-top: 12px;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.import_status.visible {
+  display: block;
+}
+
+.import_status.success {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.import_status.error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
