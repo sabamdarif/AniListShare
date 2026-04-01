@@ -540,10 +540,42 @@
   border-top: 1px solid var(--border);
 }
 
+.aam_footer_with_delete {
+  justify-content: space-between;
+}
+
+.aam_footer_right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .aam_error {
   font-size: 0.82rem;
   color: var(--danger);
   flex: 1;
+}
+
+.aam_delete_btn {
+  padding: 8px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.aam_delete_btn:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.aam_delete_btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .aam_save_btn {

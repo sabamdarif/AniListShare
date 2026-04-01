@@ -1,3 +1,4 @@
+from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
@@ -5,6 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from core.models import Anime, Category
 
 from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSerializer
+
+
+def _reindex_anime_order(category):
+    """Re-assign order = 0, 1, 2, … for all anime in this category."""
+    siblings = Anime.objects.filter(category=category).order_by("order", "pk")
+    for idx, anime in enumerate(siblings):
+        if anime.order != idx:
+            Anime.objects.filter(pk=anime.pk).update(order=idx)
 
 
 class CategoryListCreateApiView(generics.ListCreateAPIView):
@@ -47,7 +56,12 @@ class AnimeListCreateApiView(generics.ListCreateAPIView):
         category = get_object_or_404(
             Category, pk=self.kwargs["category_id"], user=self.request.user
         )
-        serializer.save(category=category)
+        # Place new anime at the end of the list
+        max_order = Anime.objects.filter(category=category).aggregate(m=Max("order"))[
+            "m"
+        ]
+        next_order = (max_order + 1) if max_order is not None else 0
+        serializer.save(category=category, order=next_order)
 
 
 class AnimeDetailApiView(generics.RetrieveUpdateDestroyAPIView):
@@ -64,6 +78,11 @@ class AnimeDetailApiView(generics.RetrieveUpdateDestroyAPIView):
                 category_id=self.kwargs["category_id"],
             )
         )
+
+    def perform_destroy(self, instance):
+        category = instance.category
+        instance.delete()
+        _reindex_anime_order(category)
 
 
 class SearchAnimeApiView(generics.ListAPIView):

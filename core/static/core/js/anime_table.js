@@ -544,6 +544,56 @@
   };
 
   /* ────────────────────────────────────────────
+   *  Edit button handlers
+   *
+   *  Delegated click on table body & mobile card
+   *  list to open the edit anime modal.
+   * ──────────────────────────────────────────── */
+
+  function findAnimeById(id) {
+    return lastList.find(function (a) {
+      return String(a.id) === String(id);
+    });
+  }
+
+  function handleEditClick(e) {
+    var btn = e.target.closest(".edit_btn");
+    if (!btn) return;
+    e.stopPropagation();
+
+    var container = btn.closest("[data-anime-id]");
+    if (!container) return;
+
+    var animeId = container.getAttribute("data-anime-id");
+    var anime = findAnimeById(animeId);
+    if (!anime || !_currentCategoryId) return;
+
+    if (typeof window.openEditAnimeModal === "function") {
+      window.openEditAnimeModal(anime, _currentCategoryId);
+    }
+  }
+
+  tableBody.addEventListener("click", handleEditClick);
+
+  // Also listen on mobile card list (created dynamically)
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".edit_btn");
+    if (!btn) return;
+
+    var mobileCard = btn.closest(".m_card[data-anime-id]");
+    if (!mobileCard) return;
+
+    e.stopPropagation();
+    var animeId = mobileCard.getAttribute("data-anime-id");
+    var anime = findAnimeById(animeId);
+    if (!anime || !_currentCategoryId) return;
+
+    if (typeof window.openEditAnimeModal === "function") {
+      window.openEditAnimeModal(anime, _currentCategoryId);
+    }
+  });
+
+  /* ────────────────────────────────────────────
    *  Responsive re-render
    * ──────────────────────────────────────────── */
 
