@@ -690,15 +690,20 @@
         watchedInput.addEventListener("change", () => {
           const val = Math.max(0, +watchedInput.value);
           _entries[i].watched = val;
-          if (_entries[i].total > 0 && val > _entries[i].total) {
-            _entries[i].watched = _entries[i].total;
-            watchedInput.value = String(_entries[i].total);
+          if (val > _entries[i].total) {
+            if (_entries[i].total === 0) {
+              _entries[i].total = val;
+              totalInput.value = String(val);
+            } else {
+              _entries[i].watched = _entries[i].total;
+              watchedInput.value = String(_entries[i].total);
+            }
           }
         });
         totalInput.addEventListener("change", () => {
           const val = Math.max(0, +totalInput.value);
           _entries[i].total = val;
-          if (val > 0 && _entries[i].watched > val) {
+          if (_entries[i].watched > val) {
             _entries[i].watched = val;
             watchedInput.value = String(val);
           }
@@ -862,7 +867,7 @@
         if (e.type === "season") {
           sNum++;
           sLabel++;
-          if (e.total > 0 && e.watched > e.total) {
+          if (e.watched > e.total) {
             errorEl.textContent = `Season ${sLabel}: watched cannot exceed total`;
             return;
           }
@@ -875,7 +880,7 @@
         } else {
           // OVA: number = lastSeason + 0.5 (e.g. 1.5 = OVA after Season 1)
           const afterSeason = Math.max(sNum, 1);
-          if (e.total > 0 && e.watched > e.total) {
+          if (e.watched > e.total) {
             errorEl.textContent = `OVA: watched cannot exceed total`;
             return;
           }
