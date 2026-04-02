@@ -369,6 +369,7 @@
             const isOva = num % 1 !== 0;
             _entries.push({
               type: isOva ? "ova" : "season",
+              number: num,
               total: s.total_episodes != null ? s.total_episodes : s.total || 0,
               watched:
                 s.watched_episodes != null
@@ -611,7 +612,19 @@
 
     /* ── seasons & OVAs (unified list) ── */
     function addSeason() {
-      _entries.push({ type: "season", total: 0, watched: 0, comment: "" });
+      let maxNum = 0;
+      _entries.forEach((e) => {
+        if (e.type === "season") {
+          maxNum = Math.max(maxNum, e.number || 1);
+        }
+      });
+      _entries.push({
+        type: "season",
+        number: maxNum + 1,
+        total: 0,
+        watched: 0,
+        comment: "",
+      });
       renderEntries();
     }
     function addOva() {
@@ -629,7 +642,10 @@
 
       _entries.forEach((entry, i) => {
         const isOva = entry.type === "ova";
-        if (!isOva) seasonCounter++;
+        if (!isOva) {
+          seasonCounter++;
+          if (!entry.number) entry.number = seasonCounter;
+        }
 
         const rowCls = isOva ? "aam_season_row aam_ova_row" : "aam_season_row";
         const row = el("div", { className: rowCls });
@@ -638,8 +654,53 @@
         const labelCls = isOva
           ? "aam_season_label aam_ova_label"
           : "aam_season_label";
-        const labelText = isOva ? "OVA" : `Season ${seasonCounter}`;
-        row.appendChild(el("span", { className: labelCls, text: labelText }));
+        const labelText = isOva ? "OVA" : `Season ${entry.number}`;
+        const labelEl = el("span", { className: labelCls, text: labelText });
+
+        if (!isOva) {
+          labelEl.title = "Double-click to edit season number";
+          labelEl.style.cursor = "pointer";
+          labelEl.addEventListener("dblclick", () => {
+            const input = el("input", {
+              className: "aam_season_num_input",
+              attrs: {
+                type: "number",
+                min: "1",
+                max: "100",
+                value: String(entry.number),
+              },
+            });
+            input.style.width = "40px";
+            input.style.marginLeft = "4px";
+            input.style.padding = "2px";
+            input.style.border = "1px solid var(--border)";
+            input.style.borderRadius = "4px";
+            input.style.background = "var(--bg-tertiary)";
+            input.style.color = "var(--text)";
+
+            labelEl.textContent = "Season ";
+            labelEl.appendChild(input);
+            input.focus();
+
+            const save = () => {
+              const val = parseInt(input.value);
+              if (!isNaN(val) && val >= 1 && val <= 100) {
+                entry.number = val;
+              }
+              renderEntries();
+            };
+
+            input.addEventListener("blur", save);
+            input.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                input.blur();
+              }
+            });
+          });
+        }
+
+        row.appendChild(labelEl);
 
         const epCell = el("div", { className: "aam_ep_cell" });
 
@@ -860,26 +921,25 @@
 
       // Validate & build seasons payload from unified entries
       const seasonEntries = [];
-      let sNum = 0; // running season counter
-      let sLabel = 0;
+      let lastSeasonNum = 0; // used for OVAs
       for (let i = 0; i < _entries.length; i++) {
         const e = _entries[i];
         if (e.type === "season") {
-          sNum++;
-          sLabel++;
+          const num = e.number || ++lastSeasonNum;
+          lastSeasonNum = num;
           if (e.watched > e.total) {
-            errorEl.textContent = `Season ${sLabel}: watched cannot exceed total`;
+            errorEl.textContent = `Season ${num}: watched cannot exceed total`;
             return;
           }
           seasonEntries.push({
-            number: sNum,
+            number: num,
             total_episodes: e.total,
             watched_episodes: e.watched,
             comment: e.comment,
           });
         } else {
           // OVA: number = lastSeason + 0.5 (e.g. 1.5 = OVA after Season 1)
-          const afterSeason = Math.max(sNum, 1);
+          const afterSeason = Math.max(lastSeasonNum, 1);
           if (e.watched > e.total) {
             errorEl.textContent = `OVA: watched cannot exceed total`;
             return;
