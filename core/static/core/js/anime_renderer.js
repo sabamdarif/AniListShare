@@ -744,6 +744,12 @@ window.AnimeRenderer = (function () {
         img.loading = "lazy";
 
         placeholder.replaceWith(img);
+
+        // Notify other scripts (like anime_table.js) to update their state
+        var ev = new CustomEvent("animeThumbLoaded", {
+          detail: { animeId: animeId, thumbUrl: thumbUrl },
+        });
+        document.dispatchEvent(ev);
       })
       .catch(function (err) {
         placeholder.classList.remove("thumb_loading");

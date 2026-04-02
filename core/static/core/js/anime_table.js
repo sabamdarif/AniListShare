@@ -161,6 +161,15 @@
 
   tableBody.addEventListener("click", handleEditClick);
 
+  document.addEventListener("animeThumbLoaded", function (e) {
+    if (e.detail && e.detail.animeId) {
+      var anime = findAnimeById(e.detail.animeId);
+      if (anime) {
+        anime.thumbnail_url = e.detail.thumbUrl || "";
+      }
+    }
+  });
+
   document.addEventListener("click", function (e) {
     var btn = e.target.closest(".edit_btn");
     if (!btn) return;
