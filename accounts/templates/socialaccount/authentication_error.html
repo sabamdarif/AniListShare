@@ -1,0 +1,28 @@
+{% extends "account/base_account.html" %}
+{% load i18n allauth %}
+{% block page_title %}
+    {% trans "Third-Party Login Failure" %}
+{% endblock page_title %}
+{% block account_title %}
+    {% trans "Google Login Error" %}
+{% endblock account_title %}
+{% block account_content %}
+    <div style="text-align: center;
+                color: var(--text-muted);
+                margin-bottom: 12px;
+                font-size: 1.1rem;
+                font-weight: 500">{% trans "Third-Party Login Failure" %}</div>
+    <p style="margin-bottom: 24px;
+              color: var(--text-muted);
+              text-align: center;
+              font-size: 0.95rem">
+        {% trans "An error occurred while attempting to login via your third-party account." %}
+    </p>
+    <div style="text-align: center; margin-top: 16px;">
+        <a href="{% url 'account_login' %}"
+           class="auth_btn"
+           style="display: inline-block;
+                  text-decoration: none;
+                  box-sizing: border-box">{% trans "Back to Login" %}</a>
+    </div>
+{% endblock account_content %}
