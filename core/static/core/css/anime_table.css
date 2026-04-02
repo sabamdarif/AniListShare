@@ -189,6 +189,28 @@
   display: block;
 }
 
+/* ── Right-to-Left Skeleton for Thumbnails ── */
+@keyframes thumbSkeletonSlide {
+  0% {
+    background-position: 200px 0;
+  }
+  100% {
+    background-position: -200px 0;
+  }
+}
+
+.thumb_skeleton {
+  background: linear-gradient(
+    -90deg,
+    var(--surface2) 25%,
+    var(--border) 50%,
+    var(--surface2) 75%
+  );
+  background-size: 400px 100%;
+  animation: thumbSkeletonSlide 1.2s ease-in-out infinite;
+  color: transparent; /* Hides alt text while loading */
+}
+
 /* ── Thumbnail Placeholder ── */
 .thumb_placeholder {
   display: flex;
@@ -973,4 +995,3 @@
     font-size: 0.9rem;
   }
 }
-

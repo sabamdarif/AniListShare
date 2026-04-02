@@ -267,7 +267,7 @@ window.AnimeRenderer = (function () {
         escapeHtml(name) +
         '" class="' +
         cssClass +
-        '" loading="lazy">'
+        ' thumb_skeleton" loading="lazy">'
       );
     }
     // No URL — render a placeholder box
@@ -291,7 +291,20 @@ window.AnimeRenderer = (function () {
     );
   }
 
-  // ── Image error handler (shared, runs once) ──
+  // ── Image load/error handlers (shared, runs once) ──
+  document.addEventListener(
+    "load",
+    function (e) {
+      if (
+        e.target.tagName === "IMG" &&
+        e.target.classList.contains("thumb_skeleton")
+      ) {
+        e.target.classList.remove("thumb_skeleton");
+      }
+    },
+    true,
+  );
+
   document.addEventListener(
     "error",
     function (e) {
@@ -749,7 +762,7 @@ window.AnimeRenderer = (function () {
         var img = document.createElement("img");
         img.src = thumbUrl;
         img.alt = animeName;
-        img.className = imgClass;
+        img.className = imgClass + " thumb_skeleton";
         img.loading = "lazy";
 
         placeholder.replaceWith(img);

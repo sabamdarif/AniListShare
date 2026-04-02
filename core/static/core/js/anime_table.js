@@ -135,7 +135,7 @@
           var img = document.createElement("img");
           img.src = e.detail.thumbUrl;
           img.alt = anime ? anime.name : "";
-          img.className = "thumb_img";
+          img.className = "thumb_img thumb_skeleton";
           img.loading = "lazy";
           placeholder.replaceWith(img);
         }
@@ -153,7 +153,7 @@
             var imgM = document.createElement("img");
             imgM.src = e.detail.thumbUrl;
             imgM.alt = anime ? anime.name : "";
-            imgM.className = "m_card_thumb";
+            imgM.className = "m_card_thumb thumb_skeleton";
             imgM.loading = "lazy";
             placeholderM.replaceWith(imgM);
           }
