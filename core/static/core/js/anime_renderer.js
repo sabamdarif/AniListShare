@@ -235,16 +235,14 @@ window.AnimeRenderer = (function () {
 
   function renderStars(val) {
     var rating = val != null && !isNaN(parseFloat(val)) ? parseFloat(val) : 0;
-    var stars = "";
-    for (var i = 1; i <= 10; i++) {
-      if (rating >= i) stars += '<span class="star filled">\u2605</span>';
-      else if (rating >= i - 0.5)
-        stars += '<span class="star half">\u2605</span>';
-      else stars += '<span class="star empty">\u2605</span>';
-    }
+    var starHtml =
+      rating > 0
+        ? '<span class="star single filled">\u2605</span>'
+        : '<span class="star single empty">\u2606</span>';
+
     return (
       '<span class="star_display">' +
-      stars +
+      starHtml +
       '<span class="star_num">' +
       rating.toFixed(1) +
       "</span></span>"
@@ -443,7 +441,11 @@ window.AnimeRenderer = (function () {
         langBadgesHtml(langs) +
         "</div>" +
         '<div class="m_card_footer">' +
-        '<span class="m_card_rating"><span class="star filled">\u2605</span> ' +
+        '<span class="m_card_rating"><span class="star single ' +
+        (parseFloat(rating) > 0 ? "filled" : "empty") +
+        '">' +
+        (parseFloat(rating) > 0 ? "\u2605" : "\u2606") +
+        "</span> " +
         escapeHtml(String(rating)) +
         "</span>";
 
@@ -675,27 +677,9 @@ window.AnimeRenderer = (function () {
     return null;
   }
 
-  document.addEventListener("click", function (e) {
-    var btn = e.target.closest(".thumb_load_btn");
-    if (!btn) return;
-    e.stopPropagation();
-
-    var animeId = btn.getAttribute("data-anime-id");
-    var animeName = btn.getAttribute("data-anime-name");
-    if (!animeId || !animeName) return;
-
-    var catId = getCurrentCategoryId();
-    if (!catId) return;
-
-    var placeholder = btn.closest(".thumb_placeholder");
-    if (!placeholder) return;
-
-    // Show loading state
-    btn.disabled = true;
-    btn.innerHTML = '<span class="thumb_spinner"></span>';
-    placeholder.classList.add("thumb_loading");
-
-    fetch(
+  // Static Helper to fetch and update Thumbnail
+  function fetchAndPatchThumbnail(animeId, animeName, catId) {
+    return fetch(
       "https://api.jikan.moe/v4/anime?q=" +
         encodeURIComponent(animeName) +
         "&limit=1",
@@ -729,7 +713,32 @@ window.AnimeRenderer = (function () {
           if (!patchResp.ok) throw new Error("Save failed");
           return thumbUrl;
         });
-      })
+      });
+  }
+
+  AnimeRenderer.fetchAndPatchThumbnail = fetchAndPatchThumbnail;
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".thumb_load_btn");
+    if (!btn) return;
+    e.stopPropagation();
+
+    var animeId = btn.getAttribute("data-anime-id");
+    var animeName = btn.getAttribute("data-anime-name");
+    if (!animeId || !animeName) return;
+
+    var catId = getCurrentCategoryId();
+    if (!catId) return;
+
+    var placeholder = btn.closest(".thumb_placeholder");
+    if (!placeholder) return;
+
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="thumb_spinner"></span>';
+    placeholder.classList.add("thumb_loading");
+
+    fetchAndPatchThumbnail(animeId, animeName, catId)
       .then(function (thumbUrl) {
         // Determine the right CSS class from the placeholder
         var isMobileThumb = placeholder.classList.contains(

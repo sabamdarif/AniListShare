@@ -85,9 +85,228 @@
     }
   }
 
+  function checkMissingThumbnails() {
+    var missing = lastList.filter(function (a) {
+      return !a.thumbnail_url;
+    });
+    var banner = document.getElementById("autofetch_banner");
+
+    if (missing.length > 0 && !window.isAutoFetchingThumbnails) {
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "autofetch_banner";
+        banner.className = "autofetch_banner";
+        var wrapper = tableEl.closest(".anime_table_wrapper");
+        if (wrapper) wrapper.insertBefore(banner, wrapper.firstChild);
+      }
+      banner.innerHTML =
+        '<div class="autofetch_content">' +
+        '<i class="nf nf-md-image_off"></i> ' +
+        "<span>" +
+        missing.length +
+        " anime " +
+        (missing.length === 1 ? "is" : "are") +
+        " missing thumbnails. Auto-fetch them?</span>" +
+        '<div class="autofetch_actions">' +
+        '<button class="autofetch_btn_yes">Yes</button>' +
+        '<button class="autofetch_btn_close" title="Close"><i class="nf nf-md-close"></i></button>' +
+        "</div>" +
+        "</div>" +
+        '<div class="autofetch_progress_bar" style="display:none;"><div class="autofetch_progress_fill"></div></div>';
+      banner.style.display = "block";
+    } else if (banner && !window.isAutoFetchingThumbnails) {
+      banner.style.display = "none";
+    }
+  }
+
+  document.addEventListener("animeThumbLoaded", function (e) {
+    if (e.detail && e.detail.animeId) {
+      var animeId = e.detail.animeId;
+      var anime = findAnimeById(animeId);
+      if (anime) {
+        anime.thumbnail_url = e.detail.thumbUrl || "";
+      }
+
+      // Update Desktop Table DOM
+      var tr = tableEl.querySelector('tr[data-anime-id="' + animeId + '"]');
+      if (tr) {
+        var placeholder = tr.querySelector(".thumb_placeholder");
+        if (placeholder) {
+          var img = document.createElement("img");
+          img.src = e.detail.thumbUrl;
+          img.alt = anime ? anime.name : "";
+          img.className = "thumb_img";
+          img.loading = "lazy";
+          placeholder.replaceWith(img);
+        }
+      }
+
+      // Update Mobile Card DOM
+      var wrapper = document.getElementById("mobile_card_list");
+      if (wrapper) {
+        var mCard = wrapper.querySelector(
+          '.m_card[data-anime-id="' + animeId + '"]',
+        );
+        if (mCard) {
+          var placeholderM = mCard.querySelector(".thumb_placeholder");
+          if (placeholderM) {
+            var imgM = document.createElement("img");
+            imgM.src = e.detail.thumbUrl;
+            imgM.alt = anime ? anime.name : "";
+            imgM.className = "m_card_thumb";
+            imgM.loading = "lazy";
+            placeholderM.replaceWith(imgM);
+          }
+        }
+      }
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".autofetch_btn_close")) {
+      var banner = document.getElementById("autofetch_banner");
+      if (banner) banner.style.display = "none";
+      return;
+    }
+    if (e.target.closest(".autofetch_btn_yes")) {
+      startAutoFetchSequence();
+    }
+  });
+
+  function setEntryLoadingStatus(animeId) {
+    var tr = tableEl.querySelector('tr[data-anime-id="' + animeId + '"]');
+    if (tr) {
+      var btn = tr.querySelector(".thumb_load_btn");
+      var placeholder = tr.querySelector(".thumb_placeholder");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="thumb_spinner"></span>';
+      }
+      if (placeholder) placeholder.classList.add("thumb_loading");
+    }
+
+    var wrapper = document.getElementById("mobile_card_list");
+    if (wrapper) {
+      var mCard = wrapper.querySelector(
+        '.m_card[data-anime-id="' + animeId + '"]',
+      );
+      if (mCard) {
+        var btnM = mCard.querySelector(".thumb_load_btn");
+        var placeholderM = mCard.querySelector(".thumb_placeholder");
+        if (btnM) {
+          btnM.disabled = true;
+          btnM.innerHTML = '<span class="thumb_spinner"></span>';
+        }
+        if (placeholderM) placeholderM.classList.add("thumb_loading");
+      }
+    }
+  }
+
+  function setEntryErrorStatus(animeId) {
+    var tr = tableEl.querySelector('tr[data-anime-id="' + animeId + '"]');
+    if (tr) {
+      var btn = tr.querySelector(".thumb_load_btn");
+      var placeholder = tr.querySelector(".thumb_placeholder");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="nf nf-md-alert_circle_outline"></i> Retry';
+        btn.classList.add("thumb_load_error");
+      }
+      if (placeholder) placeholder.classList.remove("thumb_loading");
+    }
+
+    var wrapper = document.getElementById("mobile_card_list");
+    if (wrapper) {
+      var mCard = wrapper.querySelector(
+        '.m_card[data-anime-id="' + animeId + '"]',
+      );
+      if (mCard) {
+        var btnM = mCard.querySelector(".thumb_load_btn");
+        var placeholderM = mCard.querySelector(".thumb_placeholder");
+        if (btnM) {
+          btnM.disabled = false;
+          btnM.innerHTML =
+            '<i class="nf nf-md-alert_circle_outline"></i> Retry';
+          btnM.classList.add("thumb_load_error");
+        }
+        if (placeholderM) placeholderM.classList.remove("thumb_loading");
+      }
+    }
+  }
+
+  async function startAutoFetchSequence() {
+    var banner = document.getElementById("autofetch_banner");
+    if (!banner) return;
+
+    var missing = lastList.filter(function (a) {
+      return !a.thumbnail_url;
+    });
+    if (!missing.length || !_currentCategoryId) return;
+
+    window.isAutoFetchingThumbnails = true;
+
+    var content = banner.querySelector(".autofetch_content");
+    var progressTrack = banner.querySelector(".autofetch_progress_bar");
+    var progressFill = banner.querySelector(".autofetch_progress_fill");
+
+    if (content)
+      content.innerHTML =
+        '<i class="nf nf-md-cloud_sync"></i> <span>Fetching thumbnails (<span id="autofetch_count">0</span>/' +
+        missing.length +
+        ")...</span>";
+    if (progressTrack) progressTrack.style.display = "block";
+    if (progressFill) progressFill.style.width = "0%";
+
+    var catId = _currentCategoryId;
+
+    for (var i = 0; i < missing.length; i++) {
+      var a = missing[i];
+      var countEl = document.getElementById("autofetch_count");
+      if (countEl) countEl.textContent = i;
+
+      setEntryLoadingStatus(a.id);
+
+      try {
+        var thumbUrl = await AR.fetchAndPatchThumbnail(a.id, a.name, catId);
+
+        // Notify UI to update the image in place
+        var ev = new CustomEvent("animeThumbLoaded", {
+          detail: { animeId: a.id, thumbUrl: thumbUrl },
+        });
+        document.dispatchEvent(ev);
+      } catch (err) {
+        console.error("Auto-fetch failed for " + a.name, err);
+        setEntryErrorStatus(a.id);
+      }
+
+      if (progressFill) {
+        progressFill.style.width =
+          Math.round(((i + 1) / missing.length) * 100) + "%";
+      }
+
+      // Delay 500ms to avoid Jikan API rate limit (3 RPS)
+      if (i < missing.length - 1) {
+        await new Promise(function (res) {
+          setTimeout(res, 500);
+        });
+      }
+    }
+
+    if (content) {
+      content.innerHTML =
+        '<i class="nf nf-fa-check_circle" style="color:var(--success,#4ade80);"></i> <span>All missing thumbnails fetched!</span>';
+    }
+
+    setTimeout(function () {
+      window.isAutoFetchingThumbnails = false;
+      if (banner) banner.style.display = "none";
+    }, 3000);
+  }
+
   function render(animeList) {
     lastList = animeList;
     renderer.render(animeList);
+    checkMissingThumbnails();
   }
 
   async function loadCategory(categoryId) {
