@@ -109,13 +109,42 @@
     }
   });
 
-  if (DATA.length) {
-    buildTabs();
-    showCategory(0);
-  } else {
-    tableBody.innerHTML =
-      '<tr><td colspan="6" class="empty_msg">This list is empty.</td></tr>';
+  async function fetchSharedData() {
+    var loader = document.getElementById("category_tabs_loader");
+    if (loader) loader.style.display = "inline-block";
+
+    var token = window.__SHARE_TOKEN__;
+    if (!token) return;
+
+    try {
+      var res = await fetch("/api/share/data/" + token + "/", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to load list");
+      var data = await res.json();
+      DATA = data || [];
+
+      if (loader) loader.style.display = "none";
+
+      if (DATA.length) {
+        buildTabs();
+        showCategory(0);
+      } else {
+        tableBody.innerHTML =
+          '<tr><td colspan="6" class="empty_msg">This list is empty.</td></tr>';
+      }
+    } catch (err) {
+      console.error(err);
+      if (tabsContainer) {
+        tabsContainer.innerHTML =
+          '<span style="color:red; margin-left:12px;">Failed to load list. Please refresh.</span>';
+      }
+      if (loader) loader.style.display = "none";
+    }
   }
+
+  fetchSharedData();
 
   window.addEventListener("beforeunload", function () {
     if (DATA.length && _activeCatIdx >= 0) {

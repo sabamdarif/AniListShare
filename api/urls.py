@@ -57,6 +57,11 @@ urlpatterns = [
         views.ShareCopyApiView.as_view(),
         name="share_copy",
     ),
+    path(
+        "share/data/<str:token>/",
+        views.ShareDataApiView.as_view(),
+        name="share_data",
+    ),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]

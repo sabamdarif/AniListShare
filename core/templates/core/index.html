@@ -39,7 +39,7 @@
                     <i class="nf nf-fa-folder_plus"></i>Category
                 </button>
                 <button type="button"
-                        class="header_action_buttons btn_add_anime{% if not categories %} btn_add_anime_disabled{% endif %}">
+                        class="header_action_buttons btn_add_anime btn_add_anime_disabled">
                     <i class="nf nf-oct-plus"></i>Add Anime
                 </button>
                 <button type="button"
@@ -127,18 +127,12 @@
             </div>
         </header>
         <nav class="category_tabs" id="category_tabs">
-            {% for cat in categories %}
-                <div class="category_tab_wrapper"
-                     data-category-id="{{ cat.user_category_id }}">
-                    <button class="category_tab" data-category-id="{{ cat.user_category_id }}">{{ cat.name }}</button>
-                    <button class="category_edit_btn"
-                            aria-label="Edit category"
-                            data-category-id="{{ cat.user_category_id }}"
-                            data-category-name="{{ cat.name }}">
-                        <i class="nf nf-fa-pencil"></i>
-                    </button>
-                </div>
-            {% endfor %}
+            <div class="m_search_loader"
+                 id="category_tabs_loader"
+                 style="width: 24px;
+                        height: 24px;
+                        display:inline-block;
+                        margin-left: 20px"></div>
         </nav>
     </div>
     <main class="anime_table_wrapper">
@@ -151,7 +145,7 @@
                 <i class="nf nf-oct-plus"></i> Category
             </button>
             <button type="button"
-                    class="m_fab_option{% if not categories %} m_fab_option_disabled{% endif %}"
+                    class="m_fab_option m_fab_option_disabled"
                     id="m_fab_add_anime"
                     aria-label="Add Anime">
                 <i class="nf nf-oct-plus"></i> Add Anime

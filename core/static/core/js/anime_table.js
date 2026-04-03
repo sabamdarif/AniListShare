@@ -15,11 +15,15 @@
     emptyMessage: "No anime found in this category.",
   });
 
-  var tabs = tabsContainer.querySelectorAll(".category_tab");
   var lastList = [];
   var _currentCategoryId = null;
 
+  function getTabs() {
+    return tabsContainer ? tabsContainer.querySelectorAll(".category_tab") : [];
+  }
+
   function setActiveTab(btn) {
+    var tabs = getTabs();
     tabs.forEach(function (t) {
       t.classList.remove("active");
       if (
@@ -310,6 +314,20 @@
     if (isNaN(catId)) return;
 
     _currentCategoryId = catId;
+
+    if (
+      window.__INITIAL_CATEGORY_DATA__ &&
+      window.__INITIAL_CATEGORY_ID__ === catId
+    ) {
+      var data = window.__INITIAL_CATEGORY_DATA__;
+      window.__INITIAL_CATEGORY_DATA__ = null; // consume it
+      var serverList = Array.isArray(data) ? data : data.results || [];
+      var normalized = serverList.map(normalizeAnime);
+      render(normalized);
+      AR.restoreScroll(_currentCategoryId);
+      return;
+    }
+
     showSkeleton(4);
 
     try {
@@ -1091,45 +1109,97 @@
     })();
   }
 
-  /* Tab click handlers & initial load */
-  tabs.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var wrapper = btn.closest(".category_tab_wrapper");
-
-      if (btn.classList.contains("active")) {
-        if (wrapper) wrapper.classList.toggle("category_edit_visible");
-        return;
-      }
-
-      document
-        .querySelectorAll(".category_edit_visible")
-        .forEach(function (el) {
-          el.classList.remove("category_edit_visible");
-        });
-
-      setActiveTab(btn);
-      try {
-        localStorage.setItem("active_category", btn.dataset.categoryId);
-        AR.clearScroll(btn.dataset.categoryId);
-      } catch (_) {}
-      loadCategory(btn.dataset.categoryId);
-    });
-  });
-
-  if (tabs.length > 0) {
-    var startTab = tabs[0];
+  /* Dynamic Category Fetch & Render */
+  async function fetchAndRenderCategories() {
     try {
-      var savedId = localStorage.getItem("active_category");
-      if (savedId) {
-        var found = Array.prototype.find.call(tabs, function (t) {
-          return t.dataset.categoryId === savedId;
+      var loader = document.getElementById("category_tabs_loader");
+      if (loader) loader.style.display = "inline-block";
+
+      var res = await apiFetch("/api/anime/category/", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to load categories");
+      var cats = await res.json();
+      var list = Array.isArray(cats) ? cats : cats.results || [];
+
+      if (loader) loader.style.display = "none";
+      tabsContainer.innerHTML = "";
+
+      list.forEach(function (cat) {
+        var wrapper = document.createElement("div");
+        wrapper.className = "category_tab_wrapper";
+        wrapper.dataset.categoryId = cat.id;
+
+        var btn = document.createElement("button");
+        btn.className = "category_tab";
+        btn.dataset.categoryId = cat.id;
+        btn.textContent = cat.name;
+
+        var editBtn = document.createElement("button");
+        editBtn.className = "category_edit_btn";
+        editBtn.setAttribute("aria-label", "Edit category");
+        editBtn.dataset.categoryId = cat.id;
+        editBtn.dataset.categoryName = cat.name;
+        editBtn.innerHTML = '<i class="nf nf-fa-pencil"></i>';
+
+        wrapper.appendChild(btn);
+        wrapper.appendChild(editBtn);
+        tabsContainer.appendChild(wrapper);
+
+        // Tab click handler
+        btn.addEventListener("click", function () {
+          if (btn.classList.contains("active")) {
+            wrapper.classList.toggle("category_edit_visible");
+            return;
+          }
+          document
+            .querySelectorAll(".category_edit_visible")
+            .forEach(function (el) {
+              el.classList.remove("category_edit_visible");
+            });
+          setActiveTab(btn);
+          try {
+            localStorage.setItem("active_category", btn.dataset.categoryId);
+            AR.clearScroll(btn.dataset.categoryId);
+          } catch (_) {}
+          loadCategory(btn.dataset.categoryId);
         });
-        if (found) startTab = found;
+      });
+
+      // Update external dependencies
+      if (typeof window.updateAddAnimeButtonState === "function") {
+        window.updateAddAnimeButtonState();
       }
-    } catch (_) {}
-    setActiveTab(startTab);
-    loadCategory(startTab.dataset.categoryId);
+
+      var tabs = getTabs();
+      if (tabs.length > 0) {
+        var startTab = tabs[0];
+        try {
+          var savedId = localStorage.getItem("active_category");
+          if (savedId) {
+            var found = Array.prototype.find.call(tabs, function (t) {
+              return String(t.dataset.categoryId) === String(savedId);
+            });
+            if (found) startTab = found;
+          }
+        } catch (_) {}
+        setActiveTab(startTab);
+        loadCategory(startTab.dataset.categoryId);
+      } else {
+        tableBody.innerHTML =
+          '<tr><td colspan="7" class="empty_msg">Please create a category first to add anime.</td></tr>';
+      }
+    } catch (err) {
+      console.error(err);
+      if (tabsContainer) {
+        tabsContainer.innerHTML =
+          '<span style="color:red; margin-left:12px;">Failed to load categories. Please refresh.</span>';
+      }
+    }
   }
+
+  fetchAndRenderCategories();
 
   window.addEventListener("beforeunload", function () {
     if (_currentCategoryId != null) {

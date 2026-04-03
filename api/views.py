@@ -260,6 +260,35 @@ class ShareToggleApiView(APIView):
             return Response({"enabled": False}, status=status.HTTP_200_OK)
 
 
+class ShareDataApiView(APIView):
+    def get(self, request, token):
+        try:
+            share = ShareLink.objects.select_related("user").get(token=token)
+        except ShareLink.DoesNotExist:
+            return Response(
+                {"detail": "This shared link does not exist or has been disabled."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        owner = share.user
+        categories = (
+            Category.objects.filter(user=owner)
+            .prefetch_related("animes__seasons")
+            .order_by("order")
+        )
+
+        data = [
+            {
+                "id": cat.user_category_id,
+                "name": cat.name,
+                "animes": AnimeSerializer(cat.animes.all(), many=True).data,
+            }
+            for cat in categories
+        ]
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
 class ShareCopyApiView(APIView):
     permission_classes = [IsAuthenticated]
 

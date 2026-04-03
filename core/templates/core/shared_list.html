@@ -60,6 +60,12 @@
             </div>
         </header>
         <nav class="category_tabs" id="category_tabs">
+            <div class="m_search_loader"
+                 id="category_tabs_loader"
+                 style="width: 24px;
+                        height: 24px;
+                        display:inline-block;
+                        margin-left: 20px"></div>
         </nav>
     </div>
     <main class="anime_table_wrapper">
@@ -68,7 +74,7 @@
 {% endblock body_content %}
 {% block scripts %}
     <script>
-        window.__SHARED_DATA__ = {{ categories_json|safe }};
+        window.__SHARED_DATA__ = null; // Will be fetched by shared_list.js
         window.__SHARE_TOKEN__ = "{{ share_token }}";
         window.__LOGIN_URL__ = "{% url 'account_login' %}?next={{ request.path }}";
         window.__IS_AUTHENTICATED__ = {{ request.user.is_authenticated|yesno:"true,false" }};
