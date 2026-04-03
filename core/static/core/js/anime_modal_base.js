@@ -958,6 +958,7 @@
       try {
         await cfg.onSave(payload, catId, {
           animeId: _editingAnimeId,
+          oldCategoryId: _editingCategoryId,
           close,
           showToast,
         });
@@ -987,6 +988,7 @@
         try {
           const catId = _editingCategoryId || catSelect.value;
           await cfg.onDelete(_editingAnimeId, catId, {
+            oldCategoryId: _editingCategoryId,
             close,
             showToast,
           });

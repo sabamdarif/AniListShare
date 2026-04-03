@@ -16,17 +16,20 @@
 
       onSave: async (payload, catId, ctx) => {
         const animeId = ctx.animeId;
+        const oldCatId = ctx.oldCategoryId || catId;
         if (!animeId) throw new Error("No anime selected");
 
+        const requestPayload = { ...payload, category_id: parseInt(catId, 10) };
+
         const resp = await apiFetch(
-          `${API_BASE}${encodeURIComponent(catId)}/${encodeURIComponent(animeId)}/`,
+          `${API_BASE}${encodeURIComponent(oldCatId)}/${encodeURIComponent(animeId)}/`,
           {
             method: "PUT",
             credentials: "same-origin",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(requestPayload),
           },
         );
 
@@ -61,8 +64,9 @@
       },
 
       onDelete: async (animeId, catId, ctx) => {
+        const oldCatId = ctx.oldCategoryId || catId;
         const resp = await apiFetch(
-          `${API_BASE}${encodeURIComponent(catId)}/${encodeURIComponent(animeId)}/`,
+          `${API_BASE}${encodeURIComponent(oldCatId)}/${encodeURIComponent(animeId)}/`,
           {
             method: "DELETE",
             credentials: "same-origin",

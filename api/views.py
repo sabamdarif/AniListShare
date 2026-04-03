@@ -104,6 +104,31 @@ class AnimeDetailApiView(generics.RetrieveUpdateDestroyAPIView):
             )
         )
 
+    def perform_update(self, serializer):
+        new_category_id = self.request.data.get("category_id")
+        old_category = serializer.instance.category
+
+        # If the category is being changed
+        if new_category_id is not None and str(new_category_id) != str(
+            self.kwargs["category_id"]
+        ):
+            new_category = get_object_or_404(
+                Category,
+                user_category_id=new_category_id,
+                user=self.request.user,
+            )
+            # Add to the end of the new category
+            max_order_agg = Anime.objects.filter(category=new_category).aggregate(
+                m=Max("order")
+            )
+            max_order = max_order_agg.get("m")
+            next_order = (max_order + 1) if max_order is not None else 0
+
+            serializer.save(category=new_category, order=next_order)
+            _reindex_anime_order(old_category)
+        else:
+            serializer.save()
+
     def perform_destroy(self, instance):
         category = instance.category
         instance.delete()
