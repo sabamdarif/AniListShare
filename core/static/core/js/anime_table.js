@@ -448,6 +448,33 @@
   /* Desktop drag-and-drop on .col_id */
   (function () {
     var state = null;
+    var autoScrollAnimationFrame = null;
+
+    function handleAutoScroll() {
+      if (!state || !state.dragging) {
+        autoScrollAnimationFrame = null;
+        return;
+      }
+      var edgeSize = 60;
+      var maxSpeed = 15;
+      var vh = window.innerHeight;
+      var speed = 0;
+
+      if (state.currentY < edgeSize) {
+        speed = -Math.max(1, maxSpeed * (1 - state.currentY / edgeSize));
+      } else if (state.currentY > vh - edgeSize) {
+        speed = Math.max(
+          1,
+          maxSpeed * ((state.currentY - (vh - edgeSize)) / edgeSize),
+        );
+      }
+
+      if (speed !== 0) {
+        window.scrollBy(0, speed);
+        showIndicator(getDropIdx(state.currentY));
+      }
+      autoScrollAnimationFrame = requestAnimationFrame(handleAutoScroll);
+    }
 
     function removeIndicator() {
       var el = tableBody.querySelector(".anime_drop_indicator");
@@ -499,6 +526,7 @@
         fromIdx: fromIdx,
         startX: startX,
         startY: startY,
+        currentY: e.clientY,
         offsetY: e.clientY - rect.top,
         offsetX: e.clientX - rect.left,
         ghost: null,
@@ -508,6 +536,7 @@
 
     document.addEventListener("mousemove", function (e) {
       if (!state) return;
+      state.currentY = e.clientY;
 
       if (!state.dragging) {
         var dx = Math.abs(e.clientX - state.startX);
@@ -523,6 +552,10 @@
         ghost.style.width = state.tr.offsetWidth + "px";
         document.body.appendChild(ghost);
         state.ghost = ghost;
+
+        if (!autoScrollAnimationFrame) {
+          autoScrollAnimationFrame = requestAnimationFrame(handleAutoScroll);
+        }
       }
 
       e.preventDefault();
@@ -535,6 +568,11 @@
       if (!state) return;
       var s = state;
       state = null;
+
+      if (autoScrollAnimationFrame) {
+        cancelAnimationFrame(autoScrollAnimationFrame);
+        autoScrollAnimationFrame = null;
+      }
 
       if (!s.dragging) return;
 
@@ -553,6 +591,35 @@
   (function () {
     var state = null;
     var pressTimer = null;
+    var autoScrollAnimationFrame = null;
+
+    function handleAutoScroll() {
+      if (!state) {
+        autoScrollAnimationFrame = null;
+        return;
+      }
+      var edgeSize = 80;
+      var maxSpeed = 15;
+      var vh = window.innerHeight;
+      var speed = 0;
+
+      if (state.currentY < edgeSize) {
+        speed = -Math.max(1, maxSpeed * (1 - state.currentY / edgeSize));
+      } else if (state.currentY > vh - edgeSize) {
+        speed = Math.max(
+          1,
+          maxSpeed * ((state.currentY - (vh - edgeSize)) / edgeSize),
+        );
+      }
+
+      if (speed !== 0) {
+        window.scrollBy(0, speed);
+        var dropIdx = getDropIdx(state.wrapper, state.currentY);
+        state.dropIdx = dropIdx;
+        showIndicator(state.wrapper, dropIdx);
+      }
+      autoScrollAnimationFrame = requestAnimationFrame(handleAutoScroll);
+    }
 
     function removeIndicator(wrapper) {
       if (!wrapper) return;
@@ -590,6 +657,10 @@
 
     function cleanup() {
       cancelPress();
+      if (autoScrollAnimationFrame) {
+        cancelAnimationFrame(autoScrollAnimationFrame);
+        autoScrollAnimationFrame = null;
+      }
       if (state) {
         state.card.classList.remove("anime_dragging_mobile");
         if (state.ghost) state.ghost.remove();
@@ -640,10 +711,15 @@
             ghost: ghost,
             wrapper: wrapper,
             fromIdx: fromIdx,
+            currentY: touch.clientY,
             offsetY: touch.clientY - rect.top,
             offsetX: touch.clientX - rect.left,
             dropIdx: fromIdx,
           };
+
+          if (!autoScrollAnimationFrame) {
+            autoScrollAnimationFrame = requestAnimationFrame(handleAutoScroll);
+          }
         }, MOBILE_HOLD_MS);
 
         var onTouchMove = function (ev) {
@@ -685,6 +761,8 @@
         if (!state) return;
         e.preventDefault();
         var touch = e.touches[0];
+        state.currentY = touch.clientY;
+
         state.ghost.style.top = touch.clientY - state.offsetY + "px";
         state.ghost.style.left = touch.clientX - state.offsetX + "px";
 
