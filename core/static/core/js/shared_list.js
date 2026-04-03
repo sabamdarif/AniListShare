@@ -65,6 +65,11 @@
     renderer.render(normalized);
   }
 
+  function getScrollKey(idx) {
+    var token = window.__SHARE_TOKEN__ || "local";
+    return "shared_" + token + "_tab_" + idx;
+  }
+
   function showCategory(idx) {
     _activeCatIdx = idx;
     var allTabs = tabsContainer.querySelectorAll(".category_tab");
@@ -76,13 +81,17 @@
       w.classList.toggle("active", i === idx);
     });
     renderCurrent();
+    AR.restoreScroll(getScrollKey(idx));
   }
 
   tabsContainer.addEventListener("click", function (e) {
     var btn = e.target.closest(".category_tab");
     if (!btn) return;
     var idx = parseInt(btn.getAttribute("data-cat-idx"), 10);
-    if (!isNaN(idx)) showCategory(idx);
+    if (!isNaN(idx)) {
+      if (idx !== _activeCatIdx) AR.clearScroll(getScrollKey(idx));
+      showCategory(idx);
+    }
   });
 
   if (searchInput) {
@@ -107,6 +116,12 @@
     tableBody.innerHTML =
       '<tr><td colspan="6" class="empty_msg">This list is empty.</td></tr>';
   }
+
+  window.addEventListener("beforeunload", function () {
+    if (DATA.length && _activeCatIdx >= 0) {
+      AR.saveScroll(getScrollKey(_activeCatIdx));
+    }
+  });
 
   // --- Dropdown and Copy Logic ---
   var dropdownBtn = document.getElementById("shared_dropdown_btn");

@@ -484,6 +484,37 @@ window.AnimeRenderer = (function () {
   AnimeRenderer.renderSeasonsMobile = renderSeasonsMobile;
   AnimeRenderer.renderStars = renderStars;
 
+  // ── Scroll State Manager ──
+  AnimeRenderer.saveScroll = function (key) {
+    if (key == null) return;
+    try {
+      sessionStorage.setItem(
+        "ar_scroll_" + key,
+        window.scrollY || document.documentElement.scrollTop,
+      );
+    } catch (e) {}
+  };
+
+  AnimeRenderer.clearScroll = function (key) {
+    if (key == null) return;
+    try {
+      sessionStorage.removeItem("ar_scroll_" + key);
+    } catch (e) {}
+  };
+
+  AnimeRenderer.restoreScroll = function (key) {
+    if (key == null) return;
+    try {
+      var saved = sessionStorage.getItem("ar_scroll_" + key);
+      if (saved) {
+        requestAnimationFrame(function () {
+          window.scrollTo(0, parseInt(saved, 10));
+          sessionStorage.removeItem("ar_scroll_" + key);
+        });
+      }
+    } catch (e) {}
+  };
+
   // ── Desktop comment tooltips ──
   var activeTooltip = null;
   var hoverTimer = null;

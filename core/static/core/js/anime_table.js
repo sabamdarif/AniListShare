@@ -326,6 +326,8 @@
       var normalized = serverList.map(normalizeAnime);
 
       render(normalized);
+
+      AR.restoreScroll(_currentCategoryId);
     } catch (_) {
       if (isMobile()) {
         renderer.removeMobileList();
@@ -348,7 +350,10 @@
   }
 
   window.refreshCurrentCategory = function () {
-    if (_currentCategoryId != null) loadCategory(_currentCategoryId);
+    if (_currentCategoryId != null) {
+      AR.saveScroll(_currentCategoryId);
+      loadCategory(_currentCategoryId);
+    }
   };
 
   function findAnimeById(id) {
@@ -1033,6 +1038,7 @@
       setActiveTab(btn);
       try {
         localStorage.setItem("active_category", btn.dataset.categoryId);
+        AR.clearScroll(btn.dataset.categoryId);
       } catch (_) {}
       loadCategory(btn.dataset.categoryId);
     });
@@ -1052,4 +1058,10 @@
     setActiveTab(startTab);
     loadCategory(startTab.dataset.categoryId);
   }
+
+  window.addEventListener("beforeunload", function () {
+    if (_currentCategoryId != null) {
+      AR.saveScroll(_currentCategoryId);
+    }
+  });
 })();
