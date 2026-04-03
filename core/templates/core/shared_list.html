@@ -26,9 +26,36 @@
                 <input type="search" placeholder="search anime..." id="shared_search_input">
             </div>
             <div class="header_content" id="header_action_buttons">
-                <div class="shared_owner_badge">
-                    <i class="nf nf-fa-user"></i>
-                    <span>{{ owner_name }}'s List</span>
+                <div class="shared_owner_badge_wrapper" id="shared_dropdown_wrapper">
+                    <div class="shared_owner_badge" id="shared_dropdown_btn">
+                        <i class="nf nf-fa-user"></i>
+                        <span>{{ owner_name }}'s List</span>
+                        <i class="nf nf-fa-caret_down"
+                           style="font-size: 0.7rem;
+                                  margin-left: 4px"></i>
+                    </div>
+                    <div class="shared_dropdown_menu" id="shared_dropdown_menu">
+                        {% if request.user.is_authenticated %}
+                            <button class="shared_dropdown_item" id="copy_list_btn">
+                                <i class="nf nf-fa-copy"></i>
+                                Copy this list
+                            </button>
+                            <a href="{% url 'home_page' %}" class="shared_dropdown_item">
+                                <i class="nf nf-fa-home"></i>
+                                Return to your list
+                            </a>
+                        {% else %}
+                            <button class="shared_dropdown_item" id="copy_list_login_btn">
+                                <i class="nf nf-fa-copy"></i>
+                                Copy this list
+                            </button>
+                            <a href="{% url 'account_login' %}?next={{ request.path }}"
+                               class="shared_dropdown_item">
+                                <i class="nf nf-fa-sign_in"></i>
+                                Login
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </header>
@@ -40,7 +67,13 @@
     </main>
 {% endblock body_content %}
 {% block scripts %}
-    <script>window.__SHARED_DATA__ = {{ categories_json|safe }};</script>
+    <script>
+        window.__SHARED_DATA__ = {{ categories_json|safe }};
+        window.__SHARE_TOKEN__ = "{{ share_token }}";
+        window.__LOGIN_URL__ = "{% url 'account_login' %}?next={{ request.path }}";
+        window.__IS_AUTHENTICATED__ = {{ request.user.is_authenticated|yesno:"true,false" }};
+        window.__CSRF_TOKEN__ = "{{ csrf_token }}";
+    </script>
     <script src="{% static 'core/js/anime_renderer.js' %}"></script>
     <script src="{% static 'core/js/shared_list.js' %}"></script>
 {% endblock scripts %}

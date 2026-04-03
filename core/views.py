@@ -46,5 +46,6 @@ def shared_list_view(request, token):
         {
             "owner_name": owner.get_full_name() or owner.username,
             "categories_json": json.dumps(data),
+            "share_token": token,
         },
     )

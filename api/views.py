@@ -1,5 +1,6 @@
 import secrets
 
+from django.db import transaction
 from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
@@ -7,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import Anime, Category, ShareLink
+from core.models import Anime, Category, Season, ShareLink
 
 from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSerializer
 
@@ -232,3 +233,99 @@ class ShareToggleApiView(APIView):
         else:
             ShareLink.objects.filter(user=request.user).delete()
             return Response({"enabled": False}, status=status.HTTP_200_OK)
+
+
+class ShareCopyApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, token):
+        try:
+            share = ShareLink.objects.get(token=token)
+        except ShareLink.DoesNotExist:
+            return Response(
+                {"detail": "This shared link does not exist or has been disabled."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        source_user = share.user
+        target_user = request.user
+
+        if source_user == target_user:
+            return Response(
+                {"detail": "Cannot copy your own list."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            owner_categories = (
+                Category.objects.filter(user=source_user)
+                .prefetch_related("animes__seasons")
+                .order_by("order")
+            )
+
+            for o_cat in owner_categories:
+                # Find matching category by name for the target user
+                t_cat = Category.objects.filter(
+                    user=target_user, name=o_cat.name
+                ).first()
+                if not t_cat:
+                    # Create new category with sequentially generated user_category_id and order
+                    qs = Category.objects.filter(user=target_user)
+                    max_order = qs.aggregate(m=Max("order"))["m"]
+                    next_order = (max_order + 1) if max_order is not None else 0
+                    max_ucid = qs.aggregate(m=Max("user_category_id"))["m"]
+                    next_ucid = (max_ucid + 1) if max_ucid is not None else 1
+
+                    t_cat = Category.objects.create(
+                        user=target_user,
+                        name=o_cat.name,
+                        order=next_order,
+                        user_category_id=next_ucid,
+                    )
+
+                # Find existing animes inside this category to avoid duplicates
+                existing_anime_names = set(
+                    Anime.objects.filter(category=t_cat).values_list("name", flat=True)
+                )
+
+                # Setup ordering base for any newly created anime
+                max_anime_order = Anime.objects.filter(category=t_cat).aggregate(
+                    m=Max("order")
+                )["m"]
+                next_anime_order = (
+                    (max_anime_order + 1) if max_anime_order is not None else 0
+                )
+
+                for o_ani in o_cat.animes.all():
+                    if o_ani.name in existing_anime_names:
+                        continue
+
+                    t_ani = Anime.objects.create(
+                        category=t_cat,
+                        name=o_ani.name,
+                        thumbnail_url=o_ani.thumbnail_url,
+                        language=o_ani.language,
+                        stars=o_ani.stars,
+                        order=next_anime_order,
+                    )
+                    next_anime_order += 1
+
+                    # Copy seasons in bulk
+                    seasons_to_create = []
+                    for o_season in o_ani.seasons.all():
+                        seasons_to_create.append(
+                            Season(
+                                anime=t_ani,
+                                number=o_season.number,
+                                total_episodes=o_season.total_episodes,
+                                watched_episodes=o_season.watched_episodes,
+                                comment=o_season.comment,
+                            )
+                        )
+                    if seasons_to_create:
+                        Season.objects.bulk_create(seasons_to_create)
+
+        return Response(
+            {"status": "ok", "detail": "List copied successfully!"},
+            status=status.HTTP_200_OK,
+        )

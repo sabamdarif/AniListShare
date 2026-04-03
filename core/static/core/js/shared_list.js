@@ -107,4 +107,100 @@
     tableBody.innerHTML =
       '<tr><td colspan="6" class="empty_msg">This list is empty.</td></tr>';
   }
+
+  // --- Dropdown and Copy Logic ---
+  var dropdownBtn = document.getElementById("shared_dropdown_btn");
+  var dropdownMenu = document.getElementById("shared_dropdown_menu");
+  var copyListBtn = document.getElementById("copy_list_btn");
+  var copyListLoginBtn = document.getElementById("copy_list_login_btn");
+  var token = window.__SHARE_TOKEN__;
+  var isAuthenticated = window.__IS_AUTHENTICATED__;
+
+  if (dropdownBtn && dropdownMenu) {
+    dropdownBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle("show");
+    });
+    document.addEventListener("click", function (e) {
+      if (!dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove("show");
+      }
+    });
+  }
+
+  // Fallback toast alert
+  function notify(msg) {
+    if (typeof window.showToast === "function") {
+      window.showToast(msg, "success");
+    } else {
+      alert(msg);
+    }
+  }
+
+  function handleCopy() {
+    if (!copyListBtn) return;
+    copyListBtn.classList.add("loading");
+    copyListBtn.innerHTML =
+      '<i class="nf nf-fa-spinner fa-spin"></i> Copying...';
+
+    fetch("/api/share/copy/" + token + "/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": window.__CSRF_TOKEN__,
+      },
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { status: res.status, data: data };
+        });
+      })
+      .then(function (result) {
+        var res = result.status;
+        var data = result.data;
+        copyListBtn.classList.remove("loading");
+        copyListBtn.innerHTML = '<i class="nf nf-fa-check"></i> Copied!';
+        setTimeout(function () {
+          copyListBtn.innerHTML =
+            '<i class="nf nf-fa-copy"></i> Copy this list';
+        }, 3000);
+
+        if (res === 200 || res === 201) {
+          notify(data.detail || "List copied successfully!");
+        } else {
+          alert("Error: " + (data.detail || "Failed to copy list."));
+        }
+      })
+      .catch(function (err) {
+        console.error(err);
+        copyListBtn.classList.remove("loading");
+        copyListBtn.innerHTML = '<i class="nf nf-fa-copy"></i> Copy this list';
+        alert("A network error occurred while copying the list.");
+      });
+  }
+
+  // Secure intent check for unauthenticated users
+  if (copyListLoginBtn) {
+    copyListLoginBtn.addEventListener("click", function () {
+      sessionStorage.setItem("pending_share_copy", token);
+      window.location.href = window.__LOGIN_URL__;
+    });
+  }
+
+  // Copy action for authenticated users
+  if (copyListBtn) {
+    copyListBtn.addEventListener("click", function () {
+      handleCopy();
+    });
+  }
+
+  // Automatically execute pending copy when user returns after login
+  if (
+    isAuthenticated &&
+    sessionStorage.getItem("pending_share_copy") === token
+  ) {
+    sessionStorage.removeItem("pending_share_copy");
+    // Small delay to ensure UI is fully loaded before popping alert/toast
+    setTimeout(handleCopy, 500);
+  }
 })();

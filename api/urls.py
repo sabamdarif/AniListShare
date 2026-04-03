@@ -48,4 +48,9 @@ urlpatterns = [
         views.ShareToggleApiView.as_view(),
         name="share_toggle",
     ),
+    path(
+        "share/copy/<str:token>/",
+        views.ShareCopyApiView.as_view(),
+        name="share_copy",
+    ),
 ]

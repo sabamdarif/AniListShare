@@ -1,3 +1,8 @@
+.shared_owner_badge_wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 .shared_owner_badge {
   display: flex;
   align-items: center;
@@ -10,11 +15,86 @@
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.shared_owner_badge:hover {
+  background: var(--surface);
 }
 
 .shared_owner_badge i {
   color: var(--accent);
   font-size: 0.9rem;
+}
+
+.shared_dropdown_menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  z-index: 100;
+  padding: 8px 0;
+}
+
+.shared_dropdown_menu.show {
+  display: block;
+  animation: fadeInDown 0.2s ease-out;
+}
+
+.shared_dropdown_item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.shared_dropdown_item i {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.shared_dropdown_item:hover {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.shared_dropdown_item:hover i {
+  color: var(--accent);
+}
+
+.shared_dropdown_item.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
