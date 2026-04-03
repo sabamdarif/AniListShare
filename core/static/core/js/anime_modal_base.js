@@ -12,13 +12,6 @@
 
   /* ── security helpers ── */
 
-  function getCSRF() {
-    const el = document.querySelector("[name=csrfmiddlewaretoken]");
-    if (el) return el.value;
-    const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-    return m ? decodeURIComponent(m[1]) : "";
-  }
-
   function sanitizeUrl(url) {
     if (!url) return "";
     try {
@@ -483,7 +476,7 @@
 
     async function searchJikan(q) {
       try {
-        const r = await fetch(
+        const r = await apiFetch(
           `${JIKAN}?q=${encodeURIComponent(q)}&limit=6&sfw=true`,
         );
         const j = await r.json();
@@ -967,7 +960,6 @@
           animeId: _editingAnimeId,
           close,
           showToast,
-          getCSRF,
         });
       } catch (err) {
         errorEl.textContent = err.message || "Save failed";
@@ -997,7 +989,6 @@
           await cfg.onDelete(_editingAnimeId, catId, {
             close,
             showToast,
-            getCSRF,
           });
         } catch (err) {
           errorEl.textContent = err.message || "Delete failed";

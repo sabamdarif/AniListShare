@@ -11,6 +11,7 @@ dependencies = [
     "django-stubs>=6.0.1",
     "django-watchfiles>=1.4.0",
     "djangorestframework>=3.17.1",
+    "djangorestframework-simplejwt>=5.5.1",
     "jwt>=1.4.0",
     "psycopg[binary]>=3.2.0",
     "pyjwt>=2.12.1",

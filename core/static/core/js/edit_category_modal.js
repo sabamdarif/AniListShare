@@ -2,14 +2,6 @@
   "use strict";
 
   document.addEventListener("DOMContentLoaded", () => {
-    function getCSRF() {
-      const el = document.querySelector("[name=csrfmiddlewaretoken]");
-      if (el) return el.value;
-      const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-      return m ? decodeURIComponent(m[1]) : "";
-    }
-    const CSRF = getCSRF();
-
     let editingCategoryId = null;
 
     /* ── build modal DOM ── */
@@ -148,13 +140,12 @@
       saveBtn.innerHTML = '<span class="btn_spinner"></span> Saving\u2026';
       deleteBtn.disabled = true;
       try {
-        const r = await fetch(
+        const r = await apiFetch(
           `/api/anime/category/${encodeURIComponent(editingCategoryId)}/`,
           {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
-              "X-CSRFToken": CSRF,
             },
             body: JSON.stringify({ name }),
           },
@@ -198,13 +189,11 @@
       deleteBtn.innerHTML = '<span class="btn_spinner"></span> Deleting\u2026';
 
       try {
-        const r = await fetch(
+        const r = await apiFetch(
           `/api/anime/category/${encodeURIComponent(editingCategoryId)}/`,
           {
             method: "DELETE",
-            headers: {
-              "X-CSRFToken": CSRF,
-            },
+            headers: {},
           },
         );
         if (!r.ok) {

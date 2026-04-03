@@ -63,12 +63,6 @@
   var closeBtn = modal.querySelector(".share_modal_close");
 
   /* ── CSRF helper ─────────────────────────────────── */
-  function getCSRF() {
-    var el = document.querySelector("[name=csrfmiddlewaretoken]");
-    if (el) return el.value;
-    var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-    return m ? decodeURIComponent(m[1]) : "";
-  }
 
   /* ── Open / Close ────────────────────────────────── */
   function openModal() {
@@ -104,7 +98,7 @@
     errorEl.style.display = "none";
 
     try {
-      var res = await fetch("/api/share/status/", {
+      var res = await apiFetch("/api/share/status/", {
         method: "GET",
         credentials: "same-origin",
         headers: { Accept: "application/json" },
@@ -135,12 +129,11 @@
     errorEl.style.display = "none";
 
     try {
-      var res = await fetch("/api/share/toggle/", {
+      var res = await apiFetch("/api/share/toggle/", {
         method: "POST",
         credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRFToken": getCSRF(),
         },
         body: JSON.stringify({ enable: enable }),
       });

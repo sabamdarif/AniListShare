@@ -5,12 +5,6 @@
   /* ═══════════════════════════════════════════════════════════════════
      Helpers
      ═══════════════════════════════════════════════════════════════════ */
-  function getCSRF() {
-    var el = document.querySelector("[name=csrfmiddlewaretoken]");
-    if (el) return el.value;
-    var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-    return m ? decodeURIComponent(m[1]) : "";
-  }
 
   var profileBtn = document.getElementById("user_profile_btn");
   var ringFill = document.querySelector(".export_ring_fill");
@@ -58,7 +52,7 @@
 
     try {
       // 1. Fetch categories
-      var catRes = await fetch("/api/anime/category/", {
+      var catRes = await apiFetch("/api/anime/category/", {
         credentials: "same-origin",
         signal: signal,
       });
@@ -78,10 +72,13 @@
         if (signal.aborted) throw new Error("Cancelled");
 
         var cat = categories[i];
-        var animeRes = await fetch("/api/anime/list/category/" + cat.id + "/", {
-          credentials: "same-origin",
-          signal: signal,
-        });
+        var animeRes = await apiFetch(
+          "/api/anime/list/category/" + cat.id + "/",
+          {
+            credentials: "same-origin",
+            signal: signal,
+          },
+        );
         if (!animeRes.ok) throw new Error("Failed to fetch anime");
         var animeList = await animeRes.json();
         if (!Array.isArray(animeList)) animeList = animeList.results || [];
@@ -385,7 +382,7 @@
         }
 
         // Fetch existing categories to check for duplicates
-        var existingCatRes = await fetch("/api/anime/category/", {
+        var existingCatRes = await apiFetch("/api/anime/category/", {
           credentials: "same-origin",
         });
         var existingCats = await existingCatRes.json();
@@ -408,12 +405,11 @@
           }
 
           if (!catId) {
-            var catCreateRes = await fetch("/api/anime/category/", {
+            var catCreateRes = await apiFetch("/api/anime/category/", {
               method: "POST",
               credentials: "same-origin",
               headers: {
                 "Content-Type": "application/json",
-                "X-CSRFToken": getCSRF(),
               },
               body: JSON.stringify({ name: categoryName }),
             });
@@ -425,7 +421,7 @@
           }
 
           // Fetch existing anime in this category for duplicate check
-          var existingAnimeRes = await fetch(
+          var existingAnimeRes = await apiFetch(
             "/api/anime/list/category/" + catId + "/",
             { credentials: "same-origin" },
           );
@@ -469,26 +465,24 @@
             var existing = animeByName[animeName];
             if (existing) {
               // Update existing anime
-              await fetch(
+              await apiFetch(
                 "/api/anime/list/category/" + catId + "/" + existing.id + "/",
                 {
                   method: "PUT",
                   credentials: "same-origin",
                   headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": getCSRF(),
                   },
                   body: JSON.stringify(payload),
                 },
               );
             } else {
               // Create new anime
-              await fetch("/api/anime/list/category/" + catId + "/", {
+              await apiFetch("/api/anime/list/category/" + catId + "/", {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {
                   "Content-Type": "application/json",
-                  "X-CSRFToken": getCSRF(),
                 },
                 body: JSON.stringify(payload),
               });

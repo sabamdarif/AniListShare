@@ -313,7 +313,7 @@
     showSkeleton(4);
 
     try {
-      var res = await fetch("/api/anime/list/category/" + catId + "/", {
+      var res = await apiFetch("/api/anime/list/category/" + catId + "/", {
         method: "GET",
         credentials: "same-origin",
         headers: { Accept: "application/json" },
@@ -411,13 +411,6 @@
   var MOBILE_HOLD_MS = 400;
   var DRAG_DEAD_ZONE = 4;
 
-  function getCSRF() {
-    var el = document.querySelector("[name=csrfmiddlewaretoken]");
-    if (el) return el.value;
-    var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-    return m ? decodeURIComponent(m[1]) : "";
-  }
-
   function reorderList(fromIdx, toIdx) {
     if (fromIdx === toIdx || fromIdx === toIdx - 1) return null;
     var copy = lastList.slice();
@@ -433,15 +426,17 @@
       return a.id;
     });
     try {
-      var resp = await fetch(REORDER_API + _currentCategoryId + "/reorder/", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCSRF(),
+      var resp = await apiFetch(
+        REORDER_API + _currentCategoryId + "/reorder/",
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ order: ids }),
         },
-        body: JSON.stringify({ order: ids }),
-      });
+      );
       if (!resp.ok) throw new Error("Reorder failed");
       lastList = newList;
       render(lastList);
@@ -745,12 +740,11 @@
       return parseInt(w.dataset.categoryId, 10);
     });
     try {
-      var resp = await fetch(CAT_REORDER_API, {
+      var resp = await apiFetch(CAT_REORDER_API, {
         method: "POST",
         credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRFToken": getCSRF(),
         },
         body: JSON.stringify({ order: ids }),
       });

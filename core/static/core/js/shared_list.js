@@ -158,11 +158,10 @@
     copyListBtn.innerHTML =
       '<i class="nf nf-fa-spinner fa-spin"></i> Copying...';
 
-    fetch("/api/share/copy/" + token + "/", {
+    apiFetch("/api/share/copy/" + token + "/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRFToken": window.__CSRF_TOKEN__,
       },
     })
       .then(function (res) {

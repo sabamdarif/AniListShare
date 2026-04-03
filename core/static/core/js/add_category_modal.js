@@ -2,14 +2,6 @@
   "use strict";
 
   document.addEventListener("DOMContentLoaded", () => {
-    function getCSRF() {
-      const el = document.querySelector("[name=csrfmiddlewaretoken]");
-      if (el) return el.value;
-      const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-      return m ? decodeURIComponent(m[1]) : "";
-    }
-    const CSRF = getCSRF();
-
     /* ── build modal DOM ── */
     function createModal() {
       const overlay = document.createElement("div");
@@ -103,11 +95,10 @@
       saveBtn.classList.add("btn_loading");
       saveBtn.innerHTML = '<span class="btn_spinner"></span> Saving\u2026';
       try {
-        const r = await fetch("/api/anime/category/", {
+        const r = await apiFetch("/api/anime/category/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-CSRFToken": CSRF,
           },
           body: JSON.stringify({ name }),
         });

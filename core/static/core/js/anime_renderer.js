@@ -697,12 +697,6 @@ window.AnimeRenderer = (function () {
   });
 
   // ── Thumbnail Load button handler ──
-  function getCSRF() {
-    var el = document.querySelector("[name=csrfmiddlewaretoken]");
-    if (el) return el.value;
-    var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-    return m ? decodeURIComponent(m[1]) : "";
-  }
 
   function getCurrentCategoryId() {
     var tab = document.querySelector(".category_tab.active");
@@ -718,7 +712,7 @@ window.AnimeRenderer = (function () {
 
   // Static Helper to fetch and update Thumbnail
   function fetchAndPatchThumbnail(animeId, animeName, catId) {
-    return fetch(
+    return apiFetch(
       "https://api.jikan.moe/v4/anime?q=" +
         encodeURIComponent(animeName) +
         "&limit=1",
@@ -737,14 +731,13 @@ window.AnimeRenderer = (function () {
         if (!thumbUrl) throw new Error("No thumbnail found");
 
         // Save to DB via PATCH
-        return fetch(
+        return apiFetch(
           "/api/anime/list/category/" + catId + "/" + animeId + "/",
           {
             method: "PATCH",
             credentials: "same-origin",
             headers: {
               "Content-Type": "application/json",
-              "X-CSRFToken": getCSRF(),
             },
             body: JSON.stringify({ thumbnail_url: thumbUrl }),
           },

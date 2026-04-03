@@ -83,7 +83,7 @@
     indexLoading = true;
     showLoading();
 
-    fetch("/api/anime/search/", {
+    apiFetch("/api/anime/search/", {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },

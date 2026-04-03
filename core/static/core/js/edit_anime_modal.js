@@ -18,14 +18,13 @@
         const animeId = ctx.animeId;
         if (!animeId) throw new Error("No anime selected");
 
-        const resp = await fetch(
+        const resp = await apiFetch(
           `${API_BASE}${encodeURIComponent(catId)}/${encodeURIComponent(animeId)}/`,
           {
             method: "PUT",
             credentials: "same-origin",
             headers: {
               "Content-Type": "application/json",
-              "X-CSRFToken": ctx.getCSRF(),
             },
             body: JSON.stringify(payload),
           },
@@ -62,14 +61,12 @@
       },
 
       onDelete: async (animeId, catId, ctx) => {
-        const resp = await fetch(
+        const resp = await apiFetch(
           `${API_BASE}${encodeURIComponent(catId)}/${encodeURIComponent(animeId)}/`,
           {
             method: "DELETE",
             credentials: "same-origin",
-            headers: {
-              "X-CSRFToken": ctx.getCSRF(),
-            },
+            headers: {},
           },
         );
 
