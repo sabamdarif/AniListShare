@@ -978,8 +978,13 @@
     height: 110px;
   }
 
+  .skel_thumb_m {
+    width: 75px;
+    min-width: 75px;
+    height: 110px;
+  }
+
   .m_card_title {
     font-size: 0.9rem;
   }
 }
-
