@@ -34,18 +34,15 @@
       showDeleteBtn: false,
 
       onSave: async (payload, catId, ctx) => {
-        const resp = await fetch(
-          `${API_BASE}${encodeURIComponent(catId)}/`,
-          {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": ctx.getCSRF(),
-            },
-            body: JSON.stringify(payload),
+        const resp = await fetch(`${API_BASE}${encodeURIComponent(catId)}/`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": ctx.getCSRF(),
           },
-        );
+          body: JSON.stringify(payload),
+        });
 
         const data = await resp.json().catch(() => null);
 

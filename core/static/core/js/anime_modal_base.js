@@ -910,11 +910,13 @@
       // Validate & build seasons payload from unified entries
       const seasonEntries = [];
       let lastSeasonNum = 0; // used for OVAs
+      let ovaCount = 0;
       for (let i = 0; i < _entries.length; i++) {
         const e = _entries[i];
         if (e.type === "season") {
           const num = e.number || ++lastSeasonNum;
           lastSeasonNum = num;
+          ovaCount = 0;
           if (e.watched > e.total) {
             errorEl.textContent = `Season ${num}: watched cannot exceed total`;
             return;
@@ -926,14 +928,15 @@
             comment: e.comment,
           });
         } else {
-          // OVA: number = lastSeason + 0.5 (e.g. 1.5 = OVA after Season 1)
+          ovaCount++;
+          // OVA: number = lastSeason + (ovaCount * 0.01) (e.g. 1.01 = OVA 1 after Season 1)
           const afterSeason = Math.max(lastSeasonNum, 1);
           if (e.watched > e.total) {
             errorEl.textContent = `OVA: watched cannot exceed total`;
             return;
           }
           seasonEntries.push({
-            number: afterSeason + 0.5,
+            number: Number((afterSeason + ovaCount * 0.01).toFixed(2)),
             total_episodes: e.total,
             watched_episodes: e.watched,
             comment: e.comment,

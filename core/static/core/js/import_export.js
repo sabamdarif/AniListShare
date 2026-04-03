@@ -302,39 +302,30 @@
   // Parse season string back to objects
   function parseSeasons(seasonStr) {
     if (!seasonStr || !seasonStr.trim()) return [];
-    // Format: "S1: 5/12 [comment], OVA(after S1): 2/3, S2: 3/24"
-    var parts = seasonStr.split(/,\s*/);
     var seasons = [];
-    for (var i = 0; i < parts.length; i++) {
-      var part = parts[i].trim();
-      if (!part) continue;
+    var ovaCounters = {}; // Maps season number to how many OVAs we've seen
 
-      var comment = "";
-      // Extract comment if present
-      var commentMatch = part.match(/\[([^\]]*)\]/);
-      if (commentMatch) {
-        comment = commentMatch[1];
-        part = part.replace(/\s*\[[^\]]*\]/, "").trim();
-      }
+    // Matches e.g. "S1: 5/12 [comment]" or "OVA(after S1): 2/3"
+    var regex =
+      /(?:S(\d+)|OVA\(after S(\d+)\)):\s*(\d+)\/(\d+)(?:\s*\[([^\]]*)\])?/gi;
+    var match;
 
-      var number, watched, total;
+    while ((match = regex.exec(seasonStr)) !== null) {
+      var sMatch = match[1];
+      var ovaMatch = match[2];
+      var watched = parseInt(match[3]);
+      var total = parseInt(match[4]);
+      var comment = match[5] ? match[5].trim() : "";
+      var number;
 
-      // Match OVA: "OVA(after S2): 5/10"
-      var ovaMatch = part.match(/^OVA\(after S(\d+)\):\s*(\d+)\/(\d+)/i);
-      if (ovaMatch) {
-        number = parseInt(ovaMatch[1]) + 0.5; // OVA is stored as X.5
-        watched = parseInt(ovaMatch[2]);
-        total = parseInt(ovaMatch[3]);
+      if (ovaMatch !== undefined) {
+        var baseNum = parseInt(ovaMatch);
+        ovaCounters[baseNum] = (ovaCounters[baseNum] || 0) + 1;
+        number = Number((baseNum + ovaCounters[baseNum] * 0.01).toFixed(2));
+      } else if (sMatch !== undefined) {
+        number = parseInt(sMatch);
       } else {
-        // Match regular season: "S1: 5/12"
-        var sMatch = part.match(/^S(\d+):\s*(\d+)\/(\d+)/i);
-        if (sMatch) {
-          number = parseInt(sMatch[1]);
-          watched = parseInt(sMatch[2]);
-          total = parseInt(sMatch[3]);
-        } else {
-          continue; // skip unparseable parts
-        }
+        continue;
       }
 
       seasons.push({
