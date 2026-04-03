@@ -416,7 +416,6 @@ window.AnimeRenderer = (function () {
       return;
     }
     var showEdit = this.opts.showEditColumn;
-    var displayIdFn = this.opts.displayIdFn;
     var html = "";
     animeList.forEach(function (a, idx) {
       var langs = parseLanguages(a.language);

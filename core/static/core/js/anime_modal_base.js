@@ -19,16 +19,6 @@
     return m ? decodeURIComponent(m[1]) : "";
   }
 
-  function escapeAttr(s) {
-    if (s == null) return "";
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
   function sanitizeUrl(url) {
     if (!url) return "";
     try {
@@ -82,7 +72,6 @@
 
   /* ── constants ── */
   const JIKAN = "https://api.jikan.moe/v4/anime";
-  const API_BASE = "/api/anime/list/category/";
   const LANG_PRESETS = [
     "Japanese",
     "English",
@@ -322,7 +311,6 @@
     const langDrop = OV.querySelector(".aam_lang_dropdown");
     const saveBtn = $(".aam_save_btn");
     const deleteBtn = showDelete ? $(".aam_delete_btn") : null;
-    const titleEl = $(".aam_title");
 
     /* ── open / close ── */
     function open(prefill) {

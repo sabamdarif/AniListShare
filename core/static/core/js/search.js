@@ -7,7 +7,6 @@
   var DEBOUNCE_MS = 200;
   var MAX_RESULTS = 15;
   var HIGHLIGHT_MS = 1800;
-  var MOBILE_BP = 768;
 
   /* ────────────────────────────────────────────
    *  State
@@ -35,10 +34,6 @@
   /* ────────────────────────────────────────────
    *  Helpers
    * ──────────────────────────────────────────── */
-  function isMobile() {
-    return window.innerWidth <= MOBILE_BP;
-  }
-
   function escapeHtml(str) {
     if (str == null) return "";
     return String(str)
@@ -56,7 +51,7 @@
       if (parsed.protocol === "https:" || parsed.protocol === "http:") {
         return parsed.href;
       }
-    } catch (_) { }
+    } catch (_) {}
     return "";
   }
 
@@ -209,8 +204,8 @@
       var safeUrl = sanitizeUrl(item.thumbnail_url);
       var thumbHtml = safeUrl
         ? '<img src="' +
-        escapeHtml(safeUrl) +
-        '" alt="" class="search_item_thumb" loading="lazy">'
+          escapeHtml(safeUrl) +
+          '" alt="" class="search_item_thumb" loading="lazy">'
         : '<div class="search_item_thumb"></div>';
 
       html +=
@@ -383,8 +378,8 @@
       var safeUrl = sanitizeUrl(item.thumbnail_url);
       var thumbHtml = safeUrl
         ? '<img src="' +
-        escapeHtml(safeUrl) +
-        '" alt="" class="m_search_item_thumb" loading="lazy">'
+          escapeHtml(safeUrl) +
+          '" alt="" class="m_search_item_thumb" loading="lazy">'
         : '<div class="m_search_item_thumb"></div>';
 
       html +=

@@ -16,7 +16,6 @@
   });
 
   var tabs = tabsContainer.querySelectorAll(".category_tab");
-  var MOBILE_BP = 768;
   var lastList = [];
   var _currentCategoryId = null;
 
