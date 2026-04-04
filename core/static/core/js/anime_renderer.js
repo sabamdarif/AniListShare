@@ -356,9 +356,9 @@ window.AnimeRenderer = (function () {
     var html = "";
     animeList.forEach(function (a, idx) {
       var langs = parseLanguages(a.language);
-      var seasons = Array.isArray(a.seasons)
-        ? a.seasons
-        : (a.seasons || []).map(normalizeSeason);
+      var seasons = (Array.isArray(a.seasons) ? a.seasons : []).map(
+        window.AnimeRenderer.normalizeSeason || normalizeSeason,
+      );
       var seasonBadges = renderSeasonsDesktop(seasons);
       var safeName = escapeHtml(a.name);
 
@@ -419,9 +419,9 @@ window.AnimeRenderer = (function () {
     var html = "";
     animeList.forEach(function (a, idx) {
       var langs = parseLanguages(a.language);
-      var seasons = Array.isArray(a.seasons)
-        ? a.seasons
-        : (a.seasons || []).map(normalizeSeason);
+      var seasons = (Array.isArray(a.seasons) ? a.seasons : []).map(
+        window.AnimeRenderer.normalizeSeason || normalizeSeason,
+      );
       var seasonsHtml = renderSeasonsMobile(seasons);
       var rating =
         a.stars != null && !isNaN(parseFloat(a.stars))

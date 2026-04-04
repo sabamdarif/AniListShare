@@ -14,11 +14,17 @@ from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSeriali
 
 
 def _reindex_anime_order(category):
-    """Re-assign order = 0, 1, 2, … for all anime in this category."""
+    """Re-assign order = 0, 1, 2, … for all anime in this category using bulk_update."""
     siblings = Anime.objects.filter(category=category).order_by("order", "pk")
+    updates = []
     for idx, anime in enumerate(siblings):
         if anime.order != idx:
-            Anime.objects.filter(pk=anime.pk).update(order=idx)
+            anime.order = idx
+            updates.append(anime)
+
+    if updates:
+        with transaction.atomic():
+            Anime.objects.bulk_update(updates, ["order"])
 
 
 class CategoryListCreateApiView(generics.ListCreateAPIView):
@@ -159,8 +165,17 @@ class AnimeReorderApiView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        animes_by_id = {a.id: a for a in anime_qs}
+        updates = []
         for idx, aid in enumerate(ordered_ids):
-            Anime.objects.filter(pk=aid).update(order=idx)
+            anime = animes_by_id.get(aid)
+            if anime and anime.order != idx:
+                anime.order = idx
+                updates.append(anime)
+
+        if updates:
+            with transaction.atomic():
+                Anime.objects.bulk_update(updates, ["order"])
 
         return Response({"status": "ok"})
 
@@ -176,11 +191,13 @@ class CategoryReorderApiView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        valid_ids = set(
-            Category.objects.filter(user=request.user).values_list(
-                "user_category_id", flat=True
-            )
-        )
+        # Get all categories belonging to the user
+        cats_by_ucid = {
+            cat.user_category_id: cat
+            for cat in Category.objects.filter(user=request.user)
+        }
+
+        valid_ids = set(cats_by_ucid.keys())
 
         for cid in ordered_ids:
             if cid not in valid_ids:
@@ -189,10 +206,16 @@ class CategoryReorderApiView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        updates = []
         for idx, cid in enumerate(ordered_ids):
-            Category.objects.filter(user=request.user, user_category_id=cid).update(
-                order=idx
-            )
+            cat = cats_by_ucid.get(cid)
+            if cat and cat.order != idx:
+                cat.order = idx
+                updates.append(cat)
+
+        if updates:
+            with transaction.atomic():
+                Category.objects.bulk_update(updates, ["order"])
 
         return Response({"status": "ok"})
 
@@ -210,6 +233,101 @@ class SearchAnimeApiView(generics.ListAPIView):
 
     def get_queryset(self):
         return super().get_queryset().filter(category__user=self.request.user)
+
+
+class AnimeBulkSyncApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        actions = request.data.get("actions", [])
+        if not isinstance(actions, list):
+            return Response(
+                {"detail": "actions must be a list"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_ids = {}
+        categories_to_reindex = set()
+
+        for action in actions:
+            action_type = action.get("type")
+            temp_id = action.get("temp_id")
+            data = action.get("data", {})
+            real_id = action.get("id")
+
+            if action_type == "CREATE":
+                category_id = data.get("category_id")
+                if not category_id:
+                    continue
+                category = get_object_or_404(
+                    Category, user_category_id=category_id, user=request.user
+                )
+
+                max_order = Anime.objects.filter(category=category).aggregate(
+                    m=Max("order")
+                )["m"]
+                next_order = (max_order + 1) if max_order is not None else 0
+
+                serializer = AnimeSerializer(data=data)
+                if serializer.is_valid():
+                    anime = serializer.save(category=category, order=next_order)
+                    if temp_id:
+                        created_ids[temp_id] = anime.id
+
+            elif action_type == "UPDATE":
+                if real_id is None and temp_id in created_ids:
+                    real_id = created_ids[temp_id]
+
+                if real_id is None:
+                    continue
+
+                try:
+                    anime = Anime.objects.get(id=real_id, category__user=request.user)
+                except Anime.DoesNotExist:
+                    continue
+
+                old_category = anime.category
+                new_category_id = data.get("category_id")
+
+                serializer = AnimeSerializer(anime, data=data, partial=True)
+                if serializer.is_valid():
+                    if new_category_id is not None and str(new_category_id) != str(
+                        old_category.user_category_id
+                    ):
+                        new_category = get_object_or_404(
+                            Category,
+                            user_category_id=new_category_id,
+                            user=request.user,
+                        )
+                        max_order = Anime.objects.filter(
+                            category=new_category
+                        ).aggregate(m=Max("order"))["m"]
+                        next_order = (max_order + 1) if max_order is not None else 0
+                        serializer.save(category=new_category, order=next_order)
+                        categories_to_reindex.add(old_category)
+                    else:
+                        serializer.save()
+
+            elif action_type == "DELETE":
+                if real_id is None and temp_id in created_ids:
+                    real_id = created_ids[temp_id]
+
+                if real_id is not None:
+                    try:
+                        anime = Anime.objects.get(
+                            id=real_id, category__user=request.user
+                        )
+                        category = anime.category
+                        anime.delete()
+                        categories_to_reindex.add(category)
+                    except Anime.DoesNotExist:
+                        # Anime was already deleted or doesn't exist, safely ignore
+                        pass
+
+        for category in categories_to_reindex:
+            _reindex_anime_order(category)
+
+        return Response({"status": "ok", "created_ids": created_ids})
 
 
 def _generate_share_token() -> str:

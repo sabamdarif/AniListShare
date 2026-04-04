@@ -374,6 +374,48 @@
     }
   };
 
+  window.addLocalAnime = function (anime) {
+    if (_currentCategoryId === null) return;
+    lastList.push(anime);
+    render(lastList);
+  };
+
+  window.updateLocalAnime = function (anime) {
+    if (_currentCategoryId === null) return;
+    var idx = lastList.findIndex(function (a) {
+      return (
+        String(a.id) === String(anime.id) ||
+        (a.temp_id && anime.temp_id && a.temp_id === anime.temp_id)
+      );
+    });
+    if (idx !== -1) {
+      lastList[idx] = anime;
+      render(lastList);
+    }
+  };
+
+  window.removeLocalAnime = function (animeId) {
+    if (_currentCategoryId === null) return;
+    lastList = lastList.filter(function (a) {
+      return String(a.id) !== String(animeId) && a.temp_id !== animeId;
+    });
+    render(lastList);
+  };
+
+  window.resolveAnimeIds = function (idMap) {
+    var changed = false;
+    lastList.forEach(function (anime) {
+      if (anime.temp_id && idMap[anime.temp_id]) {
+        anime.id = idMap[anime.temp_id];
+        delete anime.temp_id;
+        changed = true;
+      }
+    });
+    if (changed) {
+      render(lastList);
+    }
+  };
+
   function findAnimeById(id) {
     return lastList.find(function (a) {
       return String(a.id) === String(id);

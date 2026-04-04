@@ -6,8 +6,6 @@
   "use strict";
 
   document.addEventListener("DOMContentLoaded", () => {
-    const API_BASE = "/api/anime/list/category/";
-
     /* ── helpers: category gate ── */
     function hasCategories() {
       return document.querySelectorAll(".category_tab").length > 0;
@@ -34,42 +32,26 @@
       showDeleteBtn: false,
 
       onSave: async (payload, catId, ctx) => {
-        const resp = await apiFetch(
-          `${API_BASE}${encodeURIComponent(catId)}/`,
-          {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          },
-        );
+        const tempId = window.SyncQueue.generateTempId();
 
-        const data = await resp.json().catch(() => null);
+        // Optimistic UI Data preparation
+        const optimisticData = { ...payload };
+        optimisticData.id = tempId;
+        optimisticData.temp_id = tempId;
+        if (!optimisticData.seasons) optimisticData.seasons = [];
 
-        if (!resp.ok) {
-          let msg = "Save failed";
-          if (data) {
-            if (data.detail) {
-              msg = data.detail;
-            } else if (data.non_field_errors) {
-              msg = data.non_field_errors.join(", ");
-            } else {
-              const firstKey = Object.keys(data).find(
-                (k) => Array.isArray(data[k]) && data[k].length > 0,
-              );
-              if (firstKey) {
-                msg = `${firstKey}: ${data[firstKey][0]}`;
-              }
-            }
-          }
-          throw new Error(msg);
-        }
+        const action = {
+          type: "CREATE",
+          temp_id: tempId,
+          data: { ...payload, category_id: parseInt(catId, 10) },
+        };
 
+        window.SyncQueue.pushAction(action);
         ctx.close();
 
-        if (typeof window.refreshCurrentCategory === "function") {
+        if (typeof window.addLocalAnime === "function") {
+          window.addLocalAnime(optimisticData);
+        } else if (typeof window.refreshCurrentCategory === "function") {
           window.refreshCurrentCategory();
         }
 

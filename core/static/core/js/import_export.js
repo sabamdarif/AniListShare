@@ -435,7 +435,10 @@
             animeByName[existingAnime[ea].name] = existingAnime[ea];
           }
 
-          // Process each row
+          // Process rows in chunks
+          var CHUNK_SIZE = 50;
+          var chunkActions = [];
+
           for (var ri = 0; ri < sheetInfo.rows.length; ri++) {
             var row = sheetInfo.rows[ri];
             var animeName = String(row[0] || "").trim();
@@ -447,8 +450,7 @@
 
             var seasonStr = row[1] != null ? String(row[1]) : "";
             var language = row[2] != null ? String(row[2]).trim() : "";
-            var stars =
-              row[3] != null && row[3] !== "" ? parseFloat(row[3]) : null;
+            var stars = row[3] != null && row[3] !== "" ? parseFloat(row[3]) : null;
             var thumbnailUrl = row[4] != null ? String(row[4]).trim() : "";
 
             var seasons = parseSeasons(seasonStr);
@@ -460,36 +462,42 @@
               language: language,
               stars: stars,
               seasons: seasons,
+              category_id: catId
             };
 
             var existing = animeByName[animeName];
             if (existing) {
-              // Update existing anime
-              await apiFetch(
-                "/api/anime/list/category/" + catId + "/" + existing.id + "/",
-                {
-                  method: "PUT",
-                  credentials: "same-origin",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify(payload),
-                },
-              );
+              chunkActions.push({
+                type: "UPDATE",
+                id: existing.id,
+                data: payload
+              });
             } else {
-              // Create new anime
-              await apiFetch("/api/anime/list/category/" + catId + "/", {
-                method: "POST",
-                credentials: "same-origin",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
+              chunkActions.push({
+                type: "CREATE",
+                data: payload
               });
             }
 
             processed++;
-            updateProgress("Importing: " + animeName);
+            updateProgress("Queuing: " + animeName);
+
+            // Flush chunk if size reached or last item
+            if (chunkActions.length >= CHUNK_SIZE || ri === sheetInfo.rows.length - 1) {
+                if (chunkActions.length > 0) {
+                  updateProgress("Sending " + chunkActions.length + " items to cloud...");
+                  var bulkRes = await apiFetch("/api/anime/bulk_sync/", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ actions: chunkActions }),
+                  });
+                  if (!bulkRes.ok) {
+                    throw new Error("Bulk import chunk failed.");
+                  }
+                  chunkActions = [];
+                }
+            }
           }
         }
 

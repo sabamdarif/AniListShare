@@ -6,8 +6,6 @@
   "use strict";
 
   document.addEventListener("DOMContentLoaded", () => {
-    const API_BASE = "/api/anime/list/category/";
-
     /* ── create modal via shared base ── */
     const modal = window.AnimeModalBase({
       title: "Edit Anime",
@@ -19,69 +17,56 @@
         const oldCatId = ctx.oldCategoryId || catId;
         if (!animeId) throw new Error("No anime selected");
 
-        const requestPayload = { ...payload, category_id: parseInt(catId, 10) };
+        const targetCatId = parseInt(catId, 10);
+        const action = {
+          type: "UPDATE",
+          data: { ...payload, category_id: targetCatId },
+        };
 
-        const resp = await apiFetch(
-          `${API_BASE}${encodeURIComponent(oldCatId)}/${encodeURIComponent(animeId)}/`,
-          {
-            method: "PUT",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestPayload),
-          },
-        );
-
-        const data = await resp.json().catch(() => null);
-
-        if (!resp.ok) {
-          let msg = "Update failed";
-          if (data) {
-            if (data.detail) {
-              msg = data.detail;
-            } else if (data.non_field_errors) {
-              msg = data.non_field_errors.join(", ");
-            } else {
-              const firstKey = Object.keys(data).find(
-                (k) => Array.isArray(data[k]) && data[k].length > 0,
-              );
-              if (firstKey) {
-                msg = `${firstKey}: ${data[firstKey][0]}`;
-              }
-            }
-          }
-          throw new Error(msg);
+        // determine if this was a temp anime
+        if (typeof animeId === "string" && animeId.startsWith("temp_")) {
+          action.temp_id = animeId;
+        } else {
+          action.id = parseInt(animeId, 10);
         }
 
+        window.SyncQueue.pushAction(action);
         ctx.close();
 
-        if (typeof window.refreshCurrentCategory === "function") {
-          window.refreshCurrentCategory();
+        const optimisticData = { ...payload, id: animeId };
+        if (action.temp_id) optimisticData.temp_id = action.temp_id;
+
+        if (oldCatId != targetCatId) {
+          if (typeof window.removeLocalAnime === "function") {
+            window.removeLocalAnime(animeId);
+          } else if (typeof window.refreshCurrentCategory === "function") {
+            window.refreshCurrentCategory();
+          }
+        } else {
+          if (typeof window.updateLocalAnime === "function") {
+            window.updateLocalAnime(optimisticData);
+          } else if (typeof window.refreshCurrentCategory === "function") {
+            window.refreshCurrentCategory();
+          }
         }
 
         ctx.showToast(`"${payload.name}" updated`);
       },
 
       onDelete: async (animeId, catId, ctx) => {
-        const oldCatId = ctx.oldCategoryId || catId;
-        const resp = await apiFetch(
-          `${API_BASE}${encodeURIComponent(oldCatId)}/${encodeURIComponent(animeId)}/`,
-          {
-            method: "DELETE",
-            credentials: "same-origin",
-            headers: {},
-          },
-        );
-
-        if (!resp.ok) {
-          const data = await resp.json().catch(() => null);
-          throw new Error((data && data.detail) || "Delete failed");
+        const action = { type: "DELETE" };
+        if (typeof animeId === "string" && animeId.startsWith("temp_")) {
+          action.temp_id = animeId;
+        } else {
+          action.id = parseInt(animeId, 10);
         }
 
+        window.SyncQueue.pushAction(action);
         ctx.close();
 
-        if (typeof window.refreshCurrentCategory === "function") {
+        if (typeof window.removeLocalAnime === "function") {
+          window.removeLocalAnime(animeId);
+        } else if (typeof window.refreshCurrentCategory === "function") {
           window.refreshCurrentCategory();
         }
 

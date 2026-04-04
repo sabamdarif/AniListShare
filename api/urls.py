@@ -24,7 +24,7 @@ urlpatterns = [
     ),
     path(
         "anime/list/category/<int:category_id>/",
-        views.AnimeListCreateApiView.as_view(),
+        views.AnimeListCreateApiView.as_view(http_method_names=["get"]),
         name="anime_list_create",
     ),
     path(
@@ -34,8 +34,13 @@ urlpatterns = [
     ),
     path(
         "anime/list/category/<int:category_id>/<int:pk>/",
-        views.AnimeDetailApiView.as_view(),
+        views.AnimeDetailApiView.as_view(http_method_names=["get"]),
         name="anime_detail",
+    ),
+    path(
+        "anime/bulk_sync/",
+        views.AnimeBulkSyncApiView.as_view(),
+        name="anime_bulk_sync",
     ),
     path(
         "anime/search/",
