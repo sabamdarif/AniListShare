@@ -21,12 +21,12 @@ class SeasonSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("seasons must be greater then 0")
         return value
 
-    def validated_total_episodes(self, value):
+    def validate_total_episodes(self, value):
         if value <= 0:
             raise serializers.ValidationError("total_episodes cannot be negative")
         return value
 
-    def validated_watched_episodes(self, value):
+    def validate_watched_episodes(self, value):
         if value <= 0:
             raise serializers.ValidationError("watched_episodes cannot be negative")
         return value
@@ -63,15 +63,15 @@ class AnimeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id",)
 
-    def validated_name(self, value):
-        if not value and not value.strip():
-            serializers.ValidationError("Anime name cannot be empty")
+    def validate_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Anime name cannot be empty")
 
         return value
 
-    def validated_stars(self, value):
-        if value is not None:
-            serializers.ValidationError("Star rating must be between 0 and 10")
+    def validate_stars(self, value):
+        if value is not None and (value < 0 or value > 10):
+            raise serializers.ValidationError("Star rating must be between 0 and 10")
 
         return value
 

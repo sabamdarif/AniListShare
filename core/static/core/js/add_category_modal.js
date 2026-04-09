@@ -95,7 +95,7 @@
       saveBtn.classList.add("btn_loading");
       saveBtn.innerHTML = '<span class="btn_spinner"></span> Saving\u2026';
       try {
-        const r = await apiFetch("/api/anime/category/", {
+        const r = await apiFetch("/api/v1/categories/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

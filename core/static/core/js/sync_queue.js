@@ -42,7 +42,7 @@
     if (!actionsPayload || actionsPayload.length === 0) return;
 
     try {
-      const resp = await window.apiFetch("/api/anime/bulk_sync/", {
+      const resp = await window.apiFetch("/api/v1/animes/bulk_sync/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ actions: actionsPayload }),
@@ -103,7 +103,7 @@
       }
       queue = [];
 
-      fetch("/api/anime/bulk_sync/", {
+      fetch("/api/v1/animes/bulk_sync/", {
         method: "POST",
         keepalive: true,
         headers: {

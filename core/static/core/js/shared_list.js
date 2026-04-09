@@ -117,7 +117,7 @@
     if (!token) return;
 
     try {
-      var res = await fetch("/api/share/data/" + token + "/", {
+      var res = await fetch("/api/v1/share/data/" + token + "/", {
         method: "GET",
         headers: { Accept: "application/json" },
       });
@@ -187,7 +187,7 @@
     copyListBtn.innerHTML =
       '<i class="nf nf-fa-spinner fa-spin"></i> Copying...';
 
-    apiFetch("/api/share/copy/" + token + "/", {
+    apiFetch("/api/v1/share/copy/" + token + "/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

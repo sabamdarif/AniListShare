@@ -141,7 +141,7 @@
       deleteBtn.disabled = true;
       try {
         const r = await apiFetch(
-          `/api/anime/category/${encodeURIComponent(editingCategoryId)}/`,
+          `/api/v1/categories/${encodeURIComponent(editingCategoryId)}/`,
           {
             method: "PATCH",
             headers: {
@@ -190,7 +190,7 @@
 
       try {
         const r = await apiFetch(
-          `/api/anime/category/${encodeURIComponent(editingCategoryId)}/`,
+          `/api/v1/categories/${encodeURIComponent(editingCategoryId)}/`,
           {
             method: "DELETE",
             headers: {},

@@ -144,7 +144,7 @@ class AnimeDetailApiView(generics.RetrieveUpdateDestroyAPIView):
 class AnimeReorderApiView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, category_id):
+    def patch(self, request, category_id):
         category = get_object_or_404(
             Category, user_category_id=category_id, user=request.user
         )
@@ -183,7 +183,7 @@ class AnimeReorderApiView(APIView):
 class CategoryReorderApiView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def patch(self, request):
         ordered_ids = request.data.get("order", [])
         if not isinstance(ordered_ids, list):
             return Response(
@@ -337,7 +337,7 @@ def _generate_share_token() -> str:
             return token
 
 
-class ShareStatusApiView(APIView):
+class ShareManageApiView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -353,29 +353,23 @@ class ShareStatusApiView(APIView):
         except ShareLink.DoesNotExist:
             return Response({"enabled": False})
 
-
-class ShareToggleApiView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request):
-        enable = request.data.get("enable", False)
+        link, created = ShareLink.objects.get_or_create(
+            user=request.user,
+            defaults={"token": _generate_share_token()},
+        )
+        return Response(
+            {
+                "enabled": True,
+                "token": link.token,
+                "url": request.build_absolute_uri(f"/share/{link.token}/"),
+            },
+            status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED,
+        )
 
-        if enable:
-            link, created = ShareLink.objects.get_or_create(
-                user=request.user,
-                defaults={"token": _generate_share_token()},
-            )
-            return Response(
-                {
-                    "enabled": True,
-                    "token": link.token,
-                    "url": request.build_absolute_uri(f"/share/{link.token}/"),
-                },
-                status=status.HTTP_200_OK,
-            )
-        else:
-            ShareLink.objects.filter(user=request.user).delete()
-            return Response({"enabled": False}, status=status.HTTP_200_OK)
+    def delete(self, request):
+        ShareLink.objects.filter(user=request.user).delete()
+        return Response({"enabled": False}, status=status.HTTP_200_OK)
 
 
 class ShareDataApiView(APIView):

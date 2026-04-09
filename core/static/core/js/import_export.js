@@ -52,7 +52,7 @@
 
     try {
       // 1. Fetch categories
-      var catRes = await apiFetch("/api/anime/category/", {
+      var catRes = await apiFetch("/api/v1/categories/", {
         credentials: "same-origin",
         signal: signal,
       });
@@ -73,7 +73,7 @@
 
         var cat = categories[i];
         var animeRes = await apiFetch(
-          "/api/anime/list/category/" + cat.id + "/",
+          "/api/v1/categories/" + cat.id + "/animes/",
           {
             credentials: "same-origin",
             signal: signal,
@@ -382,7 +382,7 @@
         }
 
         // Fetch existing categories to check for duplicates
-        var existingCatRes = await apiFetch("/api/anime/category/", {
+        var existingCatRes = await apiFetch("/api/v1/categories/", {
           credentials: "same-origin",
         });
         var existingCats = await existingCatRes.json();
@@ -405,7 +405,7 @@
           }
 
           if (!catId) {
-            var catCreateRes = await apiFetch("/api/anime/category/", {
+            var catCreateRes = await apiFetch("/api/v1/categories/", {
               method: "POST",
               credentials: "same-origin",
               headers: {
@@ -422,7 +422,7 @@
 
           // Fetch existing anime in this category for duplicate check
           var existingAnimeRes = await apiFetch(
-            "/api/anime/list/category/" + catId + "/",
+            "/api/v1/categories/" + catId + "/animes/",
             { credentials: "same-origin" },
           );
           var existingAnime = await existingAnimeRes.json();
@@ -486,7 +486,7 @@
             if (chunkActions.length >= CHUNK_SIZE || ri === sheetInfo.rows.length - 1) {
                 if (chunkActions.length > 0) {
                   updateProgress("Sending " + chunkActions.length + " items to cloud...");
-                  var bulkRes = await apiFetch("/api/anime/bulk_sync/", {
+                  var bulkRes = await apiFetch("/api/v1/animes/bulk_sync/", {
                     method: "POST",
                     credentials: "same-origin",
                     headers: { "Content-Type": "application/json" },

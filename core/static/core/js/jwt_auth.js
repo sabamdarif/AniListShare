@@ -19,7 +19,7 @@ async function apiFetch(url, options = {}) {
   // If 401 Unauthorized, token might be expired. Try to refresh.
   if (response.status === 401 && jwtRefreshToken && url.startsWith("/api/")) {
     try {
-      const refreshResponse = await fetch("/api/token/refresh/", {
+      const refreshResponse = await fetch("/api/v1/token/refresh/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: jwtRefreshToken }),

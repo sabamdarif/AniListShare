@@ -732,7 +732,7 @@ window.AnimeRenderer = (function () {
 
         // Save to DB via PATCH
         return apiFetch(
-          "/api/anime/list/category/" + catId + "/" + animeId + "/",
+          "/api/v1/categories/" + catId + "/animes/" + animeId + "/",
           {
             method: "PATCH",
             credentials: "same-origin",

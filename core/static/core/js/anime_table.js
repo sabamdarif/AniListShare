@@ -331,7 +331,7 @@
     showSkeleton(4);
 
     try {
-      var res = await apiFetch("/api/anime/list/category/" + catId + "/", {
+      var res = await apiFetch("/api/v1/categories/" + catId + "/animes/", {
         method: "GET",
         credentials: "same-origin",
         headers: { Accept: "application/json" },
@@ -467,7 +467,7 @@
     }
   });
 
-  var REORDER_API = "/api/anime/list/category/";
+  var REORDER_API = "/api/v1/categories/";
   var MOBILE_HOLD_MS = 400;
   var DRAG_DEAD_ZONE = 4;
 
@@ -487,9 +487,9 @@
     });
     try {
       var resp = await apiFetch(
-        REORDER_API + _currentCategoryId + "/reorder/",
+        REORDER_API + _currentCategoryId + "/animes/order/",
         {
-          method: "POST",
+          method: "PATCH",
           credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
@@ -854,7 +854,7 @@
   });
 
   /* Category tab drag-and-drop reorder */
-  var CAT_REORDER_API = "/api/anime/category/reorder/";
+  var CAT_REORDER_API = "/api/v1/categories/order/";
   var CAT_HOLD_MS = 400;
   var CAT_DEAD_ZONE = 4;
 
@@ -879,7 +879,7 @@
     });
     try {
       var resp = await apiFetch(CAT_REORDER_API, {
-        method: "POST",
+        method: "PATCH",
         credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
@@ -1157,7 +1157,7 @@
       var loader = document.getElementById("category_tabs_loader");
       if (loader) loader.style.display = "inline-block";
 
-      var res = await apiFetch("/api/anime/category/", {
+      var res = await apiFetch("/api/v1/categories/", {
         method: "GET",
         headers: { Accept: "application/json" },
       });

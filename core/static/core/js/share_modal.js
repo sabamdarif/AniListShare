@@ -98,7 +98,7 @@
     errorEl.style.display = "none";
 
     try {
-      var res = await apiFetch("/api/share/status/", {
+      var res = await apiFetch("/api/v1/share/", {
         method: "GET",
         credentials: "same-origin",
         headers: { Accept: "application/json" },
@@ -129,13 +129,13 @@
     errorEl.style.display = "none";
 
     try {
-      var res = await apiFetch("/api/share/toggle/", {
-        method: "POST",
+      var res = await apiFetch("/api/v1/share/", {
+        method: enable ? "POST" : "DELETE",
         credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ enable: enable }),
+        body: enable ? JSON.stringify({}) : null,
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
       var data = await res.json();
