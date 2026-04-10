@@ -218,10 +218,7 @@
     </div>
 {% endblock body_content %}
 {% block scripts %}
-    <script>
-        window.__INITIAL_JWT_ACCESS__ = "{{ jwt_access|default:'' }}" || null;
-        window.__INITIAL_JWT_REFRESH__ = "{{ jwt_refresh|default:'' }}" || null;
-    </script>
+    <script>window.__USER_IS_AUTHENTICATED__ = {{ user_is_authenticated|yesno:"true,false" }};</script>
     <script src="{% static 'core/js/jwt_auth.js' %}"></script>
     <script src="{% static 'core/js/sync_queue.js' %}"></script>
     <script src="{% static 'core/js/header_dropdown.js' %}"></script>

@@ -77,9 +77,7 @@
         window.__SHARED_DATA__ = null; // Will be fetched by shared_list.js
         window.__SHARE_TOKEN__ = "{{ share_token }}";
         window.__LOGIN_URL__ = "{% url 'account_login' %}?next={{ request.path }}";
-        window.__IS_AUTHENTICATED__ = {{ request.user.is_authenticated|yesno:"true,false" }};
-        window.__INITIAL_JWT_ACCESS__ = "{{ jwt_access|default:'' }}" || null;
-        window.__INITIAL_JWT_REFRESH__ = "{{ jwt_refresh|default:'' }}" || null;
+        window.__USER_IS_AUTHENTICATED__ = {{ user_is_authenticated|yesno:"true,false" }};
     </script>
     <script src="{% static 'core/js/jwt_auth.js' %}"></script>
     <script src="{% static 'core/js/anime_renderer.js' %}"></script>

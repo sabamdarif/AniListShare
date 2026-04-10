@@ -4,9 +4,11 @@ from django.db import transaction
 from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Anime, Category, Season, ShareLink
 
@@ -495,3 +497,16 @@ class ShareCopyApiView(APIView):
             {"status": "ok", "detail": "List copied successfully!"},
             status=status.HTTP_200_OK,
         )
+
+
+class SessionTokenApiView(APIView):
+    """
+    Returns a JWT pair for the currently logged in session-authenticated user.
+    """
+
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh = RefreshToken.for_user(request.user)
+        return Response({"access": str(refresh.access_token), "refresh": str(refresh)})

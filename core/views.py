@@ -2,7 +2,6 @@ from allauth.account.decorators import verified_email_required
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import render
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import ShareLink
 
@@ -10,12 +9,7 @@ from core.models import ShareLink
 @login_required
 @verified_email_required
 def home(request):
-    context = {}
-    if request.user.is_authenticated:
-        refresh = RefreshToken.for_user(request.user)
-        context["jwt_access"] = str(refresh.access_token)
-        context["jwt_refresh"] = str(refresh)
-
+    context = {"user_is_authenticated": request.user.is_authenticated}
     return render(request, "core/index.html", context)
 
 
@@ -30,11 +24,6 @@ def shared_list_view(request, token):
     context = {
         "owner_name": owner.get_full_name() or owner.username,
         "share_token": token,
+        "user_is_authenticated": request.user.is_authenticated,
     }
-
-    if request.user.is_authenticated:
-        refresh = RefreshToken.for_user(request.user)
-        context["jwt_access"] = str(refresh.access_token)
-        context["jwt_refresh"] = str(refresh)
-
     return render(request, "core/shared_list.html", context)
