@@ -476,9 +476,7 @@
 
     async function searchJikan(q) {
       try {
-        const r = await apiFetch(
-          `${JIKAN}?q=${encodeURIComponent(q)}&limit=6&sfw=true`,
-        );
+        const r = await apiFetch(`${JIKAN}?q=${encodeURIComponent(q)}&limit=6`);
         const j = await r.json();
         renderSuggestions(j.data || [], nameInput.value.trim());
       } catch {
