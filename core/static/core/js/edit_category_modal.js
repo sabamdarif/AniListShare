@@ -75,54 +75,72 @@
 
     /* ── Event Triggers ── */
 
-    // Desktop: Click Edit Icon
-    document.querySelectorAll(".category_edit_btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation(); // prevent triggering tab select
-        const categoryId = btn.getAttribute("data-category-id");
-        const categoryName = btn.getAttribute("data-category-name");
-        open(categoryId, categoryName);
-      });
-    });
-
-    // Mobile: Long Press on Category Tab
-    document.querySelectorAll(".category_tab_wrapper").forEach((wrapper) => {
-      let pressTimer;
-      const btn = wrapper.querySelector(".category_edit_btn");
+    // Desktop: Click Edit Icon (event delegation for dynamic buttons)
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".category_edit_btn");
       if (!btn) return;
-
+      e.stopPropagation();
       const categoryId = btn.getAttribute("data-category-id");
       const categoryName = btn.getAttribute("data-category-name");
+      open(categoryId, categoryName);
+    });
 
-      const clearTimer = () => {
-        if (pressTimer) {
-          clearTimeout(pressTimer);
+    // Mobile: Long Press on Category Tab (event delegation for dynamic wrappers)
+    let pressTimer;
+    let activeWrapper = null;
+
+    const clearTimer = () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+      activeWrapper = null;
+    };
+
+    document.addEventListener(
+      "touchstart",
+      (e) => {
+        const wrapper = e.target.closest(".category_tab_wrapper");
+        if (!wrapper) return;
+        const btn = wrapper.querySelector(".category_edit_btn");
+        if (!btn) return;
+
+        activeWrapper = wrapper;
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          if (navigator.vibrate) navigator.vibrate(50);
+          const categoryId = btn.getAttribute("data-category-id");
+          const categoryName = btn.getAttribute("data-category-name");
+          open(categoryId, categoryName);
           pressTimer = null;
-        }
-      };
+        }, 600);
+      },
+      { passive: true },
+    );
 
-      wrapper.addEventListener(
-        "touchstart",
-        (e) => {
-          clearTimer();
-          pressTimer = setTimeout(() => {
-            if (navigator.vibrate) navigator.vibrate(50);
-            open(categoryId, categoryName);
-          }, 600); // 600ms long press
-        },
-        { passive: true },
-      );
+    document.addEventListener("touchend", (e) => {
+      if (
+        activeWrapper &&
+        e.target.closest(".category_tab_wrapper") === activeWrapper
+      ) {
+        clearTimer();
+      }
+    });
+    document.addEventListener("touchmove", (e) => {
+      if (activeWrapper) clearTimer();
+    });
+    document.addEventListener("touchcancel", (e) => {
+      if (activeWrapper) clearTimer();
+    });
 
-      wrapper.addEventListener("touchend", clearTimer);
-      wrapper.addEventListener("touchmove", clearTimer);
-      wrapper.addEventListener("touchcancel", clearTimer);
-
-      // Also prevent native context menu on long press text selection
-      wrapper.addEventListener("contextmenu", (e) => {
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-        }
-      });
+    // Prevent native context menu on long press for mobile
+    document.addEventListener("contextmenu", (e) => {
+      if (
+        window.innerWidth <= 768 &&
+        e.target.closest(".category_tab_wrapper")
+      ) {
+        e.preventDefault();
+      }
     });
 
     /* ── Save (Edit) ── */
