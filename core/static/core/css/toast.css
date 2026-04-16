@@ -32,3 +32,9 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+.asq_toast_error {
+  background: #2a1215;
+  border-color: #e53935;
+  color: #ffcdd2;
+}

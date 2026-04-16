@@ -44,7 +44,7 @@
   }
 
   /* ── toast helper ── */
-  function showToast(msg) {
+  function showToast(msg, type) {
     let container = document.getElementById("asq_toast_container");
     if (!container) {
       container = document.createElement("div");
@@ -54,13 +54,17 @@
     }
     const toast = document.createElement("div");
     toast.className = "asq_toast";
+    if (type === "error") toast.classList.add("asq_toast_error");
     toast.textContent = msg;
     container.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add("asq_toast_visible"));
-    setTimeout(() => {
-      toast.classList.remove("asq_toast_visible");
-      setTimeout(() => toast.remove(), 300);
-    }, 2500);
+    setTimeout(
+      () => {
+        toast.classList.remove("asq_toast_visible");
+        setTimeout(() => toast.remove(), 300);
+      },
+      type === "error" ? 4000 : 2500,
+    );
   }
 
   /* ── constants ── */

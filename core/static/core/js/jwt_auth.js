@@ -113,6 +113,35 @@ async function performRefresh() {
   return await refreshTokenPromise;
 }
 
+// Parse DRF validation error response into human-readable messages
+function parseDRFErrors(data) {
+  const msgs = [];
+  if (typeof data === "string") {
+    msgs.push(data);
+  } else if (Array.isArray(data)) {
+    data.forEach((item) => msgs.push(String(item)));
+  } else if (data && typeof data === "object") {
+    // DRF returns { field: ["error1", ...], ... } or { detail: "..." }
+    if (data.detail) {
+      msgs.push(String(data.detail));
+    } else {
+      for (const [field, errors] of Object.entries(data)) {
+        const errList = Array.isArray(errors) ? errors : [errors];
+        errList.forEach((e) => {
+          if (typeof e === "object" && e !== null) {
+            // Nested errors (e.g. seasons -> watched_episodes)
+            msgs.push(...parseDRFErrors(e));
+          } else {
+            const label = field === "non_field_errors" ? "" : `${field}: `;
+            msgs.push(`${label}${e}`);
+          }
+        });
+      }
+    }
+  }
+  return msgs;
+}
+
 // Custom fetch wrapper for API calls
 async function apiFetch(url, options = {}) {
   if (!options.headers) {
@@ -142,6 +171,24 @@ async function apiFetch(url, options = {}) {
     if (success) {
       options.headers["Authorization"] = `Bearer ${jwtAccessToken}`;
       response = await fetch(url, options);
+    }
+  }
+
+  // Auto-toast DRF validation errors (400) and server errors (405, 500, etc.)
+  if (
+    url.startsWith("/api/") &&
+    response.status >= 400 &&
+    response.status !== 401
+  ) {
+    try {
+      const cloned = response.clone();
+      const errData = await cloned.json();
+      const msgs = parseDRFErrors(errData);
+      if (msgs.length && typeof window._animeModalShowToast === "function") {
+        msgs.forEach((m) => window._animeModalShowToast(m, "error"));
+      }
+    } catch (_) {
+      // Response wasn't JSON — skip
     }
   }
 
