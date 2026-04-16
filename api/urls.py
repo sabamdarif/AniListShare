@@ -34,7 +34,7 @@ urlpatterns = [
     ),
     path(
         "v1/categories/<int:category_id>/animes/<int:pk>/",
-        views.AnimeDetailApiView.as_view(http_method_names=["get"]),
+        views.AnimeDetailApiView.as_view(),
         name="anime_detail",
     ),
     path(
