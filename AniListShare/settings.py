@@ -203,8 +203,12 @@ ACCOUNT_SIGNUP_FIELDS = [
     "password1*",
     "password2*",
 ]  # it's default but i still did it
-ACCOUNT_LOGIN_METHODS = {"email", "username"}  # login either using email or username
+
+# login either using email or username
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+# Determines the expiration date of email confirmation mails
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = os.getenv("EMAIL_ADDRESS")
