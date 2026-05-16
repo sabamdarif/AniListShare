@@ -6,16 +6,17 @@
 }
 
 .home_container {
-  max-width: 1200px;
+  max-width: 1800px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 24px;
+  grid-template-columns: 320px minmax(0, 1fr) 320px;
+  gap: 28px;
+  padding: 0 16px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1300px) {
   .home_container {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -343,4 +344,103 @@
 .signup_btn:hover {
   background: var(--accent2);
   transform: translateY(-1px);
+}
+
+/* ── Hover Popup ── */
+.anime_hover_popup {
+  position: fixed;
+  z-index: 9999;
+  width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.95);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  overflow: hidden;
+}
+
+.anime_hover_popup.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.popup_content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popup_title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.popup_header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.popup_image {
+  width: 110px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+}
+
+.popup_header_info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.popup_meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.popup_genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.popup_genre_tag {
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.popup_synopsis {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.popup_footer {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
 }

@@ -34,31 +34,46 @@
     </div>
     <main class="home_main">
         <div class="home_container">
-            <!-- Left Column: Latest Episodes -->
-            <section class="latest_episodes_section" id="latest_episodes_section">
+            <!-- Left Column: Top Upcoming -->
+            <aside class="top_upcoming_section" id="top_upcoming_section">
                 <div class="section_header">
-                    <h3 class="section_title">Latest Episodes</h3>
-                    <!-- TODO: Re-enable these tabs when Dub data support is added
-                    <div class="filter_tabs" id="latest_tabs">
-                        <button class="tab_btn active" data-filter="all">All</button>
-                        <button class="tab_btn" data-filter="sub">Sub</button>
-                        <button class="tab_btn" data-filter="dub">Dub</button>
+                    <h3 class="section_title">Top Upcoming</h3>
+                </div>
+                <div class="trending_list" id="upcoming_list">
+                    <!-- Items injected by JS -->
+                </div>
+            </aside>
+            <!-- Center Column: Main Content -->
+            <div class="main_column"
+                 style="display: flex;
+                        flex-direction: column;
+                        gap: 32px">
+                <!-- Latest Episodes -->
+                <section class="latest_episodes_section" id="latest_episodes_section">
+                    <div class="section_header">
+                        <h3 class="section_title">Latest Episodes</h3>
+                        <!-- TODO: Re-enable these tabs when Dub data support is added
+                        <div class="filter_tabs" id="latest_tabs">
+                            <button class="tab_btn active" data-filter="all">All</button>
+                            <button class="tab_btn" data-filter="sub">Sub</button>
+                            <button class="tab_btn" data-filter="dub">Dub</button>
+                        </div>
+                        -->
                     </div>
-                    -->
-                </div>
-                <div class="card_grid" id="latest_grid">
-                    <!-- Cards injected by JS -->
-                </div>
-                <div class="pagination_controls" id="latest_pagination">
-                    <button class="page_btn" id="prev_day_btn" aria-label="Previous Day">
-                        <i class="nf nf-fa-chevron_left"></i>
-                    </button>
-                    <span class="page_label" id="current_day_label">Today</span>
-                    <button class="page_btn" id="next_day_btn" aria-label="Next Day" disabled>
-                        <i class="nf nf-fa-chevron_right"></i>
-                    </button>
-                </div>
-            </section>
+                    <div class="card_grid" id="latest_grid">
+                        <!-- Cards injected by JS -->
+                    </div>
+                    <div class="pagination_controls" id="latest_pagination">
+                        <button class="page_btn" id="prev_day_btn" aria-label="Previous Day">
+                            <i class="nf nf-fa-chevron_left"></i>
+                        </button>
+                        <span class="page_label" id="current_day_label">Today</span>
+                        <button class="page_btn" id="next_day_btn" aria-label="Next Day" disabled>
+                            <i class="nf nf-fa-chevron_right"></i>
+                        </button>
+                    </div>
+                </section>
+            </div>
             <!-- Right Column: Top Trending -->
             <aside class="top_trending_section" id="top_trending_section">
                 <div class="section_header">
@@ -75,6 +90,25 @@
             </aside>
         </div>
     </main>
+    <!-- Global Hover Popup for Anime Cards -->
+    <div id="anime_hover_popup"
+         class="anime_hover_popup"
+         style="display: none">
+        <div class="popup_content">
+            <div class="popup_header">
+                <img id="popup_image" src="" alt="Thumbnail" class="popup_image">
+                <div class="popup_header_info">
+                    <h4 id="popup_title" class="popup_title"></h4>
+                    <div class="popup_meta" id="popup_meta"></div>
+                    <div class="popup_genres" id="popup_genres"></div>
+                </div>
+            </div>
+            <p id="popup_synopsis" class="popup_synopsis"></p>
+            <div class="popup_footer">
+                <span id="popup_studio"></span>
+            </div>
+        </div>
+    </div>
 {% endblock body_content %}
 {% block scripts %}
     <script src="{% static 'core/js/home.js' %}"></script>
