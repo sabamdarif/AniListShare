@@ -1,48 +1,81 @@
 {% extends "core/base.html" %}
 {% load static %}
-
 {% block page_title %}
     Welcome - {{ WEBSITE_NAME }}
 {% endblock page_title %}
-
 {% block extra_css %}
     <link href="{% static 'core/css/home.css' %}" rel="stylesheet">
     <link href="{% static 'core/css/header.css' %}" rel="stylesheet">
-    <link rel="stylesheet" href="https://www.nerdfonts.com/assets/css/webfont.css">
+    <link rel="stylesheet"
+          href="https://www.nerdfonts.com/assets/css/webfont.css">
 {% endblock extra_css %}
-
 {% block body_content %}
     <div class="sticky_header">
         <header>
-            <a href="{% url 'landing_page' %}" class="header_content" id="header_title_section" style="text-decoration: none; color: inherit; cursor: pointer;">
+            <a href="{% url 'landing_page' %}"
+               class="header_content"
+               id="header_title_section"
+               style="text-decoration: none;
+                      color: inherit;
+                      cursor: pointer">
                 <img src="{% static 'core/logo.png' %}"
                      alt="{{ WEBSITE_NAME }}-logo"
                      id="header_web_logo">
                 <h2 id="header_web_title">{{ WEBSITE_NAME }}</h2>
             </a>
             <div class="header_content" id="header_action_buttons">
-                <a href="{% url 'account_login' %}" class="login_btn">
-                    <i class="nf nf-fa-sign_in"></i> Login
-                </a>
-                <a href="{% url 'account_signup' %}" class="signup_btn">
-                    Get Started
-                </a>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'list_view' %}" class="signup_btn">Open Your List</a>
+                {% else %}
+                    <a href="{% url 'account_login' %}" class="signup_btn">Get Started</a>
+                {% endif %}
             </div>
         </header>
     </div>
-
     <main class="home_main">
-        <!-- TODO: Add future landing page content here -->
-        <section class="hero_section">
-            <h1 class="hero_title">Track and Share Your Anime Lists</h1>
-            <p class="hero_subtitle">
-                The easiest way to keep track of the anime you've watched, currently watching, or plan to watch. Share your lists with friends seamlessly.
-            </p>
-            <div class="hero_cta_wrapper">
-                <a href="{% url 'account_signup' %}" class="hero_cta_btn">
-                    Create Your Free List
-                </a>
-            </div>
-        </section>
+        <div class="home_container">
+            <!-- Left Column: Latest Episodes -->
+            <section class="latest_episodes_section" id="latest_episodes_section">
+                <div class="section_header">
+                    <h3 class="section_title">Latest Episodes</h3>
+                    <!-- TODO: Re-enable these tabs when Dub data support is added
+                    <div class="filter_tabs" id="latest_tabs">
+                        <button class="tab_btn active" data-filter="all">All</button>
+                        <button class="tab_btn" data-filter="sub">Sub</button>
+                        <button class="tab_btn" data-filter="dub">Dub</button>
+                    </div>
+                    -->
+                </div>
+                <div class="card_grid" id="latest_grid">
+                    <!-- Cards injected by JS -->
+                </div>
+                <div class="pagination_controls" id="latest_pagination">
+                    <button class="page_btn" id="prev_day_btn" aria-label="Previous Day">
+                        <i class="nf nf-fa-chevron_left"></i>
+                    </button>
+                    <span class="page_label" id="current_day_label">Today</span>
+                    <button class="page_btn" id="next_day_btn" aria-label="Next Day" disabled>
+                        <i class="nf nf-fa-chevron_right"></i>
+                    </button>
+                </div>
+            </section>
+            <!-- Right Column: Top Trending -->
+            <aside class="top_trending_section" id="top_trending_section">
+                <div class="section_header">
+                    <h3 class="section_title">Top Trending</h3>
+                    <div class="filter_tabs" id="trending_tabs">
+                        <button class="tab_btn active" data-filter="day">Day</button>
+                        <button class="tab_btn" data-filter="week">Week</button>
+                        <button class="tab_btn" data-filter="month">Month</button>
+                    </div>
+                </div>
+                <div class="trending_list" id="trending_list">
+                    <!-- Items injected by JS -->
+                </div>
+            </aside>
+        </div>
     </main>
 {% endblock body_content %}
+{% block scripts %}
+    <script src="{% static 'core/js/home.js' %}"></script>
+{% endblock scripts %}
