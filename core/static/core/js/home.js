@@ -415,7 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Position popup
     popup.style.display = "block";
     const rect = targetEl.getBoundingClientRect();
-    const popupWidth = 320;
+    const popupWidth = popup.offsetWidth;
 
     // Default: show to the right
     let left = rect.right + 16;

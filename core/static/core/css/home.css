@@ -351,6 +351,7 @@
   position: fixed;
   z-index: 9999;
   width: 400px;
+  max-width: calc(100vw - 32px);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -444,3 +445,4 @@
   font-weight: 600;
   color: var(--accent);
 }
+
