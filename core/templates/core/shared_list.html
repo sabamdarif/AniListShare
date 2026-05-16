@@ -15,12 +15,12 @@
 {% block body_content %}
     <div class="sticky_header">
         <header>
-            <div class="header_content" id="header_title_section">
+            <a href="{% url 'landing_page' %}" class="header_content" id="header_title_section" style="text-decoration: none; color: inherit; cursor: pointer;">
                 <img src="{% static 'core/logo.png' %}"
                      alt="{{ WEBSITE_NAME }}-logo"
                      id="header_web_logo">
                 <h2 id="header_web_title">{{ WEBSITE_NAME }}</h2>
-            </div>
+            </a>
             <div class="header_content" id="header_search_section">
                 <i class="nf nf-seti-search"></i>
                 <input type="search" placeholder="search anime..." id="shared_search_input">
@@ -40,7 +40,7 @@
                                 <i class="nf nf-fa-copy"></i>
                                 Copy this list
                             </button>
-                            <a href="{% url 'home_page' %}" class="shared_dropdown_item">
+                            <a href="{% url 'list_view' %}" class="shared_dropdown_item">
                                 <i class="nf nf-fa-home"></i>
                                 Return to your list
                             </a>

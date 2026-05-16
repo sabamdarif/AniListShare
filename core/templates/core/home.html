@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block page_title %}
+    Welcome - {{ WEBSITE_NAME }}
+{% endblock page_title %}
+
+{% block extra_css %}
+    <link href="{% static 'core/css/home.css' %}" rel="stylesheet">
+    <link href="{% static 'core/css/header.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://www.nerdfonts.com/assets/css/webfont.css">
+{% endblock extra_css %}
+
+{% block body_content %}
+    <div class="sticky_header">
+        <header>
+            <a href="{% url 'landing_page' %}" class="header_content" id="header_title_section" style="text-decoration: none; color: inherit; cursor: pointer;">
+                <img src="{% static 'core/logo.png' %}"
+                     alt="{{ WEBSITE_NAME }}-logo"
+                     id="header_web_logo">
+                <h2 id="header_web_title">{{ WEBSITE_NAME }}</h2>
+            </a>
+            <div class="header_content" id="header_action_buttons">
+                <a href="{% url 'account_login' %}" class="login_btn">
+                    <i class="nf nf-fa-sign_in"></i> Login
+                </a>
+                <a href="{% url 'account_signup' %}" class="signup_btn">
+                    Get Started
+                </a>
+            </div>
+        </header>
+    </div>
+
+    <main class="home_main">
+        <!-- TODO: Add future landing page content here -->
+        <section class="hero_section">
+            <h1 class="hero_title">Track and Share Your Anime Lists</h1>
+            <p class="hero_subtitle">
+                The easiest way to keep track of the anime you've watched, currently watching, or plan to watch. Share your lists with friends seamlessly.
+            </p>
+            <div class="hero_cta_wrapper">
+                <a href="{% url 'account_signup' %}" class="hero_cta_btn">
+                    Create Your Free List
+                </a>
+            </div>
+        </section>
+    </main>
+{% endblock body_content %}
