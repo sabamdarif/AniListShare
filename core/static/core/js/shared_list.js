@@ -54,6 +54,12 @@
     });
   }
 
+  if (window.AnimeFilter) {
+    window.AnimeFilter.init(function () {
+      renderCurrent();
+    });
+  }
+
   function renderCurrent() {
     var list = getCurrentAnimeList(searchInput ? searchInput.value : "");
     // Normalize seasons for each anime before rendering
@@ -62,7 +68,11 @@
         seasons: (a.seasons || []).map(normalizeSeason),
       });
     });
-    renderer.render(normalized);
+
+    var filtered = window.AnimeFilter
+      ? window.AnimeFilter.applyFilters(normalized)
+      : normalized;
+    renderer.render(filtered);
   }
 
   function getScrollKey(idx) {

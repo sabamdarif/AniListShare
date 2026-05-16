@@ -22,7 +22,12 @@
 {% block body_content %}
     <div class="sticky_header">
         <header>
-            <a href="{% url 'landing_page' %}" class="header_content" id="header_title_section" style="text-decoration: none; color: inherit; cursor: pointer;">
+            <a href="{% url 'landing_page' %}"
+               class="header_content"
+               id="header_title_section"
+               style="text-decoration: none;
+                      color: inherit;
+                      cursor: pointer">
                 <img src="{% static 'core/logo.png' %}"
                      alt="{{ WEBSITE_NAME }}-logo"
                      id="header_web_logo">
@@ -223,6 +228,7 @@
     <script src="{% static 'core/js/sync_queue.js' %}"></script>
     <script src="{% static 'core/js/header_dropdown.js' %}"></script>
     <script src="{% static 'core/js/anime_renderer.js' %}"></script>
+    <script src="{% static 'core/js/anime_filter.js' %}"></script>
     <script src="{% static 'core/js/anime_table.js' %}"></script>
     <script src="{% static 'core/js/add_category_modal.js' %}"></script>
     <script src="{% static 'core/js/anime_modal_base.js' %}"></script>

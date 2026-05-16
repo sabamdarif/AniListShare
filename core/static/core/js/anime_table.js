@@ -303,9 +303,22 @@
     }, 3000);
   }
 
+  if (window.AnimeFilter) {
+    window.AnimeFilter.init(function () {
+      if (lastList) {
+        var filtered = window.AnimeFilter.applyFilters(lastList);
+        renderer.render(filtered);
+        checkMissingThumbnails();
+      }
+    });
+  }
+
   function render(animeList) {
     lastList = animeList;
-    renderer.render(animeList);
+    var filtered = window.AnimeFilter
+      ? window.AnimeFilter.applyFilters(animeList)
+      : animeList;
+    renderer.render(filtered);
     checkMissingThumbnails();
   }
 

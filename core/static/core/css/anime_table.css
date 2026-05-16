@@ -784,6 +784,115 @@
   transition: width 0.3s ease;
 }
 
+/* ── Advanced Filter Toolbar Dropdown ── */
+.table_filter_container {
+  position: relative;
+  display: inline-block;
+}
+
+.table_filter_icon_btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.table_filter_icon_btn:hover,
+.table_filter_icon_btn.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.filter_controls_dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  width: max-content;
+  max-width: 320px;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.filter_controls_dropdown.open {
+  display: flex;
+}
+
+.filter_group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter_label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 4px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.filter_pill {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter_pill:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface2));
+}
+
+.filter_pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.filter_clear_btn {
+  background: transparent;
+  border: none;
+  color: var(--error, #e55);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  margin-top: 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.15s ease;
+  width: 100%;
+}
+
+.filter_clear_btn:hover {
+  background: color-mix(in srgb, var(--error, #e55) 10%, transparent);
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 768px) {

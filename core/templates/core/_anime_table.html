@@ -1,6 +1,6 @@
 <table class="anime_table" id="anime_table">
     <thead>
-        <tr>
+        <tr style="position: relative;">
             <th class="col_id">#</th>
             <th class="col_thumb">Thumbnail</th>
             <th class="col_name">Name</th>
@@ -8,6 +8,69 @@
             <th class="col_lang">Language</th>
             <th class="col_stars">Stars</th>
             {% if show_edit_column %}<th class="col_edit"></th>{% endif %}
+            <th class="col_filter_anchor"
+                style="position: absolute;
+                       right: 8px;
+                       top: 50%;
+                       transform: translateY(-50%);
+                       padding: 0;
+                       border: none;
+                       width: auto">
+                <div class="table_filter_container" id="anime_filter_toolbar">
+                    <button type="button"
+                            class="table_filter_icon_btn"
+                            id="m_filter_toggle_btn"
+                            title="Filters">
+                        <i class="nf nf-fa-filter"></i>
+                    </button>
+                    <div class="filter_controls_dropdown" id="filter_controls_wrapper">
+                        <div class="filter_group">
+                            <span class="filter_label">Sort:</span>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="sort"
+                                    data-filter-val="az">A &rarr; Z</button>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="sort"
+                                    data-filter-val="za">Z &rarr; A</button>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="sort"
+                                    data-filter-val="rating_high">High &rarr; Low Rating</button>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="sort"
+                                    data-filter-val="rating_low">Low &rarr; High Rating</button>
+                        </div>
+                        <div class="filter_group">
+                            <span class="filter_label">Status:</span>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="status"
+                                    data-filter-val="completed">Completed</button>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="status"
+                                    data-filter-val="watching">Watching</button>
+                        </div>
+                        <div class="filter_group">
+                            <span class="filter_label">Attrs:</span>
+                            <button type="button"
+                                    class="filter_pill"
+                                    data-filter-type="attr"
+                                    data-filter-val="ova">Has OVA</button>
+                        </div>
+                        <!-- TODO: Implement Language filter pills here once logic is refactored -->
+                        <button type="button"
+                                class="filter_clear_btn"
+                                id="filter_clear_btn"
+                                style="display: none">
+                            <i class="nf nf-cod-clear_all"></i> Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </th>
         </tr>
     </thead>
     <tbody id="anime_table_body">
