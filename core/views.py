@@ -1,7 +1,7 @@
 from allauth.account.decorators import verified_email_required
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect, render
 
 from core.models import ShareLink
 
@@ -13,7 +13,18 @@ def home_redirect(request):
 
 
 def landing_page(request):
-    return render(request, "core/home.html")
+    user_is_authenticated = request.user.is_authenticated
+    user_email_verified = False
+    if user_is_authenticated:
+        user_email_verified = request.user.emailaddress_set.filter(
+            verified=True
+        ).exists()
+
+    context = {
+        "user_is_authenticated": user_is_authenticated,
+        "user_email_verified": user_email_verified,
+    }
+    return render(request, "core/home.html", context)
 
 
 def list_view(request):

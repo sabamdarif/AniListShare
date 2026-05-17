@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let latestFilter = "all"; // all, sub, dub
   let trendingFilter = "day"; // day (airing), week (bypopularity), month (favorite)
   const animeDataMap = new Map(); // Stores full anime objects by mal_id
+  let userCategories = []; // Fetched from API for authenticated+verified users
+  let canAddToList = false; // True if user is auth+verified and has ≥1 category
+  let currentPopupAnimeId = null; // Track which anime the popup is showing
 
   // --- DOM Elements ---
   const latestGrid = document.getElementById("latest_grid");
@@ -461,14 +464,40 @@ document.addEventListener("DOMContentLoaded", () => {
   const popupGenres = document.getElementById("popup_genres");
   const popupSynopsis = document.getElementById("popup_synopsis");
   const popupStudio = document.getElementById("popup_studio");
+  const popupAddBtn = document.getElementById("popup_add_btn");
+  const popupCategoryPicker = document.getElementById("popup_category_picker");
+  const popupCategoryList = document.getElementById("popup_category_list");
+  const popupAddFeedback = document.getElementById("popup_add_feedback");
+  const popupCancelAddBtn = document.getElementById("popup_cancel_add_btn");
   let hoverTimeout = null;
+  let hideTimeout = null;
+  let isMouseInPopup = false;
   let isMobile = window.matchMedia(
     "(hover: none) or (pointer: coarse)",
   ).matches;
 
+  const resetPopupAddState = () => {
+    popupCategoryPicker.style.display = "none";
+    popupAddFeedback.style.display = "none";
+    if (popupAddBtn) {
+      popupAddBtn.style.display = canAddToList ? "" : "none";
+      popupAddBtn.disabled = false;
+      popupAddBtn.innerHTML = '<i class="nf nf-fa-plus"></i> Add to List';
+    }
+  };
+
+  if (popupCancelAddBtn) {
+    popupCancelAddBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      resetPopupAddState();
+    });
+  }
+
   const showPopup = (targetEl, animeId) => {
     const item = animeDataMap.get(animeId);
     if (!item) return;
+
+    currentPopupAnimeId = animeId;
 
     // Populate data
     popupTitle.textContent = item.title_english || item.title;
@@ -505,6 +534,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const studio = item.studios?.[0]?.name || "";
     popupStudio.textContent = studio ? `Studio: ${studio}` : "";
+
+    // Reset add-to-list state
+    resetPopupAddState();
 
     // Position popup
     popup.style.display = "block";
@@ -543,12 +575,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const hidePopup = () => {
     popup.classList.remove("active");
+    currentPopupAnimeId = null;
     setTimeout(() => {
       if (!popup.classList.contains("active")) {
         popup.style.display = "none";
+        resetPopupAddState();
       }
     }, 200); // match CSS transition
   };
+
+  const scheduleHide = () => {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => {
+      if (!isMouseInPopup) {
+        hidePopup();
+      }
+    }, 150);
+  };
+
+  // Keep popup open when mouse enters popup
+  popup.addEventListener("mouseenter", () => {
+    isMouseInPopup = true;
+    clearTimeout(hideTimeout);
+    clearTimeout(hoverTimeout);
+  });
+
+  popup.addEventListener("mouseleave", () => {
+    isMouseInPopup = false;
+    scheduleHide();
+  });
 
   // Event Delegation for Cards
   document.addEventListener("mouseover", (e) => {
@@ -556,9 +611,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = e.target.closest(".anime_card, .trending_card");
     if (card) {
       clearTimeout(hoverTimeout);
+      clearTimeout(hideTimeout);
       hoverTimeout = setTimeout(() => {
         showPopup(card, card.dataset.id);
-      }, 300); // 300ms delay to prevent flicker when moving quickly
+      }, 300);
     }
   });
 
@@ -567,32 +623,186 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = e.target.closest(".anime_card, .trending_card");
     if (card) {
       clearTimeout(hoverTimeout);
+      scheduleHide();
+    }
+  });
+
+  // Click outside hides popup (both mobile and desktop)
+  document.addEventListener("click", (e) => {
+    const clickedCard = e.target.closest(".anime_card, .trending_card");
+    const clickedPopup = e.target.closest("#anime_hover_popup");
+
+    if (clickedCard) {
+      e.preventDefault();
+      if (isMobile) {
+        if (
+          popup.classList.contains("active") &&
+          clickedCard.dataset.id === currentPopupAnimeId
+        ) {
+          hidePopup();
+        } else {
+          showPopup(clickedCard, clickedCard.dataset.id);
+        }
+      }
+      // Desktop: hover handles popup, click on card does nothing extra
+      return;
+    }
+
+    // Click outside popup and outside card → close popup
+    if (!clickedPopup && popup.classList.contains("active")) {
       hidePopup();
     }
   });
 
-  document.addEventListener("click", (e) => {
-    const card = e.target.closest(".anime_card, .trending_card");
-    if (card) {
-      e.preventDefault(); // Prevent default if any anchor wrapping remains
-      if (isMobile) {
-        if (popup.classList.contains("active")) {
-          hidePopup();
-        } else {
-          showPopup(card, card.dataset.id);
-        }
-      } else {
-        // Desktop click logic (e.g. Add to list later)
-        console.log("Desktop click on anime", card.dataset.id);
+  // Hide popup on scroll to prevent it from floating detached
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (popup.classList.contains("active")) {
+        hidePopup();
       }
-    } else if (isMobile && popup.classList.contains("active")) {
-      // Click outside on mobile hides popup
-      hidePopup();
+    },
+    { passive: true },
+  );
+
+  // --- Add to List Logic ---
+
+  // "Add to List" button click → show category picker
+  if (popupAddBtn) {
+    popupAddBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Populate category list
+      popupCategoryList.innerHTML = "";
+      userCategories.forEach((cat) => {
+        const btn = document.createElement("button");
+        btn.className = "popup_category_item";
+        btn.dataset.categoryId = cat.id;
+        btn.innerHTML = `<i class="nf nf-fa-folder"></i> ${cat.name}`;
+        popupCategoryList.appendChild(btn);
+      });
+      popupAddBtn.style.display = "none";
+      popupCategoryPicker.style.display = "block";
+
+      // If the expanded picker causes the popup to overflow the screen bottom, push it up
+      requestAnimationFrame(() => {
+        const rect = popup.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 16) {
+          const newTop = Math.max(16, window.innerHeight - rect.height - 16);
+          popup.style.top = `${newTop}px`;
+        }
+      });
+    });
+  }
+
+  // Category item click → add anime to that category
+  if (popupCategoryList) {
+    popupCategoryList.addEventListener("click", async (e) => {
+      const catBtn = e.target.closest(".popup_category_item");
+      if (!catBtn) return;
+      e.stopPropagation();
+
+      const categoryId = parseInt(catBtn.dataset.categoryId, 10);
+      const item = animeDataMap.get(currentPopupAnimeId);
+      if (!item) return;
+
+      // Disable all buttons while loading
+      popupCategoryList
+        .querySelectorAll(".popup_category_item")
+        .forEach((b) => (b.disabled = true));
+      catBtn.innerHTML = '<i class="nf nf-fa-spinner"></i> Adding...';
+
+      try {
+        const animeName = item.title_english || item.title;
+        const thumbnailUrl =
+          item.images?.webp?.large_image_url ||
+          item.images?.jpg?.large_image_url ||
+          "";
+
+        const response = await window.apiFetch("/api/v1/animes/bulk_sync/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actions: [
+              {
+                type: "CREATE",
+                temp_id: `home_add_${Date.now()}`,
+                data: {
+                  category_id: categoryId,
+                  name: animeName,
+                  thumbnail_url: thumbnailUrl,
+                  language: "",
+                  stars: item.score || null,
+                  order: 9999, // Will be placed at end by backend
+                  seasons: [
+                    {
+                      number: 1,
+                      total_episodes: item.episodes || 0,
+                      watched_episodes: 0,
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          // Show success feedback
+          popupCategoryPicker.style.display = "none";
+          popupAddFeedback.style.display = "flex";
+
+          // Auto-hide feedback after 1.5s
+          setTimeout(() => {
+            if (popup.classList.contains("active")) {
+              popupAddFeedback.style.display = "none";
+              popupAddBtn.style.display = "";
+              popupAddBtn.innerHTML = '<i class="nf nf-fa-check"></i> Added!';
+              popupAddBtn.disabled = true;
+            }
+          }, 1500);
+        } else {
+          // Error — re-enable picker
+          popupCategoryList
+            .querySelectorAll(".popup_category_item")
+            .forEach((b) => {
+              b.disabled = false;
+            });
+          catBtn.innerHTML = `<i class="nf nf-fa-folder"></i> Failed — try again`;
+        }
+      } catch (err) {
+        console.error("Add to list error:", err);
+        popupCategoryList
+          .querySelectorAll(".popup_category_item")
+          .forEach((b) => {
+            b.disabled = false;
+          });
+      }
+    });
+  }
+
+  // --- Fetch User Categories (if authenticated + verified) ---
+  const loadUserCategories = async () => {
+    if (!window.__USER_IS_AUTHENTICATED__ || !window.__USER_EMAIL_VERIFIED__) {
+      return;
     }
-  });
+
+    try {
+      const response = await window.apiFetch("/api/v1/categories/");
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          userCategories = data;
+          canAddToList = true;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch categories for add-to-list:", err);
+    }
+  };
 
   // --- Init ---
   loadLatestEpisodes();
   loadTrending();
   loadUpcoming();
+  loadUserCategories();
 });

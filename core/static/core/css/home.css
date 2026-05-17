@@ -368,6 +368,18 @@
 .anime_hover_popup.active {
   opacity: 1;
   transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Invisible bridge so mouse doesn't fall into the gap between card and popup */
+.anime_hover_popup::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  z-index: -1;
 }
 
 .popup_content {
@@ -444,5 +456,145 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
+/* ── Add to List Button ── */
+.popup_add_btn {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.popup_add_btn:hover {
+  background: var(--accent2);
+  transform: translateY(-1px);
+}
+
+.popup_add_btn:active {
+  transform: translateY(0);
+}
+
+/* ── Category Picker ── */
+.popup_category_picker {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  animation: pickerSlideIn 0.2s ease;
+}
+
+@keyframes pickerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup_picker_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.popup_cancel_btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  font-size: 0.8rem;
+}
+
+.popup_cancel_btn:hover {
+  color: var(--danger);
+}
+
+.popup_category_list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.popup_category_item {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.popup_category_item:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.popup_category_item i {
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+/* ── Success Feedback ── */
+.popup_add_feedback {
+  text-align: center;
+  padding: 8px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  animation: feedbackPop 0.3s ease;
+}
+
+@keyframes feedbackPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

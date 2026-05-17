@@ -106,10 +106,39 @@
             <p id="popup_synopsis" class="popup_synopsis"></p>
             <div class="popup_footer">
                 <span id="popup_studio"></span>
+                <button id="popup_add_btn" class="popup_add_btn" style="display:none;">
+                    <i class="nf nf-fa-plus"></i> Add to List
+                </button>
+            </div>
+            <!-- Category picker dropdown -->
+            <div id="popup_category_picker"
+                 class="popup_category_picker"
+                 style="display:none">
+                <div class="popup_picker_header">
+                    <span>Choose a category</span>
+                    <button id="popup_cancel_add_btn"
+                            class="popup_cancel_btn"
+                            aria-label="Cancel">
+                        <i class="nf nf-fa-times"></i>
+                    </button>
+                </div>
+                <div id="popup_category_list" class="popup_category_list"></div>
+            </div>
+            <!-- Success feedback -->
+            <div id="popup_add_feedback"
+                 class="popup_add_feedback"
+                 style="display:none">
+                <i class="nf nf-fa-check"></i> Added!
             </div>
         </div>
     </div>
 {% endblock body_content %}
 {% block scripts %}
+    {% csrf_token %}
+    <script>
+        window.__USER_IS_AUTHENTICATED__ = {{ user_is_authenticated|yesno:"true,false" }};
+        window.__USER_EMAIL_VERIFIED__ = {{ user_email_verified|yesno:"true,false" }};
+    </script>
+    <script src="{% static 'core/js/jwt_auth.js' %}"></script>
     <script src="{% static 'core/js/home.js' %}"></script>
 {% endblock scripts %}
