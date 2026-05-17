@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Utils ---
 
   // Simple sessionStorage cache with TTL
-  const fetchCached = async (cacheKey, url) => {
+  const fetchCached = async (cacheKey, url, maxRetries = 3) => {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -39,26 +39,69 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    let lastError = null;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Exponential backoff: 0ms, 1500ms, 3000ms before each retry
+        if (attempt > 0) {
+          const backoffMs = attempt * 1500;
+          console.warn(
+            `Retry ${attempt}/${maxRetries - 1} for ${url} after ${backoffMs}ms`,
+          );
+          await new Promise((r) => setTimeout(r, backoffMs));
+        }
 
-      // Artificial delay to respect rate limit globally (rudimentary)
-      await new Promise((r) => setTimeout(r, 500));
+        const res = await fetch(url);
 
-      const data = await res.json();
-      sessionStorage.setItem(
-        cacheKey,
-        JSON.stringify({
-          timestamp: Date.now(),
-          data: data,
-        }),
-      );
-      return data;
-    } catch (e) {
-      console.error("Fetch error:", e);
-      return null;
+        // Retry on server errors (5xx) and rate limits (429)
+        if (res.status === 429 || (res.status >= 500 && res.status < 600)) {
+          lastError = new Error(`HTTP error! status: ${res.status}`);
+          console.warn(
+            `Retryable status ${res.status} on attempt ${attempt + 1}`,
+          );
+          continue;
+        }
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+        // Artificial delay to respect rate limit globally (rudimentary)
+        await new Promise((r) => setTimeout(r, 500));
+
+        const data = await res.json();
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: data,
+          }),
+        );
+        return data;
+      } catch (e) {
+        lastError = e;
+        // Network errors (TypeError) are retryable; other errors are not
+        if (e instanceof TypeError) {
+          console.warn(`Network error on attempt ${attempt + 1}:`, e.message);
+          continue;
+        }
+        // Non-retryable error (e.g., 4xx client error)
+        console.error("Fetch error:", e);
+        return null;
+      }
     }
+
+    // All retries exhausted — try returning stale cache if available
+    if (cached) {
+      try {
+        const stale = JSON.parse(cached);
+        console.warn("All retries failed, returning stale cache for", cacheKey);
+        return stale.data;
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    console.error("All retries exhausted for:", url, lastError);
+    return null;
   };
 
   const parseDuration = (durationStr) => {
@@ -82,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const getTargetDate = (pageOffset) => {
     const d = new Date();
-    d.setUTCDate(d.getUTCDate() - (pageOffset - 1));
+    d.setDate(d.getDate() - (pageOffset - 1));
     return d;
   };
 
@@ -281,7 +324,58 @@ document.addEventListener("DOMContentLoaded", () => {
     const cacheKey = `jikan_schedules_${dayStr}`;
     const url = `${JIKAN_BASE_URL}/schedules?filter=${dayStr}&limit=24&page=1`;
 
-    const response = await fetchCached(cacheKey, url);
+    let response = await fetchCached(cacheKey, url);
+
+    // Fallback: if filtered endpoint fails (e.g. Jikan 504 on certain days),
+    // fetch unfiltered schedules and filter client-side by broadcast.day
+    if (!response || !response.data) {
+      console.warn(
+        `Filtered schedule fetch failed for "${dayStr}", falling back to unfiltered endpoint`,
+      );
+      const fallbackCacheKey = `jikan_schedules_all`;
+      const fallbackUrl = `${JIKAN_BASE_URL}/schedules?limit=25&page=1`;
+      const allResponse = await fetchCached(fallbackCacheKey, fallbackUrl);
+
+      if (allResponse?.data) {
+        // Jikan broadcast.day uses capitalized plural form: "Sundays", "Mondays", etc.
+        const targetDay =
+          dayStr.charAt(0).toUpperCase() + dayStr.slice(1) + "s";
+        const filtered = [];
+
+        // Collect from first page
+        allResponse.data.forEach((item) => {
+          if (
+            item.broadcast?.day === targetDay ||
+            item.broadcast?.string?.toLowerCase().includes(dayStr)
+          ) {
+            filtered.push(item);
+          }
+        });
+
+        // If first page has_next_page, fetch more pages for complete results
+        const totalPages = allResponse.pagination?.last_visible_page || 1;
+        for (let page = 2; page <= totalPages && page <= 6; page++) {
+          const pageUrl = `${JIKAN_BASE_URL}/schedules?limit=25&page=${page}`;
+          const pageCacheKey = `jikan_schedules_all_p${page}`;
+          const pageResponse = await fetchCached(pageCacheKey, pageUrl);
+          if (pageResponse?.data) {
+            pageResponse.data.forEach((item) => {
+              if (
+                item.broadcast?.day === targetDay ||
+                item.broadcast?.string?.toLowerCase().includes(dayStr)
+              ) {
+                filtered.push(item);
+              }
+            });
+          }
+          // Small delay to respect rate limits between pages
+          await new Promise((r) => setTimeout(r, 400));
+        }
+
+        response = { data: filtered.slice(0, 24) };
+      }
+    }
+
     renderGridCards(response?.data || [], latestGrid);
   };
 
