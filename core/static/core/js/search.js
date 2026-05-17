@@ -102,6 +102,9 @@
             thumbnail_url: item.thumbnail_url || "",
             category_id: item.category_id,
             category_name: item.category_name || "",
+            language: item.language || "",
+            stars: item.stars || null,
+            seasons: item.seasons || [],
           };
         });
         indexReady = true;
@@ -132,16 +135,17 @@
     if (!q) return [];
 
     var results = [];
-    for (
-      var i = 0;
-      i < searchIndex.length && results.length < MAX_RESULTS;
-      i++
-    ) {
+    for (var i = 0; i < searchIndex.length; i++) {
       if (searchIndex[i].nameLower.indexOf(q) !== -1) {
         results.push(searchIndex[i]);
       }
     }
-    return results;
+
+    if (window.AnimeFilter) {
+      results = window.AnimeFilter.applyFilters(results);
+    }
+
+    return results.slice(0, MAX_RESULTS);
   }
 
   /* ────────────────────────────────────────────

@@ -130,8 +130,18 @@ class SearchAnimeSerializer(serializers.ModelSerializer):
         source="category.user_category_id", read_only=True
     )
     category_name = serializers.CharField(source="category.name", read_only=True)
+    seasons = SeasonSerializer(many=True, read_only=True)
 
     class Meta:
         model = Anime
-        fields = ("id", "name", "thumbnail_url", "category_id", "category_name")
+        fields = (
+            "id",
+            "name",
+            "thumbnail_url",
+            "category_id",
+            "category_name",
+            "language",
+            "stars",
+            "seasons",
+        )
         read_only_fields = fields
