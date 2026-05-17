@@ -156,8 +156,13 @@
     }
 
     // 3. Language Filter
-    // TODO: Implement language-based filtering.
-
+    if (currentFilters.lang) {
+      result = result.filter(function (a) {
+        var aLang = a.language ? a.language.toLowerCase() : "";
+        var filterLang = currentFilters.lang.toLowerCase();
+        return aLang.includes(filterLang) || aLang === filterLang;
+      });
+    }
     // 4. Sort
     if (currentFilters.sort) {
       result.sort(function (a, b) {
