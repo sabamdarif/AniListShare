@@ -192,6 +192,40 @@
 
     var toggleBtn = document.getElementById("m_filter_toggle_btn");
     var wrapper = document.getElementById("filter_controls_wrapper");
+
+    // Responsive Filter Reparenting for Mobile Search Panel
+    var mPanel = document.getElementById("m_search_panel");
+    var mSearchBar = mPanel ? mPanel.querySelector(".m_search_bar") : null;
+    var mSearchLoader = mPanel
+      ? mPanel.querySelector(".m_search_loader")
+      : null;
+    var originalParent = wrapper ? wrapper.parentElement : null;
+    var originalNextSibling = wrapper ? wrapper.nextSibling : null;
+
+    var mql = window.matchMedia("(max-width: 768px)");
+    function handleMediaChange(e) {
+      if (!wrapper) return;
+      if (e.matches && mSearchBar) {
+        // Move to mobile search panel
+        var insertTarget = mSearchLoader || mSearchBar;
+        insertTarget.insertAdjacentElement("afterend", wrapper);
+        wrapper.classList.add("mobile_embedded");
+        wrapper.classList.add("open");
+      } else {
+        // Move back to desktop table
+        if (originalParent) {
+          originalParent.insertBefore(wrapper, originalNextSibling);
+        }
+        wrapper.classList.remove("mobile_embedded");
+        wrapper.classList.remove("open");
+      }
+    }
+
+    if (wrapper && mSearchBar) {
+      mql.addEventListener("change", handleMediaChange);
+      handleMediaChange(mql);
+    }
+
     if (toggleBtn && wrapper) {
       toggleBtn.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -201,6 +235,7 @@
       document.addEventListener("click", function (e) {
         if (
           wrapper.classList.contains("open") &&
+          !wrapper.classList.contains("mobile_embedded") &&
           !wrapper.contains(e.target) &&
           e.target !== toggleBtn
         ) {
@@ -209,9 +244,8 @@
       });
     }
 
-    var toolbar = document.getElementById("anime_filter_toolbar");
-    if (toolbar) {
-      toolbar.addEventListener("click", function (e) {
+    if (wrapper) {
+      wrapper.addEventListener("click", function (e) {
         var pill = e.target.closest(".filter_pill");
         if (pill) {
           var type = pill.getAttribute("data-filter-type");

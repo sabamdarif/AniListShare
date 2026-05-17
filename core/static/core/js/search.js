@@ -335,6 +335,12 @@
     mPanel.classList.add("m_search_visible");
     document.body.style.overflow = "hidden";
 
+    var wrapper = document.getElementById("filter_controls_wrapper");
+    if (wrapper && wrapper.classList.contains("mobile_embedded")) {
+      wrapper.style.display = "flex";
+      if (mResults) mResults.style.display = "none";
+    }
+
     // Lazy-load index when mobile panel opens
     ensureIndex(function () {
       if (mInput && mInput.value.trim()) {
@@ -355,19 +361,41 @@
     mOverlay.classList.remove("m_search_visible");
     document.body.style.overflow = "";
     if (mInput) mInput.value = "";
-    if (mResults)
-      mResults.innerHTML =
-        '<div class="m_search_hint">Type to search across all categories</div>';
+
+    var wrapper = document.getElementById("filter_controls_wrapper");
+    if (wrapper && wrapper.classList.contains("mobile_embedded")) {
+      wrapper.style.display = "flex";
+      if (mResults) mResults.style.display = "none";
+    } else {
+      if (mResults) {
+        mResults.style.display = "block";
+        mResults.innerHTML =
+          '<div class="m_search_hint">Type to search across all categories</div>';
+      }
+    }
   }
 
   function renderMobileSuggestions(results, query) {
     if (!mResults) return;
 
+    var wrapper = document.getElementById("filter_controls_wrapper");
+
     if (!query || !query.trim()) {
-      mResults.innerHTML =
-        '<div class="m_search_hint">Type to search across all categories</div>';
+      if (wrapper && wrapper.classList.contains("mobile_embedded")) {
+        mResults.style.display = "none";
+        wrapper.style.display = "flex";
+      } else {
+        mResults.style.display = "block";
+        mResults.innerHTML =
+          '<div class="m_search_hint">Type to search across all categories</div>';
+      }
       return;
     }
+
+    if (wrapper && wrapper.classList.contains("mobile_embedded")) {
+      wrapper.style.display = "none";
+    }
+    mResults.style.display = "block";
 
     if (!results.length) {
       mResults.innerHTML =

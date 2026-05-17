@@ -830,6 +830,18 @@
   display: flex;
 }
 
+.filter_controls_dropdown.mobile_embedded {
+  position: static;
+  box-shadow: none;
+  border: none;
+  /* border-bottom: 1px solid var(--border); */
+  border-radius: 0;
+  padding: 0 16px 16px 16px;
+  width: 100%;
+  max-width: none;
+  margin-bottom: 8px;
+}
+
 .filter_group {
   display: flex;
   align-items: center;
@@ -1096,3 +1108,4 @@
     font-size: 0.9rem;
   }
 }
+
