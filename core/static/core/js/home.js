@@ -1,13 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   // --- Constants & Config ---
-  const JIKAN_BASE_URL = "https://api.jikan.moe/v4";
+  const JIKAN_BASE_URL = "/api/v4";
   const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-  // TODO: Backend Proxy
-  // In the future, this direct fetching from Jikan might be replaced by a Django backend proxy.
-  // Why? Jikan enforces a 60 requests/minute IP rate limit. While sessionStorage helps mitigate
-  // this for individual users, a backend proxy would cache responses globally, allowing thousands
-  // of users to load the page while only consuming 1 Jikan request per 15-30 minutes.
+  // Metadata comes from this deployment's own Jikan-compatible API (see animeapi/),
+  // so these calls are same-origin, cached at Vercel's edge, and not subject to a
+  // per-visitor upstream rate limit.
 
   // --- State ---
   let latestPage = 1; // 1 = Today, 2 = Yesterday, etc.
@@ -329,8 +327,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let response = await fetchCached(cacheKey, url);
 
-    // Fallback: if filtered endpoint fails (e.g. Jikan 504 on certain days),
-    // fetch unfiltered schedules and filter client-side by broadcast.day
+    // Fallback: if the per-day schedule fails, fetch unfiltered schedules
+    // and filter client-side by broadcast.day
     if (!response || !response.data) {
       console.warn(
         `Filtered schedule fetch failed for "${dayStr}", falling back to unfiltered endpoint`,
@@ -340,7 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const allResponse = await fetchCached(fallbackCacheKey, fallbackUrl);
 
       if (allResponse?.data) {
-        // Jikan broadcast.day uses capitalized plural form: "Sundays", "Mondays", etc.
+        // broadcast.day uses the capitalized plural form: "Sundays", "Mondays", etc.
         const targetDay =
           dayStr.charAt(0).toUpperCase() + dayStr.slice(1) + "s";
         const filtered = [];

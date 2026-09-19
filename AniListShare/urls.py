@@ -23,6 +23,8 @@ urlpatterns = [
     path("", include("core.urls")),
     path("accounts/", include("accounts.urls")),
     path("api/", include("api.urls")),
+    # Jikan v4 compatible anime metadata, sourced from AniList.
+    path("api/v4/", include("animeapi.urls")),
 ]
 
 if settings.DEBUG:

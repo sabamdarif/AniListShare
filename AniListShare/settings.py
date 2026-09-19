@@ -10,11 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import importlib.util
 import os
 from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -62,6 +64,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "api",
+    "animeapi",
 ]
 
 MIDDLEWARE = [
@@ -294,3 +297,65 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+
+# ─── Anime metadata API (/api/v4/…, Jikan v4 compatible) ───────────────────
+# Backs the `animeapi` app. Metadata is read from AniList's public GraphQL API,
+# which requires no credentials; MyAnimeList (and therefore Jikan, which
+# scrapes it) no longer serves live data to third parties.
+ANILIST_API_URL = os.getenv("ANILIST_API_URL", "https://graphql.anilist.co")
+ANILIST_USER_AGENT = os.getenv(
+    "ANILIST_USER_AGENT",
+    f"{WEBSITE_NAME}/1.0 (+https://github.com/sabamdarif/AniListShare)",
+)
+ANILIST_CONNECT_TIMEOUT = float(os.getenv("ANILIST_CONNECT_TIMEOUT", "2.5"))
+ANILIST_READ_TIMEOUT = float(os.getenv("ANILIST_READ_TIMEOUT", "4"))
+# Total wall-clock budget for one upstream lookup. Vercel kills long-running
+# functions, so a slow AniList has to fail fast into the cache layer instead of
+# hanging the request until the platform cuts it off.
+ANILIST_TOTAL_TIMEOUT = float(os.getenv("ANILIST_TOTAL_TIMEOUT", "6"))
+ANILIST_MAX_ATTEMPTS = int(os.getenv("ANILIST_MAX_ATTEMPTS", "2"))
+
+# (fresh_ttl, stale_ttl) in seconds, per endpoint. Entries stay cached until
+# stale_ttl so a failing upstream can be served slightly old data instead of an
+# error. A fresh_ttl of 0 disables caching for that endpoint.
+ANIME_API_CACHE_TTLS = {
+    "search": (600, 3600),
+    "detail": (1800, 86400),
+    "top": (1800, 21600),
+    "seasonal": (3600, 86400),
+    "schedules": (900, 21600),
+    "genres": (86400, 604800),
+    "default": (900, 21600),
+}
+
+# Shared cache, optional. With no CACHE_URL the cache is per-process — still
+# useful, because Vercel reuses warm instances — while the Cache-Control headers
+# on the responses are what actually share results across instances.
+CACHE_URL = os.getenv("CACHE_URL", "")
+if CACHE_URL:
+    # Django's Redis cache backend needs redis-py, which this project does not
+    # depend on by default: the shared cache that matters here is Vercel's edge,
+    # not a service. Checking up front turns a would-be ImportError inside a
+    # request into something that says what to do instead.
+    if importlib.util.find_spec("redis") is None:
+        raise ImproperlyConfigured(
+            "CACHE_URL is set but the 'redis' package is not installed. "
+            "Run `uv add redis`, or leave CACHE_URL unset to use the "
+            "in-process cache."
+        )
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": CACHE_URL,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "animeapi",
+            "TIMEOUT": 604800,
+            "OPTIONS": {"MAX_ENTRIES": 2000},
+        }
+    }

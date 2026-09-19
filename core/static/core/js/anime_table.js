@@ -284,7 +284,7 @@
           Math.round(((i + 1) / missing.length) * 100) + "%";
       }
 
-      // Delay 500ms to avoid Jikan API rate limit (3 RPS)
+      // Space the requests out so a long backfill stays gentle on the API.
       if (i < missing.length - 1) {
         await new Promise(function (res) {
           setTimeout(res, 500);

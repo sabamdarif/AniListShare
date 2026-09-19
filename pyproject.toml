@@ -21,9 +21,16 @@ dependencies = [
     "whitenoise>=6.8.0",
 ]
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "AniListShare.settings_test"
+python_files = ["test_*.py"]
+testpaths = ["api/tests", "animeapi/tests"]
+
 [dependency-groups]
 dev = [
     "django-browser-reload>=1.21.0",
     "django-silk>=5.5.0",
     "fonttools[woff]>=4.60.0",
+    "pytest>=9.1.1",
+    "pytest-django>=4.12.0",
 ]

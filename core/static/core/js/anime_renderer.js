@@ -713,16 +713,16 @@ window.AnimeRenderer = (function () {
   // Static Helper to fetch and update Thumbnail
   function fetchAndPatchThumbnail(animeId, animeName, catId) {
     return apiFetch(
-      "https://api.jikan.moe/v4/anime?q=" +
+      "/api/v4/anime?q=" +
         encodeURIComponent(animeName) +
         "&limit=1",
     )
       .then(function (resp) {
-        if (!resp.ok) throw new Error("Jikan HTTP " + resp.status);
+        if (!resp.ok) throw new Error("Anime API HTTP " + resp.status);
         return resp.json();
       })
-      .then(function (jikanData) {
-        var results = jikanData.data || [];
+      .then(function (payload) {
+        var results = payload.data || [];
         if (!results.length) throw new Error("No results found");
 
         var item = results[0];
