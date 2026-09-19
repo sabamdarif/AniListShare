@@ -258,11 +258,13 @@
     if (progressFill) progressFill.style.width = "0%";
 
     var catId = _currentCategoryId;
+    var fetched = 0;
+    var failed = 0;
 
     for (var i = 0; i < missing.length; i++) {
       var a = missing[i];
       var countEl = document.getElementById("autofetch_count");
-      if (countEl) countEl.textContent = i;
+      if (countEl) countEl.textContent = i + 1;
 
       setEntryLoadingStatus(a.id);
 
@@ -274,9 +276,11 @@
           detail: { animeId: a.id, thumbUrl: thumbUrl },
         });
         document.dispatchEvent(ev);
+        fetched += 1;
       } catch (err) {
         console.error("Auto-fetch failed for " + a.name, err);
         setEntryErrorStatus(a.id);
+        failed += 1;
       }
 
       if (progressFill) {
@@ -293,14 +297,34 @@
     }
 
     if (content) {
-      content.innerHTML =
-        '<i class="nf nf-fa-check_circle" style="color:var(--success,#4ade80);"></i> <span>All missing thumbnails fetched!</span>';
+      if (failed === 0) {
+        content.innerHTML =
+          '<i class="nf nf-fa-check_circle" style="color:var(--success,#4ade80);"></i> <span>All missing thumbnails fetched!</span>';
+      } else if (fetched === 0) {
+        content.innerHTML =
+          '<i class="nf nf-md-alert_circle_outline" style="color:var(--danger,#f87171);"></i> <span>Failed to fetch ' +
+          failed +
+          (failed === 1 ? " thumbnail." : " thumbnails.") +
+          "</span>";
+      } else {
+        content.innerHTML =
+          '<i class="nf nf-md-alert_circle_outline" style="color:var(--danger,#f87171);"></i> <span>Fetched ' +
+          fetched +
+          " of " +
+          missing.length +
+          " thumbnails; " +
+          failed +
+          (failed === 1 ? " failed." : " failed.") +
+          "</span>";
+      }
     }
 
+    // A clean sweep can disappear on its own; leave failures up long enough
+    // to be read, so the banner never reads as success when some fetches failed.
     setTimeout(function () {
       window.isAutoFetchingThumbnails = false;
       if (banner) banner.style.display = "none";
-    }, 3000);
+    }, failed === 0 ? 3000 : 8000);
   }
 
   if (window.AnimeFilter) {

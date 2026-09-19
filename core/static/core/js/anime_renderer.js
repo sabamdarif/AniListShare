@@ -710,19 +710,46 @@ window.AnimeRenderer = (function () {
     return null;
   }
 
-  // Static Helper to fetch and update Thumbnail
-  function fetchAndPatchThumbnail(animeId, animeName, catId) {
-    return apiFetch(
-      "/api/v4/anime?q=" +
-        encodeURIComponent(animeName) +
-        "&limit=1",
-    )
+  // Some entries carry a media-kind label in their name — a trailer added from
+  // YouTube keeps "TRAILER ..." as the title. The search matches the whole
+  // query, so those prefixes match nothing; strip them before searching.
+  // Uppercase only, on purpose: a real title like "Trailer Park Boys" must
+  // keep its first word, while the stored labels ("TRAILER ...") get stripped.
+  var THUMB_KIND_PREFIX_RE =
+    /^(?:TRAILER|PV|CM|OP|ED|TEASER|PREVIEW|PROMO|CLIP|SPECIAL)\b[\s:.\-|~–—]+/;
+
+  function buildThumbnailSearchQuery(name) {
+    var query = String(name || "").trim();
+    var stripped = query.replace(THUMB_KIND_PREFIX_RE, "").trim();
+    // A replacement this short could only match by accident, so keep the
+    // original name when stripping would leave too little to search on.
+    return stripped.length >= 2 ? stripped : query;
+  }
+
+  function searchThumbnailResults(query) {
+    return apiFetch("/api/v4/anime?q=" + encodeURIComponent(query) + "&limit=1")
       .then(function (resp) {
         if (!resp.ok) throw new Error("Anime API HTTP " + resp.status);
         return resp.json();
       })
       .then(function (payload) {
-        var results = payload.data || [];
+        return payload.data || [];
+      });
+  }
+
+  // Static Helper to fetch and update Thumbnail
+  function fetchAndPatchThumbnail(animeId, animeName, catId) {
+    var query = buildThumbnailSearchQuery(animeName);
+    return searchThumbnailResults(query)
+      .then(function (results) {
+        // The stripped query is the better guess, but if it found nothing the
+        // prefix may genuinely be part of the title, so try the name as given.
+        if (!results.length && query !== animeName) {
+          return searchThumbnailResults(animeName);
+        }
+        return results;
+      })
+      .then(function (results) {
         if (!results.length) throw new Error("No results found");
 
         var item = results[0];
