@@ -68,7 +68,7 @@
   }
 
   /* ── constants ── */
-  const JIKAN = "https://api.jikan.moe/v4/anime";
+  const JIKAN = "/api/v4/anime";
   const LANG_PRESETS = [
     "Japanese",
     "English",
@@ -441,7 +441,7 @@
       }
     }
 
-    /* ── name search (Jikan) ── */
+    /* ── name search ── */
     nameInput.addEventListener("input", () => {
       clearTimeout(_debounce);
       _selectedName = "";
@@ -451,7 +451,7 @@
         return;
       }
       spinner.style.display = "block";
-      _debounce = setTimeout(() => searchJikan(q), 400);
+      _debounce = setTimeout(() => searchAnime(q), 400);
     });
 
     nameInput.addEventListener("keydown", (e) => {
@@ -478,7 +478,7 @@
       }
     });
 
-    async function searchJikan(q) {
+    async function searchAnime(q) {
       try {
         const r = await apiFetch(`${JIKAN}?q=${encodeURIComponent(q)}&limit=6`);
         const j = await r.json();
