@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Rejects a commit body longer than 5 lines. Blank lines, comments and
+# trailers are not counted. Installed via `git config core.hooksPath .githooks`.
+set -euo pipefail
+
+body=$(tail -n +2 "$1" \
+    | grep -vE '^#' \
+    | grep -vE '^[[:space:]]*$' \
+    | grep -viE '^(co-authored-by|signed-off-by|reviewed-by|tested-by):' \
+    || true)
+
+if [ -n "$body" ]; then
+    lines=$(printf '%s\n' "$body" | wc -l | tr -d ' ')
+    if [ "$lines" -gt 5 ]; then
+        echo "commit-msg: body is $lines lines, limit is 5." >&2
+        echo "Split the commit, or let the subject carry the why." >&2
+        exit 1
+    fi
+fi
