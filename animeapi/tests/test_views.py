@@ -339,7 +339,7 @@ def test_schedules_skips_entries_without_a_media_node(rf, upstream):
 def test_random_is_not_cached(rf, upstream):
     upstream.registry[queries.RANDOM_ANIME] = page([media()])
     first = views.random_anime(rf.get("/api/v4/random/anime"))
-    second = views.random_anime(rf.get("/api/v4/random/anime"))
+    views.random_anime(rf.get("/api/v4/random/anime"))
 
     assert first["Cache-Control"] == "no-store"
     assert len(upstream.calls) == 2
