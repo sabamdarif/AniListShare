@@ -71,7 +71,8 @@ def jikan_endpoint(view):
         try:
             payload, ttl, source = view(request, *args, **kwargs)
         except params.BadRequest as exc:
-            return _error(str(exc), 400, "BadRequestException")
+            logger.warning("Bad request parameters: %s", exc)
+            return _error("The request parameters are invalid.", 400, "BadRequestException")
         except AniListNotFound:
             return _error(
                 "No anime found with the requested id.",

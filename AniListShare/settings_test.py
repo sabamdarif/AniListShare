@@ -15,7 +15,11 @@ os.environ["DATABASE_URL"] = ""
 os.environ["DEBUG_MODE"] = "false"
 os.environ["SECURE_SSL_REDIRECT"] = "false"
 
-from .settings import *  # noqa: E402,F403
+from . import settings as _base_settings  # noqa: E402
+
+for _name in dir(_base_settings):
+    if _name.isupper():
+        globals()[_name] = getattr(_base_settings, _name)
 
 # Never touch the checked-out db.sqlite3, even if the fallback above changes.
 DATABASES = {
