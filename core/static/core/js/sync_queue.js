@@ -83,13 +83,13 @@
     if (syncTimer) clearTimeout(syncTimer);
     syncTimer = null;
 
-    if (queue.length === 0) return;
+    if (queue.length === 0) return Promise.resolve();
 
     const payload = queue.slice();
     // Do not clear the queue here anymore.
     // It will be cleared inside performSync upon a successful response.
-    
-    performSync(payload);
+
+    return performSync(payload);
   }
 
   // Before unload handler to guarantee transmission
@@ -172,7 +172,11 @@
       syncTimer = setTimeout(flushQueue, SYNC_DELAY);
     },
     flushNow: function () {
-      flushQueue();
+      return flushQueue();
+    },
+    // Search reads the server, so it has to know when a local edit has not landed yet.
+    hasPending: function () {
+      return queue.length > 0;
     },
   };
 

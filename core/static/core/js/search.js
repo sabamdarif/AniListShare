@@ -1,25 +1,24 @@
+/* Header and mobile search: queries the server, never holds a local index.
+ *
+ * Ranking and typo tolerance live in api/search.py, so this file only debounces,
+ * caches per query string, and aborts the request a newer keystroke replaced.
+ * The cache is dropped whenever a list mutator runs, which is what keeps results
+ * in step with an edit that has not been synced yet.
+ */
 (function () {
   "use strict";
 
-  /* ────────────────────────────────────────────
-   *  Configuration
-   * ──────────────────────────────────────────── */
-  var DEBOUNCE_MS = 200;
+  var DEBOUNCE_MS = 150;
   var MAX_RESULTS = 15;
   var HIGHLIGHT_MS = 1800;
+  var CACHE_MAX = 40;
+  var RENDER_WAIT_MS = 4000;
+  var SCROLL_GAP = 20;
 
-  /* ────────────────────────────────────────────
-   *  State
-   * ──────────────────────────────────────────── */
-  var searchIndex = [];
-  var indexReady = false;
-  var indexLoading = false;
-  var indexDirty = true; // needs (re)fetch
+  var cache = new Map();
+  var inFlight = null;
   var activeIdx = -1;
 
-  /* ────────────────────────────────────────────
-   *  DOM refs
-   * ──────────────────────────────────────────── */
   var desktopInput = document.querySelector("#header_search_section input");
   var suggestionsBox = document.getElementById("search_suggestions");
   var desktopLoader = document.getElementById("search_loader");
@@ -31,9 +30,6 @@
   var mResults = mPanel ? mPanel.querySelector(".m_search_results") : null;
   var mLoader = mPanel ? mPanel.querySelector(".m_search_loader") : null;
 
-  /* ────────────────────────────────────────────
-   *  Helpers
-   * ──────────────────────────────────────────── */
   function escapeHtml(str) {
     if (str == null) return "";
     return String(str)
@@ -55,9 +51,6 @@
     return "";
   }
 
-  /* ────────────────────────────────────────────
-   *  Loading Indicator
-   * ──────────────────────────────────────────── */
   function showLoading() {
     if (desktopLoader) desktopLoader.classList.add("search_loading");
     if (mLoader) mLoader.classList.add("search_loading");
@@ -68,106 +61,6 @@
     if (mLoader) mLoader.classList.remove("search_loading");
   }
 
-  /* ────────────────────────────────────────────
-   *  Build Search Index (lazy — called on first interaction)
-   * ──────────────────────────────────────────── */
-  function ensureIndex(callback) {
-    // Already loaded and clean
-    if (indexReady && !indexDirty) {
-      if (callback) callback();
-      return;
-    }
-    // Already in-flight
-    if (indexLoading) return;
-
-    indexLoading = true;
-    showLoading();
-
-    apiFetch("/api/v1/animes/search/", {
-      method: "GET",
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        var list = Array.isArray(data) ? data : data.results || [];
-        searchIndex = list.map(function (item) {
-          return {
-            id: item.id,
-            name: item.name || "",
-            nameLower: (item.name || "").toLowerCase(),
-            thumbnail_url: item.thumbnail_url || "",
-            category_id: item.category_id,
-            category_name: item.category_name || "",
-            language: item.language || "",
-            stars: item.stars || null,
-            seasons: item.seasons || [],
-          };
-        });
-        indexReady = true;
-        indexDirty = false;
-      })
-      .catch(function () {
-        searchIndex = [];
-        indexReady = false;
-      })
-      .finally(function () {
-        indexLoading = false;
-        hideLoading();
-        if (callback) callback();
-      });
-  }
-
-  /* Mark index as dirty (will re-fetch on next interaction) */
-  function invalidateIndex() {
-    indexDirty = true;
-  }
-
-  /* ────────────────────────────────────────────
-   *  Search / Filter
-   * ──────────────────────────────────────────── */
-  function search(query) {
-    if (!indexReady || !query) return [];
-    var q = query.toLowerCase().trim();
-    if (!q) return [];
-
-    var results = [];
-    for (var i = 0; i < searchIndex.length; i++) {
-      if (searchIndex[i].nameLower.indexOf(q) !== -1) {
-        results.push(searchIndex[i]);
-      }
-    }
-
-    if (window.AnimeFilter) {
-      results = window.AnimeFilter.applyFilters(results);
-    }
-
-    return results.slice(0, MAX_RESULTS);
-  }
-
-  /* ────────────────────────────────────────────
-   *  Highlight matched text
-   * ──────────────────────────────────────────── */
-  function highlightMatch(text, query) {
-    if (!query) return escapeHtml(text);
-    var q = query.trim();
-    if (!q) return escapeHtml(text);
-
-    var idx = text.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return escapeHtml(text);
-
-    var before = escapeHtml(text.substring(0, idx));
-    var match = escapeHtml(text.substring(idx, idx + q.length));
-    var after = escapeHtml(text.substring(idx + q.length));
-    return before + "<mark>" + match + "</mark>" + after;
-  }
-
-  /* ────────────────────────────────────────────
-   *  Debounce
-   * ──────────────────────────────────────────── */
   function debounce(fn, ms) {
     var timer;
     return function () {
@@ -180,15 +73,110 @@
     };
   }
 
-  /* ════════════════════════════════════════════
-   *  DESKTOP SEARCH
-   * ════════════════════════════════════════════ */
+  /* ── Query ── */
 
-  function renderDesktopSuggestions(results, query) {
+  function applyFilters(results) {
+    return window.AnimeFilter ? window.AnimeFilter.applyFilters(results) : results;
+  }
+
+  function remember(key, results) {
+    if (cache.size >= CACHE_MAX) {
+      cache.delete(cache.keys().next().value);
+    }
+    cache.set(key, results);
+  }
+
+  /* Push queued edits first, so the server is searched with what the user sees. */
+  function settled() {
+    var queue = window.SyncQueue;
+    if (!queue || !queue.hasPending()) return Promise.resolve();
+    return Promise.resolve(queue.flushNow()).catch(function () {});
+  }
+
+  /* Resolve with cached results when there are any, otherwise ask the server. */
+  function query(text, done) {
+    var q = text.trim();
+    if (!q) {
+      done([], q);
+      return;
+    }
+
+    var key = q.toLowerCase();
+    if (cache.has(key)) {
+      done(cache.get(key), q);
+      return;
+    }
+
+    if (inFlight) inFlight.abort();
+    var controller = new AbortController();
+    inFlight = controller;
+    showLoading();
+
+    settled().then(function () {
+      if (controller.signal.aborted) return;
+      fetchResults(q, key, controller, done);
+    });
+  }
+
+  function fetchResults(q, key, controller, done) {
+    apiFetch(
+      "/api/v1/animes/search/?limit=" +
+        MAX_RESULTS +
+        "&q=" +
+        encodeURIComponent(q),
+      {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      },
+    )
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        var list = Array.isArray(data) ? data : data.results || [];
+        remember(key, list);
+        if (inFlight === controller) {
+          inFlight = null;
+          hideLoading();
+        }
+        done(list, q);
+      })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") return;
+        if (inFlight === controller) {
+          inFlight = null;
+          hideLoading();
+        }
+        done([], q);
+      });
+  }
+
+  function highlightMatch(text, q) {
+    var needle = (q || "").trim();
+    if (!needle) return escapeHtml(text);
+
+    var idx = text.toLowerCase().indexOf(needle.toLowerCase());
+    if (idx === -1) return escapeHtml(text);
+
+    return (
+      escapeHtml(text.substring(0, idx)) +
+      "<mark>" +
+      escapeHtml(text.substring(idx, idx + needle.length)) +
+      "</mark>" +
+      escapeHtml(text.substring(idx + needle.length))
+    );
+  }
+
+  /* ── Desktop ── */
+
+  function renderDesktopSuggestions(results, q) {
     if (!suggestionsBox) return;
     activeIdx = -1;
 
-    if (!query || !query.trim()) {
+    if (!q || !q.trim()) {
       suggestionsBox.classList.remove("search_open");
       suggestionsBox.innerHTML = "";
       return;
@@ -197,7 +185,7 @@
     if (!results.length) {
       suggestionsBox.innerHTML =
         '<div class="search_empty">No results for "' +
-        escapeHtml(query) +
+        escapeHtml(q) +
         '"</div>';
       suggestionsBox.classList.add("search_open");
       return;
@@ -223,7 +211,7 @@
         thumbHtml +
         '<div class="search_item_info">' +
         '<div class="search_item_name">' +
-        highlightMatch(item.name, query) +
+        highlightMatch(item.name, q) +
         "</div>" +
         '<div class="search_item_category">' +
         escapeHtml(item.category_name) +
@@ -244,35 +232,21 @@
   }
 
   function doDesktopSearch() {
-    var q = desktopInput.value;
-    var results = search(q);
-    renderDesktopSuggestions(results, q);
+    var typed = desktopInput.value;
+    query(typed, function (results, q) {
+      if (desktopInput.value.trim() !== q) return;
+      renderDesktopSuggestions(applyFilters(results), q);
+    });
   }
 
   if (desktopInput && suggestionsBox) {
     desktopInput.placeholder = "search anime from any category...";
+    desktopInput.addEventListener("input", debounce(doDesktopSearch, DEBOUNCE_MS));
 
-    var debouncedDesktop = debounce(function () {
-      if (!indexReady) {
-        // Index is loading — will search after it arrives
-        ensureIndex(doDesktopSearch);
-        return;
-      }
-      doDesktopSearch();
-    }, DEBOUNCE_MS);
-
-    desktopInput.addEventListener("input", debouncedDesktop);
-
-    // Lazy-load index on first focus
     desktopInput.addEventListener("focus", function () {
-      ensureIndex(function () {
-        if (desktopInput.value.trim()) {
-          doDesktopSearch();
-        }
-      });
+      if (desktopInput.value.trim()) doDesktopSearch();
     });
 
-    // Keyboard navigation
     desktopInput.addEventListener("keydown", function (e) {
       var items = suggestionsBox.querySelectorAll(".search_item");
       if (!items.length) return;
@@ -303,7 +277,6 @@
       });
     }
 
-    // Click on suggestion
     suggestionsBox.addEventListener("click", function (e) {
       var item = e.target.closest(".search_item");
       if (!item) return;
@@ -314,7 +287,6 @@
       navigateToAnime(categoryId, animeId);
     });
 
-    // Close on click outside
     document.addEventListener("click", function (e) {
       if (
         !suggestionsBox.contains(e.target) &&
@@ -325,9 +297,7 @@
     });
   }
 
-  /* ════════════════════════════════════════════
-   *  MOBILE SEARCH
-   * ════════════════════════════════════════════ */
+  /* ── Mobile ── */
 
   function openMobileSearch() {
     if (!mOverlay || !mPanel) return;
@@ -341,17 +311,11 @@
       if (mResults) mResults.style.display = "none";
     }
 
-    // Lazy-load index when mobile panel opens
-    ensureIndex(function () {
-      if (mInput && mInput.value.trim()) {
-        doMobileSearch();
-      }
-    });
-
     if (mInput) {
       setTimeout(function () {
         mInput.focus();
       }, 350);
+      if (mInput.value.trim()) doMobileSearch();
     }
   }
 
@@ -366,21 +330,19 @@
     if (wrapper && wrapper.classList.contains("mobile_embedded")) {
       wrapper.style.display = "flex";
       if (mResults) mResults.style.display = "none";
-    } else {
-      if (mResults) {
-        mResults.style.display = "block";
-        mResults.innerHTML =
-          '<div class="m_search_hint">Type to search across all categories</div>';
-      }
+    } else if (mResults) {
+      mResults.style.display = "block";
+      mResults.innerHTML =
+        '<div class="m_search_hint">Type to search across all categories</div>';
     }
   }
 
-  function renderMobileSuggestions(results, query) {
+  function renderMobileSuggestions(results, q) {
     if (!mResults) return;
 
     var wrapper = document.getElementById("filter_controls_wrapper");
 
-    if (!query || !query.trim()) {
+    if (!q || !q.trim()) {
       if (wrapper && wrapper.classList.contains("mobile_embedded")) {
         mResults.style.display = "none";
         wrapper.style.display = "flex";
@@ -400,7 +362,7 @@
     if (!results.length) {
       mResults.innerHTML =
         '<div class="m_search_empty">No results for "' +
-        escapeHtml(query) +
+        escapeHtml(q) +
         '"</div>';
       return;
     }
@@ -423,7 +385,7 @@
         thumbHtml +
         '<div class="m_search_item_info">' +
         '<div class="m_search_item_name">' +
-        highlightMatch(item.name, query) +
+        highlightMatch(item.name, q) +
         "</div>" +
         '<div class="m_search_item_category">' +
         escapeHtml(item.category_name) +
@@ -438,9 +400,10 @@
 
   function doMobileSearch() {
     if (!mInput) return;
-    var q = mInput.value;
-    var results = search(q);
-    renderMobileSuggestions(results, q);
+    query(mInput.value, function (results, q) {
+      if (mInput.value.trim() !== q) return;
+      renderMobileSuggestions(applyFilters(results), q);
+    });
   }
 
   if (mSearchBtn) {
@@ -461,15 +424,7 @@
   }
 
   if (mInput) {
-    var debouncedMobile = debounce(function () {
-      if (!indexReady) {
-        ensureIndex(doMobileSearch);
-        return;
-      }
-      doMobileSearch();
-    }, DEBOUNCE_MS);
-
-    mInput.addEventListener("input", debouncedMobile);
+    mInput.addEventListener("input", debounce(doMobileSearch, DEBOUNCE_MS));
   }
 
   if (mResults) {
@@ -483,9 +438,19 @@
     });
   }
 
-  /* ════════════════════════════════════════════
-   *  NAVIGATE TO ANIME (switch tab + scroll + highlight)
-   * ════════════════════════════════════════════ */
+  /* ── Navigate to a result ── */
+
+  // Scoped to rows and cards: suggestion items carry data-anime-id too, and they
+  // sit above the table in the document.
+  function findAnimeElement(animeId) {
+    return document.querySelector(
+      'tr[data-anime-id="' +
+        animeId +
+        '"], .m_card[data-anime-id="' +
+        animeId +
+        '"]',
+    );
+  }
 
   function navigateToAnime(categoryId, animeId) {
     var tabsContainer = document.getElementById("category_tabs");
@@ -501,37 +466,35 @@
       !currentActiveTab ||
       currentActiveTab.dataset.categoryId !== String(categoryId);
 
-    if (needsLoad) {
-      targetTab.click();
-      waitForAnimeAndHighlight(animeId);
-    } else {
+    if (!needsLoad) {
       scrollAndHighlight(animeId);
+      return;
     }
+
+    // Drop the saved offset first: restoring it would fight the scroll below.
+    if (window.AnimeRenderer) window.AnimeRenderer.clearScroll(categoryId);
+    targetTab.click();
+    whenRendered(animeId, scrollAndHighlight);
   }
 
-  function waitForAnimeAndHighlight(animeId) {
-    var attempts = 0;
-    var maxAttempts = 30;
+  /* Wait for the row or card to exist, however many renders the load takes. */
+  function whenRendered(animeId, callback) {
+    if (findAnimeElement(animeId)) {
+      callback(animeId);
+      return;
+    }
 
-    var checker = setInterval(function () {
-      attempts++;
-      var el = findAnimeElement(animeId);
-      if (el) {
-        clearInterval(checker);
-        scrollAndHighlight(animeId);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checker);
-      }
-    }, 100);
-  }
-
-  function findAnimeElement(animeId) {
-    var tr = document.querySelector('tr[data-anime-id="' + animeId + '"]');
-    if (tr) return tr;
-    var card = document.querySelector(
-      '.m_card[data-anime-id="' + animeId + '"]',
-    );
-    return card || null;
+    var timer = null;
+    var observer = new MutationObserver(function () {
+      if (!findAnimeElement(animeId)) return;
+      observer.disconnect();
+      clearTimeout(timer);
+      callback(animeId);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    timer = setTimeout(function () {
+      observer.disconnect();
+    }, RENDER_WAIT_MS);
   }
 
   function scrollAndHighlight(animeId) {
@@ -539,11 +502,18 @@
     if (!el) return;
 
     var stickyHeader = document.querySelector(".sticky_header");
-    var headerHeight = stickyHeader ? stickyHeader.offsetHeight : 0;
-    var rect = el.getBoundingClientRect();
-    var scrollTo = window.scrollY + rect.top - headerHeight - 20;
+    var offset = (stickyHeader ? stickyHeader.offsetHeight : 0) + SCROLL_GAP;
+    el.style.scrollMarginTop = offset + "px";
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
 
-    window.scrollTo({ top: scrollTo, behavior: "smooth" });
+    // Lazy thumbnails above the target settle after the smooth scroll starts,
+    // which shifts it. One correction once they have.
+    setTimeout(function () {
+      var top = el.getBoundingClientRect().top;
+      if (Math.abs(top - offset) > 4) {
+        el.scrollIntoView({ block: "start", behavior: "auto" });
+      }
+    }, 600);
 
     el.classList.remove("search_highlight");
     void el.offsetWidth;
@@ -554,19 +524,24 @@
     }, HIGHLIGHT_MS);
   }
 
-  /* ════════════════════════════════════════════
-   *  INDEX REFRESH HOOK
-   * ════════════════════════════════════════════ */
+  /* ── Staleness ── */
 
-  // Expose for other modules — marks index as stale
-  window.refreshSearchIndex = function () {
-    invalidateIndex();
-  };
+  function invalidate() {
+    cache.clear();
+  }
 
-  // Wrap existing refreshCurrentCategory to also invalidate search index
-  var origRefresh = window.refreshCurrentCategory;
-  window.refreshCurrentCategory = function () {
-    if (typeof origRefresh === "function") origRefresh();
-    invalidateIndex();
-  };
+  window.refreshSearchIndex = invalidate;
+
+  // Every list write goes through one of these, so wrapping them is what keeps
+  // search from serving a name the user just renamed or deleted.
+  ["addLocalAnime", "updateLocalAnime", "removeLocalAnime", "resolveAnimeIds",
+   "refreshCurrentCategory"].forEach(function (name) {
+    var original = window[name];
+    window[name] = function () {
+      invalidate();
+      if (typeof original === "function") {
+        return original.apply(this, arguments);
+      }
+    };
+  });
 })();

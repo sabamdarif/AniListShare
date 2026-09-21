@@ -12,7 +12,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import Anime, Category, Season, ShareLink
 
+from . import search as anime_search
 from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSerializer
+
+DEFAULT_SEARCH_LIMIT = 15
+MAX_SEARCH_LIMIT = 50
 
 
 def _reindex_anime_order(category):
@@ -223,18 +227,54 @@ class CategoryReorderApiView(APIView):
 
 
 class SearchAnimeApiView(generics.ListAPIView):
-    """Return all anime across all categories for the authenticated user.
+    """Search this user's anime by name, best match first.
 
-    Used by the client-side search index — called once on page load.
+    Two passes, because typo tolerance cannot be pushed into the database: an
+    ``icontains`` per query token narrows the rows, and only when that finds
+    nothing does the fallback scan names alone (SCAN_LIMIT of them) so a
+    misspelling still lands. Without ``q`` the response is empty: this endpoint
+    deliberately never returns a whole library.
     """
 
     queryset = Anime.objects.select_related("category")
     serializer_class = SearchAnimeSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None  # Return everything in one response
+    pagination_class = None
+
+    def _limit(self):
+        try:
+            limit = int(self.request.query_params.get("limit", DEFAULT_SEARCH_LIMIT))
+        except (TypeError, ValueError):
+            return DEFAULT_SEARCH_LIMIT
+        return max(1, min(limit, MAX_SEARCH_LIMIT))
 
     def get_queryset(self):
-        return super().get_queryset().filter(category__user=self.request.user)
+        owned = (
+            super()
+            .get_queryset()
+            .filter(category__user=self.request.user)
+            .prefetch_related("seasons")
+        )
+
+        query = self.request.query_params.get("q", "")
+        if not anime_search.normalize(query):
+            return owned.none()
+
+        narrowed = owned
+        for token in anime_search.tokens(query):
+            narrowed = narrowed.filter(name__icontains=token)
+
+        candidates = list(narrowed.values_list("pk", "name"))
+        if not candidates:
+            candidates = list(owned.values_list("pk", "name")[: anime_search.SCAN_LIMIT])
+
+        ranked_pks = anime_search.rank(candidates, query, self._limit())
+        if not ranked_pks:
+            return owned.none()
+
+        by_pk = owned.in_bulk(ranked_pks)
+        matches = [by_pk[pk] for pk in ranked_pks if pk in by_pk]
+        return matches
 
 
 class AnimeBulkSyncApiView(APIView):
