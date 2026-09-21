@@ -8,13 +8,15 @@
 (function () {
   "use strict";
 
-  var DEBOUNCE_MS = 150;
+  var DEBOUNCE_MS = 250;
+  var MIN_QUERY = 2;
   var MAX_RESULTS = 15;
   var HIGHLIGHT_MS = 1800;
   var CACHE_MAX = 40;
   var RENDER_WAIT_MS = 4000;
   var SCROLL_GAP = 20;
 
+  // key -> { results, capped, derived }. See narrowFrom for what the flags gate.
   var cache = new Map();
   var inFlight = null;
   var activeIdx = -1;
@@ -79,11 +81,34 @@
     return window.AnimeFilter ? window.AnimeFilter.applyFilters(results) : results;
   }
 
-  function remember(key, results) {
+  function remember(key, entry) {
     if (cache.size >= CACHE_MAX) {
       cache.delete(cache.keys().next().value);
     }
-    cache.set(key, results);
+    cache.set(key, entry);
+  }
+
+  function normalizeKey(text) {
+    return text.toLowerCase().replace(/\s+/g, " ").trim();
+  }
+
+  /* Answer a longer query from a shorter one's results, so typing forward costs
+   * nothing. Only safe when that response was not truncated: a capped one may
+   * have dropped a row this narrower query would rank. Fuzzy hits are excluded
+   * because a substring test cannot reproduce the server's typo matching.
+   */
+  function narrowFrom(key) {
+    for (var len = key.length - 1; len >= MIN_QUERY; len--) {
+      var entry = cache.get(key.slice(0, len));
+      if (!entry || entry.capped || entry.derived) continue;
+      var narrowed = entry.results.filter(function (item) {
+        return normalizeKey(item.name || "").indexOf(key) !== -1;
+      });
+      // An empty narrowing is a real answer only if every parent hit was literal.
+      if (!narrowed.length && !entry.allLiteral) return null;
+      return { results: narrowed, capped: false, derived: true };
+    }
+    return null;
   }
 
   /* Push queued edits first, so the server is searched with what the user sees. */
@@ -93,17 +118,25 @@
     return Promise.resolve(queue.flushNow()).catch(function () {});
   }
 
-  /* Resolve with cached results when there are any, otherwise ask the server. */
+  /* Resolve from cache where possible, and only then spend a request. */
   function query(text, done) {
     var q = text.trim();
-    if (!q) {
-      done([], q);
+    var key = normalizeKey(q);
+
+    if (key.length < MIN_QUERY) {
+      if (inFlight) {
+        inFlight.abort();
+        inFlight = null;
+        hideLoading();
+      }
+      done([], q, key.length ? "short" : "empty");
       return;
     }
 
-    var key = q.toLowerCase();
-    if (cache.has(key)) {
-      done(cache.get(key), q);
+    var hit = cache.get(key) || narrowFrom(key);
+    if (hit) {
+      remember(key, hit);
+      done(hit.results, q, "ok");
       return;
     }
 
@@ -132,17 +165,25 @@
       },
     )
       .then(function (res) {
+        if (res.status === 429) throw new Error("throttled");
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
       })
       .then(function (data) {
         var list = Array.isArray(data) ? data : data.results || [];
-        remember(key, list);
+        remember(key, {
+          results: list,
+          capped: list.length >= MAX_RESULTS,
+          derived: false,
+          allLiteral: list.every(function (item) {
+            return normalizeKey(item.name || "").indexOf(key) !== -1;
+          }),
+        });
         if (inFlight === controller) {
           inFlight = null;
           hideLoading();
         }
-        done(list, q);
+        done(list, q, "ok");
       })
       .catch(function (err) {
         if (err && err.name === "AbortError") return;
@@ -150,7 +191,7 @@
           inFlight = null;
           hideLoading();
         }
-        done([], q);
+        done([], q, err && err.message === "throttled" ? "throttled" : "error");
       });
   }
 
@@ -172,11 +213,18 @@
 
   /* ── Desktop ── */
 
-  function renderDesktopSuggestions(results, q) {
+  function statusMessage(status, q) {
+    if (status === "short") return "Keep typing to search";
+    if (status === "throttled") return "Too many searches, try again in a moment";
+    if (status === "error") return "Search is unavailable right now";
+    return 'No results for "' + escapeHtml(q) + '"';
+  }
+
+  function renderDesktopSuggestions(results, q, status) {
     if (!suggestionsBox) return;
     activeIdx = -1;
 
-    if (!q || !q.trim()) {
+    if (status === "empty") {
       suggestionsBox.classList.remove("search_open");
       suggestionsBox.innerHTML = "";
       return;
@@ -184,9 +232,7 @@
 
     if (!results.length) {
       suggestionsBox.innerHTML =
-        '<div class="search_empty">No results for "' +
-        escapeHtml(q) +
-        '"</div>';
+        '<div class="search_empty">' + statusMessage(status, q) + "</div>";
       suggestionsBox.classList.add("search_open");
       return;
     }
@@ -232,10 +278,9 @@
   }
 
   function doDesktopSearch() {
-    var typed = desktopInput.value;
-    query(typed, function (results, q) {
+    query(desktopInput.value, function (results, q, status) {
       if (desktopInput.value.trim() !== q) return;
-      renderDesktopSuggestions(applyFilters(results), q);
+      renderDesktopSuggestions(applyFilters(results), q, status);
     });
   }
 
@@ -337,12 +382,12 @@
     }
   }
 
-  function renderMobileSuggestions(results, q) {
+  function renderMobileSuggestions(results, q, status) {
     if (!mResults) return;
 
     var wrapper = document.getElementById("filter_controls_wrapper");
 
-    if (!q || !q.trim()) {
+    if (status === "empty") {
       if (wrapper && wrapper.classList.contains("mobile_embedded")) {
         mResults.style.display = "none";
         wrapper.style.display = "flex";
@@ -361,9 +406,7 @@
 
     if (!results.length) {
       mResults.innerHTML =
-        '<div class="m_search_empty">No results for "' +
-        escapeHtml(q) +
-        '"</div>';
+        '<div class="m_search_empty">' + statusMessage(status, q) + "</div>";
       return;
     }
 
@@ -400,9 +443,9 @@
 
   function doMobileSearch() {
     if (!mInput) return;
-    query(mInput.value, function (results, q) {
+    query(mInput.value, function (results, q, status) {
       if (mInput.value.trim() !== q) return;
-      renderMobileSuggestions(applyFilters(results), q);
+      renderMobileSuggestions(applyFilters(results), q, status);
     });
   }
 

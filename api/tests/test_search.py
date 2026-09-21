@@ -7,6 +7,8 @@ never sees another's titles.
 
 import pytest
 from django.contrib.auth.models import User
+from django.core.cache import cache
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from api import search
@@ -49,6 +51,14 @@ def test_rank_orders_by_score_then_name_and_honours_limit():
 
 def test_rank_returns_nothing_for_a_blank_query():
     assert search.rank([(1, "Bleach")], "   ", 10) == []
+
+
+@pytest.fixture(autouse=True)
+def clear_throttle_history():
+    """Throttle counters live in the cache, which outlives a test."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
@@ -94,9 +104,27 @@ def test_missing_query_returns_nothing_rather_than_the_whole_list(client, owner)
 
 
 def test_limit_is_capped_and_never_zero(client, owner):
-    assert len(search_request(client, owner, q="a", limit=1)) == 1
-    assert len(search_request(client, owner, q="a", limit=0)) >= 1
-    assert search_request(client, owner, q="a", limit="nonsense") is not None
+    assert len(search_request(client, owner, q="at", limit=1)) == 1
+    assert len(search_request(client, owner, q="at", limit=0)) == 1
+    assert len(search_request(client, owner, q="at", limit="nonsense")) >= 1
+
+
+def test_a_single_character_is_refused_rather_than_matched(client, owner):
+    assert search_request(client, owner, q="a") == []
+    assert search_request(client, owner, q="na") != []
+
+
+def test_a_burst_of_searches_is_throttled(client, owner, monkeypatch):
+    # SimpleRateThrottle reads THROTTLE_RATES off the class, bound at import, so
+    # overriding the setting alone would not reach it.
+    monkeypatch.setitem(ScopedRateThrottle.THROTTLE_RATES, "search", "2/min")
+    token = RefreshToken.for_user(owner).access_token
+    headers = {"authorization": f"Bearer {token}"}
+    codes = [
+        client.get("/api/v1/animes/search/", {"q": "titan"}, headers=headers).status_code
+        for _ in range(3)
+    ]
+    assert codes == [200, 200, 429]
 
 
 def test_results_are_scoped_to_the_requesting_user(client, owner, stranger):

@@ -258,9 +258,12 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
+    # "search" is a burst rate, not a daily one: typing is the only caller, and
+    # the client debounces, so a legitimate session never approaches it.
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/day",
         "user": "5000/day",
+        "search": "40/min",
     },
 }
 

@@ -7,6 +7,7 @@ from rest_framework import generics, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -17,6 +18,7 @@ from .serializers import AnimeSerializer, CategorySerializer, SearchAnimeSeriali
 
 DEFAULT_SEARCH_LIMIT = 15
 MAX_SEARCH_LIMIT = 50
+MIN_QUERY_LENGTH = 2
 
 
 def _reindex_anime_order(category):
@@ -234,12 +236,18 @@ class SearchAnimeApiView(generics.ListAPIView):
     nothing does the fallback scan names alone (SCAN_LIMIT of them) so a
     misspelling still lands. Without ``q`` the response is empty: this endpoint
     deliberately never returns a whole library.
+
+    Typing drives this endpoint, so it carries its own burst throttle on top of
+    the daily one, and a query under MIN_QUERY_LENGTH is refused rather than
+    answered: a single letter matches most of a library and ranks none of it.
     """
 
     queryset = Anime.objects.select_related("category")
     serializer_class = SearchAnimeSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
+    throttle_classes = [UserRateThrottle, ScopedRateThrottle]
+    throttle_scope = "search"
 
     def _limit(self):
         try:
@@ -257,7 +265,7 @@ class SearchAnimeApiView(generics.ListAPIView):
         )
 
         query = self.request.query_params.get("q", "")
-        if not anime_search.normalize(query):
+        if len(anime_search.normalize(query)) < MIN_QUERY_LENGTH:
             return owned.none()
 
         narrowed = owned
