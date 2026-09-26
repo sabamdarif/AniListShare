@@ -20,7 +20,7 @@ import time
 from django.conf import settings
 from django.core.cache import cache
 
-from .anilist import AniListError, AniListNotFound
+from .upstream import UpstreamError, UpstreamNotFound
 
 FRESH = "fresh"
 HIT = "hit"
@@ -39,8 +39,8 @@ def fetch_through(cache_key_: str, *, fresh_ttl: int, stale_ttl: int, producer):
     """Return ``(payload, source)`` for ``cache_key_``, calling ``producer`` if needed.
 
     ``producer`` is only invoked on a miss or an expired entry, and only its
-    ``AniListError`` is treated as a soft failure — a stale copy is preferred
-    over an error.
+    ``UpstreamError`` is treated as a soft failure: a stale copy is preferred
+    over an error, whichever provider raised it.
     """
     stored = cache.get(cache_key_)
     if stored is not None:
@@ -50,11 +50,11 @@ def fetch_through(cache_key_: str, *, fresh_ttl: int, stale_ttl: int, producer):
 
     try:
         value = producer()
-    except AniListNotFound:
+    except UpstreamNotFound:
         # A missing entry is an answer, not a failure: never serve stale data
         # for it, and do not mask the 404.
         raise
-    except AniListError:
+    except UpstreamError:
         if stored is not None and time.time() - stored["stored_at"] < stale_ttl:
             return stored["value"], STALE
         raise

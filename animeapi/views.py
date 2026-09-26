@@ -23,9 +23,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
-from . import mappers, params, queries
-from .anilist import AniListError, AniListNotFound, query
+from . import mappers, params, queries, tmdb
+from .anilist import AniListNotFound, query
 from .caching import FRESH, cache_control, cache_key, fetch_through, ttl_for
+from .upstream import UpstreamError, UpstreamNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,9 @@ def jikan_endpoint(view):
     """Shared handling: GET only, Jikan-shaped errors, cache headers.
 
     The metadata provider is a third party, so its failures are translated into
-    the 404/502 split Jikan uses rather than leaking a 500.
+    the 404/502 split Jikan uses rather than leaking a 500. Both AniList and the
+    TMDb fallback raise the shared ``Upstream*`` errors, so one pair of handlers
+    covers whichever provider answered.
     """
 
     # These endpoints only read, and `require_GET` rejects every other method,
@@ -73,14 +76,14 @@ def jikan_endpoint(view):
         except params.BadRequest as exc:
             logger.warning("Bad request parameters: %s", exc)
             return _error("The request parameters are invalid.", 400, "BadRequestException")
-        except AniListNotFound:
+        except UpstreamNotFound:
             return _error(
                 "No anime found with the requested id.",
                 404,
                 "ResourceNotFoundException",
             )
-        except AniListError as exc:
-            logger.warning("AniList lookup failed: %s", exc)
+        except UpstreamError as exc:
+            logger.warning("Metadata lookup failed: %s", exc)
             return _error(
                 "The anime metadata provider is unavailable right now. "
                 "Please try again in a moment.",
@@ -123,23 +126,88 @@ def _listing(document, variables):
     return producer
 
 
+def _tmdb_search_payload(search, variables):
+    """The TMDb fallback body for a text search AniList could not answer.
+
+    A TMDb failure is swallowed into an empty Jikan page: an empty AniList
+    result plus a failing fallback is still a valid 200, never a 502.
+    """
+    try:
+        results, body = tmdb.search(
+            search, page=variables["page"], per_page=variables["perPage"]
+        )
+    except tmdb.TMDbError as exc:
+        logger.info("TMDb fallback failed for %r: %s", search, exc)
+        return {
+            "pagination": mappers.pagination(
+                {},
+                current_page=variables["page"],
+                per_page=variables["perPage"],
+                count=0,
+            ),
+            "data": [],
+        }
+    data = mappers.map_tmdb_search_results(results)
+    return {
+        "pagination": mappers.tmdb_pagination(
+            body,
+            current_page=variables["page"],
+            per_page=variables["perPage"],
+            count=len(data),
+        ),
+        "data": data,
+    }
+
+
+def _tmdb_detail(mal_id, tmdb_id, full, *, is_tv):
+    """Resolve a TMDb-range id on ``/anime/{id}`` back to its TMDb record."""
+    if not tmdb.is_enabled():
+        raise tmdb.TMDbNotFound(f"No entry with id {mal_id}.")
+
+    def producer():
+        if is_tv:
+            return {"data": mappers.map_tmdb_tv(tmdb.tv_detail(tmdb_id), full=full)}
+        return {"data": mappers.map_tmdb_movie(tmdb.movie_detail(tmdb_id), full=full)}
+
+    return _through_cache("detail", {"id": mal_id, "full": full}, producer)
+
+
 @jikan_endpoint
 def anime_search(request):
-    """``/anime`` — search, with Jikan's filter and ordering parameters."""
+    """Search ``/anime``, with Jikan's filter and ordering parameters.
+
+    When AniList has no match for a text query and a TMDb token is configured,
+    the search falls back to TMDb, so movies and live-action series can be found
+    and added to a list in the same Jikan shape.
+    """
     variables = params.search_variables(request)
-    return _through_cache(
-        "search", variables, _listing(queries.ANIME_SEARCH, variables)
-    )
+    search = variables.get("search")
+    anilist = _listing(queries.ANIME_SEARCH, variables)
+
+    def producer():
+        payload = anilist()
+        if payload["data"] or not search or not tmdb.is_enabled():
+            return payload
+        return _tmdb_search_payload(search, variables)
+
+    return _through_cache("search", variables, producer)
 
 
 @jikan_endpoint
 def anime_detail(request, mal_id, full=False):
     """``/anime/{id}`` and ``/anime/{id}/full``.
 
-    Ids at or above ``SYNTHETIC_MAL_ID_OFFSET`` are this API's own ids for
-    entries that have no MyAnimeList counterpart, so they are resolved against
-    the AniList id they were derived from.
+    Ids are routed by range: the TMDb movie and TV offsets resolve against TMDb,
+    ids at or above ``SYNTHETIC_MAL_ID_OFFSET`` are this API's own ids for
+    AniList entries with no MyAnimeList counterpart, and anything below is a real
+    MyAnimeList id.
     """
+    if mal_id >= mappers.TMDB_TV_ID_OFFSET:
+        return _tmdb_detail(mal_id, mal_id - mappers.TMDB_TV_ID_OFFSET, full, is_tv=True)
+    if mal_id >= mappers.TMDB_MOVIE_ID_OFFSET:
+        return _tmdb_detail(
+            mal_id, mal_id - mappers.TMDB_MOVIE_ID_OFFSET, full, is_tv=False
+        )
     if mal_id >= mappers.SYNTHETIC_MAL_ID_OFFSET:
         document = queries.MEDIA_BY_ID_FULL if full else queries.MEDIA_BY_ID
         variables = {"id": mal_id - mappers.SYNTHETIC_MAL_ID_OFFSET}

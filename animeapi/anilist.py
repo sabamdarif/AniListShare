@@ -14,15 +14,17 @@ import time
 import requests
 from django.conf import settings
 
+from .upstream import UpstreamError, UpstreamNotFound
+
 logger = logging.getLogger(__name__)
 
 
-class AniListError(RuntimeError):
+class AniListError(UpstreamError):
     """AniList could not be reached or answered with a GraphQL error."""
 
 
-class AniListNotFound(AniListError):
-    """AniList answered 404 — the requested media does not exist."""
+class AniListNotFound(AniListError, UpstreamNotFound):
+    """AniList answered 404: the requested media does not exist."""
 
 
 _session: requests.Session | None = None

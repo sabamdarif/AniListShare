@@ -1,13 +1,15 @@
-"""AniList responses -> Jikan v4 shaped payloads.
+"""AniList (and TMDb, for the movie/TV fallback) responses -> Jikan v4 payloads.
 
 Every response the API sends is built here, so this module is deliberately
 pure: dictionaries in, dictionaries out, no network and no cache. That makes
 the whole response contract unit-testable.
 
-Where AniList has no equivalent for a Jikan field, the key is still emitted —
-with ``None`` — so the shape stays predictable, and the reason is recorded on
+Where a source has no equivalent for a Jikan field, the key is still emitted
+(with ``None``) so the shape stays predictable, and the reason is recorded on
 the helper that produces it. Nothing is filled in with a plausible-looking
-guess, because a wrong value is worse than an admitted gap.
+guess, because a wrong value is worse than an admitted gap. TMDb entries carry
+far fewer fields than AniList ones, so most keys on a TMDb result are the empty
+form; the ``map_tmdb_*`` helpers at the foot of the file own those decisions.
 
 Known gaps, all inherited from AniList rather than chosen here:
 
@@ -30,6 +32,17 @@ from zoneinfo import ZoneInfo
 # region-exclusive or unannounced titles. Those get a synthetic id derived from
 # the AniList id, offset far above any real MAL id so the two cannot collide.
 SYNTHETIC_MAL_ID_OFFSET = 100_000_000
+
+# TMDb entries have no MyAnimeList id at all, so they get synthetic ids in their
+# own ranges, offset far above the AniList ones so the three sources never
+# collide. Movies and TV are split so /anime/{id} can route an id back to the
+# right TMDb endpoint.
+TMDB_MOVIE_ID_OFFSET = 200_000_000
+TMDB_TV_ID_OFFSET = 300_000_000
+
+# TMDb serves images from a fixed CDN; these sizes cover the frontend's small
+# (suggestion) and regular (card) needs without a /configuration lookup.
+TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/"
 
 BROADCAST_TIMEZONE = "Asia/Tokyo"
 
@@ -545,4 +558,219 @@ def map_genre_collection(names):
             {"mal_id": None, "name": name, "count": None, "url": None}
             for name in names or []
         ]
+    }
+
+
+# ─── TMDb -> Jikan ──────────────────────────────────────────────────────────
+
+
+def _tmdb_images(poster_path):
+    """Jikan's cover block built from a TMDb poster path.
+
+    TMDb has no WebP set and one poster per title, so ``webp`` is omitted and
+    the three jpg sizes point at the fixed image CDN. No poster yields nulls.
+    """
+    if not poster_path:
+        return {
+            "jpg": {
+                "image_url": None,
+                "small_image_url": None,
+                "large_image_url": None,
+            }
+        }
+    return {
+        "jpg": {
+            "image_url": f"{TMDB_IMAGE_BASE}w500{poster_path}",
+            "small_image_url": f"{TMDB_IMAGE_BASE}w185{poster_path}",
+            "large_image_url": f"{TMDB_IMAGE_BASE}original{poster_path}",
+        }
+    }
+
+
+def _tmdb_date_parts(raw):
+    """TMDb's ``YYYY-MM-DD`` release date -> AniList-style date parts, or None."""
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    return {"year": parsed.year, "month": parsed.month, "day": parsed.day}
+
+
+def _tmdb_entry(mal_id, *, url, title, poster_path, type_, vote_average,
+                overview, date_raw, episodes=None, duration=None, status=None,
+                genre_names=None, full=False):
+    """Assemble one TMDb title into Jikan's anime shape.
+
+    Emits every key :func:`map_anime` does, with the empty form for everything
+    TMDb does not carry, so a TMDb result parses the same as an AniList one.
+    """
+    start_parts = _tmdb_date_parts(date_raw)
+    entry = {
+        "mal_id": mal_id,
+        "url": url,
+        "images": _tmdb_images(poster_path),
+        "trailer": {
+            "youtube_id": None,
+            "url": None,
+            "embed_url": None,
+            "images": dict.fromkeys(_TRAILER_IMAGE_KEYS),
+        },
+        "approved": True,
+        "titles": [{"type": "Default", "title": title}] if title else [],
+        "title": title,
+        "title_english": title,
+        "title_japanese": None,
+        "title_synonyms": [],
+        "type": type_,
+        "source": None,
+        "episodes": episodes,
+        "status": status,
+        "airing": status == "Currently Airing",
+        "aired": _aired(start_parts, None),
+        "duration": duration,
+        "rating": None,
+        "score": round(vote_average, 1) if vote_average else None,
+        "scored_by": None,
+        "rank": None,
+        "popularity": None,
+        "members": None,
+        "favorites": None,
+        "synopsis": overview or None,
+        "background": None,
+        "season": None,
+        "year": start_parts["year"] if start_parts else None,
+        "broadcast": {"day": None, "time": None, "timezone": None, "string": None},
+        "producers": [],
+        "licensors": [],
+        "studios": [],
+        "genres": _named_entries(genre_names or []),
+        "explicit_genres": [],
+        "themes": [],
+        "demographics": [],
+    }
+    if full:
+        entry["relations"] = []
+        entry["external"] = [{"name": "TMDb", "url": url}] if url else []
+        entry["streaming"] = []
+    return entry
+
+
+def _tmdb_movie_status(status):
+    """TMDb movie status -> the closest Jikan airing string."""
+    if status == "Released":
+        return "Finished Airing"
+    if status in ("Planned", "In Production", "Post Production"):
+        return "Not yet aired"
+    return None
+
+
+def _tmdb_tv_status(status, in_production):
+    """TMDb series status -> the closest Jikan airing string."""
+    if status in ("Ended", "Canceled"):
+        return "Finished Airing"
+    if status == "Planned":
+        return "Not yet aired"
+    if status == "Returning Series" or in_production:
+        return "Currently Airing"
+    return None
+
+
+def map_tmdb_search_results(results):
+    """Map ``/search/multi`` movie and TV entries into Jikan anime shape.
+
+    Search results carry no episode count or genres, so those stay empty; a
+    detail lookup fills them. People are already dropped by the transport.
+    """
+    mapped = []
+    for item in results or []:
+        if item.get("id") is None:
+            continue
+        kind = item.get("media_type")
+        if kind == "movie":
+            mapped.append(
+                _tmdb_entry(
+                    TMDB_MOVIE_ID_OFFSET + int(item["id"]),
+                    url=f"https://www.themoviedb.org/movie/{item['id']}",
+                    title=item.get("title") or item.get("original_title"),
+                    poster_path=item.get("poster_path"),
+                    type_="Movie",
+                    vote_average=item.get("vote_average"),
+                    overview=item.get("overview"),
+                    date_raw=item.get("release_date"),
+                )
+            )
+        elif kind == "tv":
+            mapped.append(
+                _tmdb_entry(
+                    TMDB_TV_ID_OFFSET + int(item["id"]),
+                    url=f"https://www.themoviedb.org/tv/{item['id']}",
+                    title=item.get("name") or item.get("original_name"),
+                    poster_path=item.get("poster_path"),
+                    type_="TV",
+                    vote_average=item.get("vote_average"),
+                    overview=item.get("overview"),
+                    date_raw=item.get("first_air_date"),
+                )
+            )
+    return mapped
+
+
+def map_tmdb_movie(detail, *, full=False):
+    """Map a ``/movie/{id}`` record into Jikan's anime shape."""
+    detail = detail or {}
+    runtime = detail.get("runtime")
+    return _tmdb_entry(
+        TMDB_MOVIE_ID_OFFSET + int(detail["id"]),
+        url=f"https://www.themoviedb.org/movie/{detail['id']}",
+        title=detail.get("title") or detail.get("original_title"),
+        poster_path=detail.get("poster_path"),
+        type_="Movie",
+        vote_average=detail.get("vote_average"),
+        overview=detail.get("overview"),
+        date_raw=detail.get("release_date"),
+        # A movie is a single unit of watching, which is how the list stores it.
+        episodes=1,
+        duration=f"{runtime} min" if runtime else None,
+        status=_tmdb_movie_status(detail.get("status")),
+        genre_names=[g.get("name") for g in detail.get("genres") or [] if g.get("name")],
+        full=full,
+    )
+
+
+def map_tmdb_tv(detail, *, full=False):
+    """Map a ``/tv/{id}`` record into Jikan's anime shape."""
+    detail = detail or {}
+    run_times = detail.get("episode_run_time") or []
+    return _tmdb_entry(
+        TMDB_TV_ID_OFFSET + int(detail["id"]),
+        url=f"https://www.themoviedb.org/tv/{detail['id']}",
+        title=detail.get("name") or detail.get("original_name"),
+        poster_path=detail.get("poster_path"),
+        type_="TV",
+        vote_average=detail.get("vote_average"),
+        overview=detail.get("overview"),
+        date_raw=detail.get("first_air_date"),
+        episodes=detail.get("number_of_episodes"),
+        duration=f"{run_times[0]} min per ep" if run_times else None,
+        status=_tmdb_tv_status(detail.get("status"), detail.get("in_production")),
+        genre_names=[g.get("name") for g in detail.get("genres") or [] if g.get("name")],
+        full=full,
+    )
+
+
+def tmdb_pagination(body, *, current_page, per_page, count):
+    """Jikan's pagination envelope from TMDb's search counts."""
+    body = body or {}
+    total_pages = body.get("total_pages") or 1
+    return {
+        "last_visible_page": total_pages,
+        "has_next_page": current_page < total_pages,
+        "current_page": current_page,
+        "items": {
+            "count": count,
+            "total": body.get("total_results"),
+            "per_page": per_page,
+        },
     }

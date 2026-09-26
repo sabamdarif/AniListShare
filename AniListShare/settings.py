@@ -319,6 +319,17 @@ ANILIST_READ_TIMEOUT = float(os.getenv("ANILIST_READ_TIMEOUT", "4"))
 ANILIST_TOTAL_TIMEOUT = float(os.getenv("ANILIST_TOTAL_TIMEOUT", "6"))
 ANILIST_MAX_ATTEMPTS = int(os.getenv("ANILIST_MAX_ATTEMPTS", "2"))
 
+# TMDb fallback for the search/detail endpoints, so web series and live-action
+# films (which AniList does not carry) can be found and added to a list. With no
+# TMDB_API_TOKEN the fallback is disabled and the API behaves exactly as before.
+# The token is a TMDb account's v4 Read Access Token, sent as a bearer header.
+TMDB_API_URL = os.getenv("TMDB_API_URL", "https://api.themoviedb.org/3")
+TMDB_API_TOKEN = os.getenv("TMDB_API_TOKEN", "")
+TMDB_CONNECT_TIMEOUT = float(os.getenv("TMDB_CONNECT_TIMEOUT", "2.5"))
+TMDB_READ_TIMEOUT = float(os.getenv("TMDB_READ_TIMEOUT", "4"))
+TMDB_TOTAL_TIMEOUT = float(os.getenv("TMDB_TOTAL_TIMEOUT", "6"))
+TMDB_MAX_ATTEMPTS = int(os.getenv("TMDB_MAX_ATTEMPTS", "2"))
+
 # (fresh_ttl, stale_ttl) in seconds, per endpoint. Entries stay cached until
 # stale_ttl so a failing upstream can be served slightly old data instead of an
 # error. A fresh_ttl of 0 disables caching for that endpoint.
