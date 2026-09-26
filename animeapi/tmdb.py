@@ -33,8 +33,8 @@ _session: requests.Session | None = None
 
 
 def is_enabled() -> bool:
-    """True when a TMDb token is configured; otherwise the fallback is off."""
-    return bool(settings.TMDB_API_TOKEN)
+    """True when a TMDb credential is configured; otherwise the fallback is off."""
+    return bool(settings.TMDB_API_TOKEN or settings.TMDB_API_KEY)
 
 
 def _get_session() -> requests.Session:
@@ -45,12 +45,22 @@ def _get_session() -> requests.Session:
         session.headers.update(
             {
                 "Accept": "application/json",
-                "Authorization": f"Bearer {settings.TMDB_API_TOKEN}",
                 "User-Agent": settings.ANILIST_USER_AGENT,
             }
         )
+        # A v4 Read Access Token authenticates with a bearer header; a v3 key
+        # goes on the query string instead (see _get).
+        if settings.TMDB_API_TOKEN:
+            session.headers["Authorization"] = f"Bearer {settings.TMDB_API_TOKEN}"
         _session = session
     return _session
+
+
+def _auth_params() -> dict:
+    """The v3 ``api_key`` query param, used only when no bearer token is set."""
+    if not settings.TMDB_API_TOKEN and settings.TMDB_API_KEY:
+        return {"api_key": settings.TMDB_API_KEY}
+    return {}
 
 
 def _get(path: str, params: dict | None = None) -> dict:
@@ -61,6 +71,7 @@ def _get(path: str, params: dict | None = None) -> dict:
         TMDbError: transport failure, rate limit, or any other error status.
     """
     url = f"{settings.TMDB_API_URL}{path}"
+    request_params = {**(params or {}), **_auth_params()}
     deadline = time.monotonic() + settings.TMDB_TOTAL_TIMEOUT
     attempts = max(1, settings.TMDB_MAX_ATTEMPTS)
     last_error: Exception | None = None
@@ -73,7 +84,7 @@ def _get(path: str, params: dict | None = None) -> dict:
         try:
             response = _get_session().get(
                 url,
-                params=params or {},
+                params=request_params,
                 timeout=(
                     min(settings.TMDB_CONNECT_TIMEOUT, remaining),
                     min(settings.TMDB_READ_TIMEOUT, remaining),

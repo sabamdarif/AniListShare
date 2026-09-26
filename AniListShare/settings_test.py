@@ -14,6 +14,10 @@ os.environ.setdefault("DJANGO_SECRET_KEY", "test-only-insecure-key")
 os.environ["DATABASE_URL"] = ""
 os.environ["DEBUG_MODE"] = "false"
 os.environ["SECURE_SSL_REDIRECT"] = "false"
+# Pin the TMDb fallback off, so its tests are deterministic whatever a developer
+# has in .env; the tests that need it enable it with monkeypatch.
+os.environ["TMDB_API_TOKEN"] = ""
+os.environ["TMDB_API_KEY"] = ""
 
 from . import settings as _base_settings  # noqa: E402
 

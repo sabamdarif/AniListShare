@@ -320,11 +320,13 @@ ANILIST_TOTAL_TIMEOUT = float(os.getenv("ANILIST_TOTAL_TIMEOUT", "6"))
 ANILIST_MAX_ATTEMPTS = int(os.getenv("ANILIST_MAX_ATTEMPTS", "2"))
 
 # TMDb fallback for the search/detail endpoints, so web series and live-action
-# films (which AniList does not carry) can be found and added to a list. With no
-# TMDB_API_TOKEN the fallback is disabled and the API behaves exactly as before.
-# The token is a TMDb account's v4 Read Access Token, sent as a bearer header.
+# films (which AniList does not carry) can be found and added to a list. With
+# neither credential set the fallback is disabled and the API behaves as before.
+# Supply exactly one: TMDB_API_TOKEN is a v4 Read Access Token (a long JWT, sent
+# as a bearer header); TMDB_API_KEY is the short v3 key (sent as ?api_key=).
 TMDB_API_URL = os.getenv("TMDB_API_URL", "https://api.themoviedb.org/3")
 TMDB_API_TOKEN = os.getenv("TMDB_API_TOKEN", "")
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 TMDB_CONNECT_TIMEOUT = float(os.getenv("TMDB_CONNECT_TIMEOUT", "2.5"))
 TMDB_READ_TIMEOUT = float(os.getenv("TMDB_READ_TIMEOUT", "4"))
 TMDB_TOTAL_TIMEOUT = float(os.getenv("TMDB_TOTAL_TIMEOUT", "6"))

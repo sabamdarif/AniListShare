@@ -8,6 +8,7 @@ asserted is our own behaviour, not either network's.
 import json
 
 import pytest
+from django.conf import settings as dj_settings
 from django.core.cache import cache
 from django.test import RequestFactory
 
@@ -293,3 +294,41 @@ def test_detail_tmdb_id_is_not_found_when_disabled(rf, monkeypatch):
     response = views.anime_detail(rf.get(f"/api/v4/anime/{mal_id}"), mal_id)
 
     assert response.status_code == 404
+
+
+# ─── auth: v3 key vs v4 bearer token ──────────────────────────────────────────
+
+
+def test_a_v3_key_is_sent_as_a_query_param(monkeypatch):
+    """A short v3 key authenticates via ?api_key=, not a bearer header."""
+    monkeypatch.setattr(dj_settings, "TMDB_API_TOKEN", "", raising=False)
+    monkeypatch.setattr(dj_settings, "TMDB_API_KEY", "v3key", raising=False)
+    monkeypatch.setattr(tmdb, "_session", None)
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"results": [TV_RESULT], "page": 1, "total_pages": 1, "total_results": 1}
+
+    class FakeSession:
+        headers: dict = {}
+
+        def get(self, url, params=None, timeout=None):
+            captured["params"] = params
+            return FakeResponse()
+
+    monkeypatch.setattr(tmdb, "_get_session", lambda: FakeSession())
+    results, _ = tmdb.search("flames")
+
+    assert tmdb.is_enabled() is True
+    assert captured["params"]["api_key"] == "v3key"
+    assert results == [TV_RESULT]
+
+
+def test_a_v4_token_does_not_add_an_api_key_param(monkeypatch):
+    monkeypatch.setattr(dj_settings, "TMDB_API_TOKEN", "jwt.token", raising=False)
+    monkeypatch.setattr(dj_settings, "TMDB_API_KEY", "v3key", raising=False)
+    assert tmdb._auth_params() == {}
