@@ -27,7 +27,9 @@ jobs:
         run: uv sync --group dev
 
       - name: Django system check
-        run: uv run python manage.py check
+        # CI has no .env, so run the check under the test settings that pin a
+        # throwaway SECRET_KEY and in-memory SQLite.
+        run: DJANGO_SETTINGS_MODULE=AniListShare.settings_test uv run python manage.py check
 
       - name: Run tests
         run: uv run pytest -q
