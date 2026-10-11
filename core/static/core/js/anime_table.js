@@ -344,7 +344,140 @@
       : animeList;
     renderer.render(filtered);
     checkMissingThumbnails();
+    checkMissingEpisodes();
   }
+
+  // Seasons with a 0 total on a real (non-OVA) row, one fill target per anime.
+  function missingEpisodeTargets() {
+    var targets = [];
+    lastList.forEach(function (a) {
+      (a.seasons || []).forEach(function (s) {
+        var num = Number(s.number) || 1;
+        if (num % 1 !== 0) return;
+        var total = s.total != null ? Number(s.total) : Number(s.total_episodes || 0);
+        if (total === 0) targets.push({ anime: a, number: num });
+      });
+    });
+    return targets;
+  }
+
+  function checkMissingEpisodes() {
+    var targets = missingEpisodeTargets();
+    var banner = document.getElementById("epfill_banner");
+
+    if (targets.length > 0 && !window.isAutoFillingEpisodes) {
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "epfill_banner";
+        banner.className = "autofetch_banner";
+        var wrapper = tableEl.closest(".anime_table_wrapper");
+        if (wrapper) wrapper.insertBefore(banner, wrapper.firstChild);
+      }
+      banner.innerHTML =
+        '<div class="autofetch_content">' +
+        '<i class="nf nf-md-format_list_numbered"></i> ' +
+        "<span>" +
+        targets.length +
+        " season " +
+        (targets.length === 1 ? "is" : "are") +
+        " missing an episode count. Auto-fill them?</span>" +
+        '<div class="autofetch_actions">' +
+        '<button class="epfill_btn_yes">Yes</button>' +
+        '<button class="epfill_btn_close" title="Close"><i class="nf nf-md-close"></i></button>' +
+        "</div>" +
+        "</div>" +
+        '<div class="autofetch_progress_bar" style="display:none;"><div class="autofetch_progress_fill"></div></div>';
+      banner.style.display = "block";
+    } else if (banner && !window.isAutoFillingEpisodes) {
+      banner.style.display = "none";
+    }
+  }
+
+  async function startEpisodeFillSequence() {
+    var banner = document.getElementById("epfill_banner");
+    if (!banner) return;
+
+    var targets = missingEpisodeTargets();
+    if (!targets.length || !_currentCategoryId) return;
+
+    window.isAutoFillingEpisodes = true;
+
+    var content = banner.querySelector(".autofetch_content");
+    var progressTrack = banner.querySelector(".autofetch_progress_bar");
+    var progressFill = banner.querySelector(".autofetch_progress_fill");
+
+    if (content)
+      content.innerHTML =
+        '<i class="nf nf-md-cloud_sync"></i> <span>Filling episode counts (<span id="epfill_count">0</span>/' +
+        targets.length +
+        ")...</span>";
+    if (progressTrack) progressTrack.style.display = "block";
+    if (progressFill) progressFill.style.width = "0%";
+
+    var catId = _currentCategoryId;
+    var filled = 0;
+    var failed = 0;
+
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i];
+      var countEl = document.getElementById("epfill_count");
+      if (countEl) countEl.textContent = i + 1;
+
+      var total = await AR.fetchAndPatchSeasonTotal(t.anime, catId, t.number);
+      if (total > 0) {
+        (t.anime.seasons || []).forEach(function (s) {
+          if ((Number(s.number) || 1) === t.number) s.total = total;
+        });
+        filled += 1;
+      } else {
+        failed += 1;
+      }
+
+      if (progressFill) {
+        progressFill.style.width =
+          Math.round(((i + 1) / targets.length) * 100) + "%";
+      }
+
+      if (i < targets.length - 1) {
+        await new Promise(function (res) {
+          setTimeout(res, 400);
+        });
+      }
+    }
+
+    if (content) {
+      if (failed === 0) {
+        content.innerHTML =
+          '<i class="nf nf-fa-check_circle" style="color:var(--success,#4ade80);"></i> <span>All episode counts filled!</span>';
+      } else {
+        content.innerHTML =
+          '<i class="nf nf-md-alert_circle_outline" style="color:var(--danger,#f87171);"></i> <span>Filled ' +
+          filled +
+          " of " +
+          targets.length +
+          "; " +
+          failed +
+          " could not be resolved.</span>";
+      }
+    }
+
+    setTimeout(function () {
+      window.isAutoFillingEpisodes = false;
+      if (banner) banner.style.display = "none";
+      render(lastList);
+    }, failed === 0 ? 3000 : 8000);
+  }
+
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".epfill_btn_close")) {
+      var banner = document.getElementById("epfill_banner");
+      if (banner) banner.style.display = "none";
+      return;
+    }
+    if (e.target.closest(".epfill_btn_yes")) {
+      startEpisodeFillSequence();
+    }
+  });
 
   async function loadCategory(categoryId) {
     var catId = parseInt(categoryId, 10);

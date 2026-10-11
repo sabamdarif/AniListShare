@@ -93,6 +93,7 @@ window.AnimeRenderer = (function () {
     return {
       id: raw.id,
       name: raw.name || "",
+      mal_id: raw.mal_id != null ? raw.mal_id : null,
       thumbnail_url: raw.thumbnail_url || "",
       language: raw.language || "",
       stars: raw.stars,
@@ -776,6 +777,97 @@ window.AnimeRenderer = (function () {
   }
 
   AnimeRenderer.fetchAndPatchThumbnail = fetchAndPatchThumbnail;
+
+  // Resolves one season's episode total through /api/v4/ (the stored mal_id
+  // when present, else a name search; season >= 2 walks the Sequel chain) and
+  // PATCHes it onto the anime. Returns the count, or 0 when unresolvable.
+  function fetchAndPatchSeasonTotal(anime, catId, seasonNumber) {
+    var JIKAN = "/api/v4/anime";
+    var target = Number(seasonNumber) || 1;
+
+    function resolveMalId() {
+      if (anime.mal_id != null) return Promise.resolve(anime.mal_id);
+      return searchThumbnailResults(buildThumbnailSearchQuery(anime.name)).then(
+        function (results) {
+          return results.length ? results[0].mal_id : null;
+        },
+      );
+    }
+
+    function episodesOf(id) {
+      return apiFetch(JIKAN + "/" + id + "/full").then(function (resp) {
+        if (!resp.ok) throw new Error("Anime API HTTP " + resp.status);
+        return resp.json().then(function (payload) {
+          return payload.data || {};
+        });
+      });
+    }
+
+    return resolveMalId()
+      .then(function (id) {
+        if (id == null) return 0;
+        var hop = 1;
+        function step(currentId) {
+          return episodesOf(currentId).then(function (d) {
+            if (hop >= target) {
+              return typeof d.episodes === "number" && d.episodes > 0
+                ? d.episodes
+                : 0;
+            }
+            var sequel = (d.relations || [])
+              .filter(function (g) {
+                return g.relation === "Sequel";
+              })
+              .map(function (g) {
+                return (g.entry || []).filter(function (e) {
+                  return e.type === "anime" && e.mal_id != null;
+                })[0];
+              })[0];
+            if (!sequel) return 0;
+            hop += 1;
+            return step(sequel.mal_id);
+          });
+        }
+        return step(id);
+      })
+      .then(function (total) {
+        if (!total) return 0;
+        var seasons = (anime.seasons || []).map(function (s) {
+          var num = Number(s.number) || 1;
+          var isTarget = Math.floor(num) === Math.floor(target) && num % 1 === 0;
+          return {
+            number: num,
+            total_episodes: isTarget
+              ? total
+              : s.total_episodes != null
+                ? Number(s.total_episodes)
+                : Number(s.total || 0),
+            watched_episodes:
+              s.watched_episodes != null
+                ? Number(s.watched_episodes)
+                : Number(s.watched || 0),
+            comment: s.comment || "",
+          };
+        });
+        return apiFetch(
+          "/api/v1/categories/" + catId + "/animes/" + anime.id + "/",
+          {
+            method: "PATCH",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ seasons: seasons }),
+          },
+        ).then(function (patchResp) {
+          if (!patchResp.ok) throw new Error("Save failed");
+          return total;
+        });
+      })
+      .catch(function () {
+        return 0;
+      });
+  }
+
+  AnimeRenderer.fetchAndPatchSeasonTotal = fetchAndPatchSeasonTotal;
 
   document.addEventListener("click", function (e) {
     var btn = e.target.closest(".thumb_load_btn");

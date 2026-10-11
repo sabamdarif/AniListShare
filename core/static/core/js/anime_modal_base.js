@@ -661,6 +661,8 @@
     async function fillSeasonTotal(entry) {
       const num = entry.number;
       const name = _selectedName || nameInput.value.trim();
+      // Season 1 is the picked entry itself; its count was already captured
+      // at pick time when available, so only the sequel chain needs a fetch.
       const eps = await lookupSeasonEpisodes(_selectedMalId, name, num);
       if (!eps) return;
       if (!_entries.includes(entry)) return;
@@ -788,9 +790,20 @@
             min: "0",
             value: String(entry.total),
             placeholder: "0",
+            title: isOva
+              ? ""
+              : "Click while empty to auto-fill from metadata",
           },
         });
         epCell.appendChild(totalInput);
+
+        // Manual fill for rows the async path missed: clicking the empty
+        // total of a season row resolves it through the same lookup.
+        if (!isOva) {
+          totalInput.addEventListener("focus", () => {
+            if (entry.total === 0) fillSeasonTotal(entry);
+          });
+        }
 
         row.appendChild(epCell);
 
