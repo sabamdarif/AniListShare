@@ -125,12 +125,14 @@ query ($from: Int, $to: Int, $page: Int, $perPage: Int) {
 }
 """ % {"page_info": PAGE_INFO, "media": MEDIA_FIELDS}
 
+# type: ANIME pins the lookup: a MAL id can sit on both an anime and a manga
+# (e.g. 56285), and without it AniList returns whichever it prefers.
 MEDIA_BY_MAL_ID = """
-query ($idMal: Int) { Media(idMal: $idMal) { %s } }
+query ($idMal: Int) { Media(idMal: $idMal, type: ANIME) { %s } }
 """ % MEDIA_FIELDS
 
 MEDIA_BY_MAL_ID_FULL = """
-query ($idMal: Int) { Media(idMal: $idMal) { %s %s } }
+query ($idMal: Int) { Media(idMal: $idMal, type: ANIME) { %s %s } }
 """ % (MEDIA_FIELDS, EXTRA_DETAIL_FIELDS)
 
 MEDIA_BY_ID = """
