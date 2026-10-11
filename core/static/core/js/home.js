@@ -727,6 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 data: {
                   category_id: categoryId,
                   name: animeName,
+                  mal_id: item.mal_id || null,
                   thumbnail_url: thumbnailUrl,
                   language: "",
                   stars: item.score || null,

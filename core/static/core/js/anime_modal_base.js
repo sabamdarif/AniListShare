@@ -100,6 +100,7 @@
     let _debounce = null;
     let _selected = null;
     let _selectedName = "";
+    let _selectedMalId = null;
     let _rating = 0;
     let _entries = []; // { type: 'season'|'ova', total, watched, comment }
     let _languages = [];
@@ -322,6 +323,7 @@
         nameInput.value = prefill.name || "";
         _selectedName = prefill.name || "";
         _selected = { name: prefill.name, image: prefill.thumbnail_url };
+        _selectedMalId = prefill.mal_id || null;
 
         // Thumbnail
         const safeImg = sanitizeUrl(prefill.thumbnail_url);
@@ -397,6 +399,7 @@
     function reset() {
       _selected = null;
       _selectedName = "";
+      _selectedMalId = null;
       _rating = 0;
       _entries = [];
       _languages = [];
@@ -445,6 +448,8 @@
     nameInput.addEventListener("input", () => {
       clearTimeout(_debounce);
       _selectedName = "";
+      // A hand-typed name no longer matches the picked metadata entry.
+      _selectedMalId = null;
       const q = nameInput.value.trim();
       if (q.length < 2) {
         suggestions.textContent = "";
@@ -515,6 +520,9 @@
         const item = el("div", { className: "aam_sug_item" });
         item.dataset.name = displayName;
         item.dataset.img = fullImg;
+        item.dataset.malId = a.mal_id != null ? String(a.mal_id) : "";
+        item.dataset.episodes =
+          typeof a.episodes === "number" ? String(a.episodes) : "";
 
         if (thumbSrc) {
           const img = el("img", {
@@ -536,12 +544,18 @@
     suggestions.addEventListener("click", (e) => {
       const item = e.target.closest(".aam_sug_item");
       if (!item) return;
-      pickAnime(item.dataset.name, item.dataset.img);
+      pickAnime(
+        item.dataset.name,
+        item.dataset.img,
+        item.dataset.malId,
+        item.dataset.episodes,
+      );
     });
 
-    function pickAnime(name, img) {
+    function pickAnime(name, img, malId, episodes) {
       _selected = { name, image: img };
       _selectedName = name;
+      _selectedMalId = malId ? parseInt(malId, 10) : null;
       nameInput.value = name;
       suggestions.textContent = "";
 
@@ -557,6 +571,15 @@
         thumbBox.classList.add("aam_thumb_empty");
       }
       editUrlBtn.style.display = "block";
+
+      // Fill season 1's total from the picked result; total 0 is the
+      // untouched sentinel, so a user-typed value is never overwritten.
+      const eps = parseInt(episodes, 10);
+      const s1 = _entries.find((e) => e.type === "season" && e.number === 1);
+      if (!isNaN(eps) && eps > 0 && s1 && s1.total === 0) {
+        s1.total = eps;
+        renderEntries();
+      }
     }
 
     /* ── thumbnail url editor ── */
@@ -594,6 +617,58 @@
     }
 
     /* ── seasons & OVAs (unified list) ── */
+
+    // Resolves the episode total for season `targetNum` of the anime known as
+    // `malId` (or by name search when null) by walking the Sequel relation on
+    // /api/v4/. Returns 0 on any failure: the row then keeps its manual 0.
+    async function lookupSeasonEpisodes(malId, name, targetNum) {
+      try {
+        let id = malId;
+        if (id == null) {
+          if (!name) return 0;
+          const r = await fetch(
+            `${JIKAN}?q=${encodeURIComponent(name)}&limit=1`,
+          );
+          if (!r.ok) return 0;
+          const j = await r.json();
+          id = j.data && j.data[0] && j.data[0].mal_id;
+          if (id == null) return 0;
+        }
+        for (let hop = 2; hop <= targetNum; hop++) {
+          const r = await fetch(`${JIKAN}/${id}/full`);
+          if (!r.ok) return 0;
+          const d = (await r.json()).data || {};
+          const sequel = (d.relations || [])
+            .find((g) => g.relation === "Sequel")
+            ?.entry?.find((e) => e.type === "anime" && e.mal_id != null);
+          if (!sequel) return 0;
+          id = sequel.mal_id;
+        }
+        const r = await fetch(`${JIKAN}/${id}`);
+        if (!r.ok) return 0;
+        const d = (await r.json()).data || {};
+        return typeof d.episodes === "number" && d.episodes > 0
+          ? d.episodes
+          : 0;
+      } catch (_) {
+        // Network or parse failure: leave the row at 0.
+      }
+      return 0;
+    }
+
+    // Fills the row's total from the sequel chain, unless the user typed a
+    // value or the row was removed/renumbered while the lookup ran.
+    async function fillSeasonTotal(entry) {
+      const num = entry.number;
+      const name = _selectedName || nameInput.value.trim();
+      const eps = await lookupSeasonEpisodes(_selectedMalId, name, num);
+      if (!eps) return;
+      if (!_entries.includes(entry)) return;
+      if (entry.number !== num || entry.total !== 0) return;
+      entry.total = eps;
+      renderEntries();
+    }
+
     function addSeason() {
       let maxNum = 0;
       _entries.forEach((e) => {
@@ -601,14 +676,18 @@
           maxNum = Math.max(maxNum, e.number || 1);
         }
       });
-      _entries.push({
+      const entry = {
         type: "season",
         number: maxNum + 1,
         total: 0,
         watched: 0,
         comment: "",
-      });
+      };
+      _entries.push(entry);
       renderEntries();
+      if (entry.number >= 2 && (_selectedMalId || _selectedName)) {
+        fillSeasonTotal(entry);
+      }
     }
     function addOva() {
       _entries.push({ type: "ova", total: 0, watched: 0, comment: "" });
@@ -941,6 +1020,7 @@
 
       const payload = {
         name,
+        mal_id: _selectedMalId,
         thumbnail_url:
           (thumbImg.style.display !== "none"
             ? sanitizeUrl(thumbImg.src)

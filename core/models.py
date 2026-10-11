@@ -25,6 +25,9 @@ class Anime(models.Model):
         Category, on_delete=models.CASCADE, related_name="animes"
     )
     name = models.CharField(max_length=500)
+    # The /api/v4/ id of the picked metadata entry (real MAL id or a synthetic
+    # AniList/TMDb offset id); null for typed names and pre-field rows.
+    mal_id = models.PositiveIntegerField(null=True, blank=True)
     thumbnail_url = models.URLField(max_length=1000, default="", blank=True)
     language = models.CharField(max_length=200, blank=True, default="")
     stars = models.FloatField(null=True, blank=True)

@@ -55,6 +55,7 @@ class AnimeSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "mal_id",
             "thumbnail_url",
             "language",
             "stars",
@@ -137,6 +138,7 @@ class SearchAnimeSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "mal_id",
             "thumbnail_url",
             "category_id",
             "category_name",
