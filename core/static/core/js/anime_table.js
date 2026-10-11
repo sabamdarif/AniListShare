@@ -378,12 +378,13 @@
         '<i class="nf nf-md-format_list_numbered"></i> ' +
         "<span>" +
         targets.length +
-        " season " +
-        (targets.length === 1 ? "is" : "are") +
+        (targets.length === 1
+          ? " season is"
+          : " seasons are") +
         " missing an episode count. Auto-fill them?</span>" +
         '<div class="autofetch_actions">' +
-        '<button class="epfill_btn_yes">Yes</button>' +
-        '<button class="epfill_btn_close" title="Close"><i class="nf nf-md-close"></i></button>' +
+        '<button class="autofetch_btn_yes epfill_btn_yes">Yes</button>' +
+        '<button class="autofetch_btn_close epfill_btn_close" title="Close"><i class="nf nf-md-close"></i></button>' +
         "</div>" +
         "</div>" +
         '<div class="autofetch_progress_bar" style="display:none;"><div class="autofetch_progress_fill"></div></div>';
