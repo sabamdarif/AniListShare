@@ -317,6 +317,7 @@ def test_relations_are_grouped_and_named_as_mal_names_them():
                             "idMal": 1735,
                             "type": "ANIME",
                             "format": "TV",
+                            "episodes": 500,
                             "title": {"romaji": "NARUTO: Shippuuden"},
                         },
                     },
@@ -354,9 +355,58 @@ def test_relations_are_grouped_and_named_as_mal_names_them():
             "type": "manga",
             "name": "NARUTO",
             "url": "https://myanimelist.net/manga/11",
+            "format": None,
+            "episodes": None,
         }
     ]
-    assert by_relation["Sequel"][0]["url"] == "https://myanimelist.net/anime/1735"
+    assert by_relation["Sequel"][0] == {
+        "mal_id": 1735,
+        "type": "anime",
+        "name": "NARUTO: Shippuuden",
+        "url": "https://myanimelist.net/anime/1735",
+        "format": "TV",
+        "episodes": 500,
+    }
+    assert by_relation["Side story"][0]["format"] == "MOVIE"
+    assert by_relation["Side story"][0]["episodes"] is None
+
+
+def test_relation_entries_carry_format_and_episodes_for_the_season_walk():
+    anime = mappers.map_anime(
+        media(
+            relations={
+                "edges": [
+                    {
+                        "relationType": "SEQUEL",
+                        "node": {
+                            "id": 100,
+                            "idMal": 100,
+                            "type": "ANIME",
+                            "format": "TV",
+                            "episodes": 12,
+                            "title": {"romaji": "NARUTO Kai"},
+                        },
+                    },
+                    {
+                        "relationType": "SEQUEL",
+                        "node": {
+                            "id": 101,
+                            "idMal": 101,
+                            "type": "ANIME",
+                            "title": {"romaji": "NARUTO Gaiden"},
+                        },
+                    },
+                ]
+            }
+        ),
+        full=True,
+    )["relations"]
+
+    entries = anime[0]["entry"]
+    assert entries[0]["format"] == "TV"
+    assert entries[0]["episodes"] == 12
+    assert entries[1]["format"] is None
+    assert entries[1]["episodes"] is None
 
 
 def test_external_links_become_name_url_pairs():

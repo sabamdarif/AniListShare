@@ -778,58 +778,18 @@ window.AnimeRenderer = (function () {
 
   AnimeRenderer.fetchAndPatchThumbnail = fetchAndPatchThumbnail;
 
-  // Resolves one season's episode total through /api/v4/ (the stored mal_id
-  // when present, else a name search; season >= 2 walks the Sequel chain) and
-  // PATCHes it onto the anime. Returns the count, or 0 when unresolvable.
+  // Resolves one season's episode total through SeasonResolver (the stored
+  // mal_id when present, else a name search) and PATCHes it onto the anime.
+  // Returns the count, or 0 when unresolvable.
   function fetchAndPatchSeasonTotal(anime, catId, seasonNumber) {
-    var JIKAN = "/api/v4/anime";
     var target = Number(seasonNumber) || 1;
+    var name = buildThumbnailSearchQuery(anime.name);
 
-    function resolveMalId() {
-      if (anime.mal_id != null) return Promise.resolve(anime.mal_id);
-      return searchThumbnailResults(buildThumbnailSearchQuery(anime.name)).then(
-        function (results) {
-          return results.length ? results[0].mal_id : null;
-        },
-      );
-    }
-
-    function episodesOf(id) {
-      return apiFetch(JIKAN + "/" + id + "/full").then(function (resp) {
-        if (!resp.ok) throw new Error("Anime API HTTP " + resp.status);
-        return resp.json().then(function (payload) {
-          return payload.data || {};
-        });
-      });
-    }
-
-    return resolveMalId()
-      .then(function (id) {
-        if (id == null) return 0;
-        var hop = 1;
-        function step(currentId) {
-          return episodesOf(currentId).then(function (d) {
-            if (hop >= target) {
-              return typeof d.episodes === "number" && d.episodes > 0
-                ? d.episodes
-                : 0;
-            }
-            var sequel = (d.relations || [])
-              .filter(function (g) {
-                return g.relation === "Sequel";
-              })
-              .map(function (g) {
-                return (g.entry || []).filter(function (e) {
-                  return e.type === "anime" && e.mal_id != null;
-                })[0];
-              })[0];
-            if (!sequel) return 0;
-            hop += 1;
-            return step(sequel.mal_id);
-          });
-        }
-        return step(id);
-      })
+    return window.SeasonResolver.resolveSeasonEpisodes(
+      anime.mal_id != null ? anime.mal_id : null,
+      name,
+      target,
+    )
       .then(function (total) {
         if (!total) return 0;
         var seasons = (anime.seasons || []).map(function (s) {

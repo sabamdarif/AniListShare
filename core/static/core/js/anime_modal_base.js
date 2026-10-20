@@ -580,6 +580,9 @@
         s1.total = eps;
         renderEntries();
       }
+      // Re-resolve S1 through the cour-aware walk: the search hit's count is
+      // only the first cour's for split seasons.
+      if (_selectedMalId != null && s1) fillSeasonTotal(s1, s1.total);
     }
 
     /* ── thumbnail url editor ── */
@@ -618,55 +621,20 @@
 
     /* ── seasons & OVAs (unified list) ── */
 
-    // Resolves the episode total for season `targetNum` of the anime known as
-    // `malId` (or by name search when null) by walking the Sequel relation on
-    // /api/v4/. Returns 0 on any failure: the row then keeps its manual 0.
-    async function lookupSeasonEpisodes(malId, name, targetNum) {
-      try {
-        let id = malId;
-        if (id == null) {
-          if (!name) return 0;
-          const r = await fetch(
-            `${JIKAN}?q=${encodeURIComponent(name)}&limit=1`,
-          );
-          if (!r.ok) return 0;
-          const j = await r.json();
-          id = j.data && j.data[0] && j.data[0].mal_id;
-          if (id == null) return 0;
-        }
-        for (let hop = 2; hop <= targetNum; hop++) {
-          const r = await fetch(`${JIKAN}/${id}/full`);
-          if (!r.ok) return 0;
-          const d = (await r.json()).data || {};
-          const sequel = (d.relations || [])
-            .find((g) => g.relation === "Sequel")
-            ?.entry?.find((e) => e.type === "anime" && e.mal_id != null);
-          if (!sequel) return 0;
-          id = sequel.mal_id;
-        }
-        const r = await fetch(`${JIKAN}/${id}`);
-        if (!r.ok) return 0;
-        const d = (await r.json()).data || {};
-        return typeof d.episodes === "number" && d.episodes > 0
-          ? d.episodes
-          : 0;
-      } catch (_) {
-        // Network or parse failure: leave the row at 0.
-      }
-      return 0;
-    }
-
-    // Fills the row's total from the sequel chain, unless the user typed a
-    // value or the row was removed/renumbered while the lookup ran.
-    async function fillSeasonTotal(entry) {
+    // Fills the row's total via SeasonResolver, but only while the row still
+    // holds `expectedTotal`: a user edit, removal or renumber cancels the write.
+    async function fillSeasonTotal(entry, expectedTotal = 0) {
       const num = entry.number;
       const name = _selectedName || nameInput.value.trim();
-      // Season 1 is the picked entry itself; its count was already captured
-      // at pick time when available, so only the sequel chain needs a fetch.
-      const eps = await lookupSeasonEpisodes(_selectedMalId, name, num);
+      const eps = await window.SeasonResolver.resolveSeasonEpisodes(
+        _selectedMalId,
+        name,
+        num,
+      );
       if (!eps) return;
       if (!_entries.includes(entry)) return;
-      if (entry.number !== num || entry.total !== 0) return;
+      if (entry.number !== num || entry.total !== expectedTotal) return;
+      if (entry.total === eps) return;
       entry.total = eps;
       renderEntries();
     }
@@ -687,9 +655,7 @@
       };
       _entries.push(entry);
       renderEntries();
-      if (entry.number >= 2 && (_selectedMalId || _selectedName)) {
-        fillSeasonTotal(entry);
-      }
+      if (_selectedMalId || _selectedName) fillSeasonTotal(entry);
     }
     function addOva() {
       _entries.push({ type: "ova", total: 0, watched: 0, comment: "" });

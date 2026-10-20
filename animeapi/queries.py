@@ -47,7 +47,7 @@ EXTRA_DETAIL_FIELDS = """
   relations {
     edges {
       relationType(version: 2)
-      node { id idMal type format title { romaji english native } }
+      node { id idMal type format episodes title { romaji english native } }
     }
   }
   externalLinks { id url site type }

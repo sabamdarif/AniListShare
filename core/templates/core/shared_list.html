@@ -83,6 +83,7 @@
         window.__USER_IS_AUTHENTICATED__ = {{ user_is_authenticated|yesno:"true,false" }};
     </script>
     <script defer src="{% static 'core/js/jwt_auth.js' %}"></script>
+    <script defer src="{% static 'core/js/season_resolver.js' %}"></script>
     <script defer src="{% static 'core/js/anime_renderer.js' %}"></script>
     <script defer src="{% static 'core/js/anime_filter.js' %}"></script>
     <script defer src="{% static 'core/js/shared_list.js' %}"></script>
