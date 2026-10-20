@@ -136,7 +136,7 @@ window.AnimeRenderer = (function () {
             '"'
           : "";
         var cls = has ? " season_has_comment" : "";
-        var ovaCls = isOva ? " season_ova" : "";
+        var ovaCls = isExtra ? " season_ova" : "";
 
         if (s.completed) {
           return (
