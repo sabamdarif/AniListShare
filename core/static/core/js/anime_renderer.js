@@ -79,13 +79,17 @@ window.AnimeRenderer = (function () {
           : total > 0 && watched >= total;
 
     var num = Number(s.number) || 1;
+    // Rows saved before kind existed encode extras as fractional numbers.
+    var kind = s.kind || (num % 1 !== 0 ? "ova" : "season");
     return {
       number: num,
+      kind: kind,
       total: total,
       watched: watched,
       completed: completed,
       comment: s.comment || "",
-      isOva: num % 1 !== 0,
+      isOva: kind === "ova" || num % 1 !== 0,
+      isSpecial: kind === "special",
     };
   }
 
@@ -115,13 +119,12 @@ window.AnimeRenderer = (function () {
     return seasons
       .map(function (s) {
         var has = hasSeasonComment(s);
-        var isOva = s.isOva || s.number % 1 !== 0;
-        var displayLabel = isOva
-          ? "OVA"
+        var isExtra = s.isOva || s.isSpecial || s.number % 1 !== 0;
+        var extraLabel = s.isSpecial ? "Special" : "OVA";
+        var displayLabel = isExtra
+          ? extraLabel
           : "S" + escapeHtml(String(Math.floor(s.number)));
-        var dataSeasonLabel = isOva
-          ? "OVA"
-          : "S" + escapeHtml(String(Math.floor(s.number)));
+        var dataSeasonLabel = displayLabel;
         var icon = has
           ? '<i class="nf nf-fa-comment season_comment_icon"></i>'
           : "";
@@ -194,9 +197,11 @@ window.AnimeRenderer = (function () {
         var icon = has
           ? '<i class="nf nf-fa-comment m_season_comment_icon"></i>'
           : "";
-        var isOva = s.isOva || s.number % 1 !== 0;
-        var displayName = isOva
-          ? "OVA"
+        var isExtra = s.isOva || s.isSpecial || s.number % 1 !== 0;
+        var displayName = isExtra
+          ? s.isSpecial
+            ? "Special"
+            : "OVA"
           : "Season " + escapeHtml(String(Math.floor(s.number)));
         var attr = has
           ? ' data-comment="' +
@@ -797,6 +802,7 @@ window.AnimeRenderer = (function () {
           var isTarget = Math.floor(num) === Math.floor(target) && num % 1 === 0;
           return {
             number: num,
+            kind: s.kind || (num % 1 !== 0 ? "ova" : "season"),
             total_episodes: isTarget
               ? total
               : s.total_episodes != null

@@ -347,7 +347,9 @@
     checkMissingEpisodes();
   }
 
-  // Seasons with a 0 total on a real (non-OVA) row, one fill target per anime.
+  // Seasons with a 0 total on a real (non-extra) row, one fill target per
+  // anime. OVA/Special rows stay manual: they resolve by position and date,
+  // which the banner's one-number PATCH flow cannot express.
   function missingEpisodeTargets() {
     var targets = [];
     lastList.forEach(function (a) {

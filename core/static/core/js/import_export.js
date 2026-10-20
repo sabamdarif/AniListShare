@@ -57,7 +57,9 @@
     return seasons
       .map(function (s) {
         var label;
-        if (s.number % 1 !== 0) {
+        if (s.kind === "special") {
+          label = "Special(after S" + Math.floor(s.number) + ")";
+        } else if (s.number % 1 !== 0) {
           var after = Math.floor(s.number);
           label = "OVA(after S" + after + ")";
         } else {
@@ -332,25 +334,29 @@
   function parseSeasons(seasonStr) {
     if (!seasonStr || !seasonStr.trim()) return [];
     var seasons = [];
-    var ovaCounters = {}; // Maps season number to how many OVAs we've seen
+    var extraCounters = {}; // Maps season number to how many extras we've seen
 
-    // Matches e.g. "S1: 5/12 [comment]" or "OVA(after S1): 2/3"
+    // Matches e.g. "S1: 5/12 [comment]", "OVA(after S1): 2/3",
+    // "Special(after S1): 0/2"
     var regex =
-      /(?:S(\d+)|OVA\(after S(\d+)\)):\s*(\d+)\/(\d+)(?:\s*\[([^\]]*)\])?/gi;
+      /(?:S(\d+)|(OVA|Special)\(after S(\d+)\)):\s*(\d+)\/(\d+)(?:\s*\[([^\]]*)\])?/gi;
     var match;
 
     while ((match = regex.exec(seasonStr)) !== null) {
       var sMatch = match[1];
-      var ovaMatch = match[2];
-      var watched = parseInt(match[3]);
-      var total = parseInt(match[4]);
-      var comment = match[5] ? match[5].trim() : "";
+      var extraKind = match[2];
+      var extraBase = match[3];
+      var watched = parseInt(match[4]);
+      var total = parseInt(match[5]);
+      var comment = match[6] ? match[6].trim() : "";
       var number;
+      var kind = "season";
 
-      if (ovaMatch !== undefined) {
-        var baseNum = parseInt(ovaMatch);
-        ovaCounters[baseNum] = (ovaCounters[baseNum] || 0) + 1;
-        number = Number((baseNum + ovaCounters[baseNum] * 0.01).toFixed(2));
+      if (extraKind !== undefined) {
+        var baseNum = parseInt(extraBase);
+        extraCounters[baseNum] = (extraCounters[baseNum] || 0) + 1;
+        number = Number((baseNum + extraCounters[baseNum] * 0.01).toFixed(2));
+        kind = extraKind.toLowerCase();
       } else if (sMatch !== undefined) {
         number = parseInt(sMatch);
       } else {
@@ -359,6 +365,7 @@
 
       seasons.push({
         number: number,
+        kind: kind,
         total_episodes: total,
         watched_episodes: watched,
         comment: comment,

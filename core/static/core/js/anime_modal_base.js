@@ -209,7 +209,7 @@
       seasonSection.appendChild(seasonsHeader);
 
       const seasonsCols = el("div", { className: "aam_seasons_cols" });
-      seasonsCols.appendChild(el("span", { text: "Season / OVA" }));
+      seasonsCols.appendChild(el("span", { text: "Season / OVA / Special" }));
       seasonsCols.appendChild(el("span", { text: "Watched / Total" }));
       seasonsCols.appendChild(el("span", { text: "Comment" }));
       seasonSection.appendChild(seasonsCols);
@@ -229,6 +229,13 @@
           className: "aam_add_ova_btn",
           attrs: { type: "button" },
           text: "+ Add OVA",
+        }),
+      );
+      seasonBtns.appendChild(
+        el("button", {
+          className: "aam_add_special_btn",
+          attrs: { type: "button" },
+          text: "+ Add Special",
         }),
       );
       seasonSection.appendChild(seasonBtns);
@@ -303,6 +310,7 @@
     const seasonsList = $(".aam_seasons_list");
     const addSeasonBtn = $(".aam_add_season_btn");
     const addOvaBtn = $(".aam_add_ova_btn");
+    const addSpecialBtn = $(".aam_add_special_btn");
     const langTags = $(".aam_lang_tags");
     const langInput = $(".aam_lang_input");
     const errorEl = $(".aam_error");
@@ -353,9 +361,10 @@
           );
           for (const s of sorted) {
             const num = Number(s.number) || 1;
-            const isOva = num % 1 !== 0;
+            // Rows saved before kind existed encode extras as fractions.
+            const kind = s.kind || (num % 1 !== 0 ? "ova" : "season");
             _entries.push({
-              type: isOva ? "ova" : "season",
+              type: kind,
               number: num,
               total: s.total_episodes != null ? s.total_episodes : s.total || 0,
               watched:
@@ -639,6 +648,39 @@
       renderEntries();
     }
 
+    // Fills an OVA/Special row's total via SeasonResolver: the ordinal-th
+    // extra of its kind released after the preceding season row. Same touch
+    // guards as fillSeasonTotal.
+    async function fillExtraTotal(entry, expectedTotal = 0) {
+      let afterSeason = 1;
+      let ordinal = 0;
+      for (const e of _entries) {
+        if (e === entry) {
+          ordinal++;
+          break;
+        }
+        if (e.type === "season") {
+          afterSeason = e.number || afterSeason;
+          ordinal = 0;
+        } else if (e.type === entry.type) {
+          ordinal++;
+        }
+      }
+      const name = _selectedName || nameInput.value.trim();
+      const eps = await window.SeasonResolver.resolveExtraEpisodes(
+        _selectedMalId,
+        name,
+        entry.type,
+        afterSeason,
+        ordinal,
+      );
+      if (!eps) return;
+      if (!_entries.includes(entry)) return;
+      if (entry.total !== expectedTotal) return;
+      entry.total = eps;
+      renderEntries();
+    }
+
     function addSeason() {
       let maxNum = 0;
       _entries.forEach((e) => {
@@ -657,9 +699,11 @@
       renderEntries();
       if (_selectedMalId || _selectedName) fillSeasonTotal(entry);
     }
-    function addOva() {
-      _entries.push({ type: "ova", total: 0, watched: 0, comment: "" });
+    function addExtra(kind) {
+      const entry = { type: kind, total: 0, watched: 0, comment: "" };
+      _entries.push(entry);
       renderEntries();
+      if (_selectedMalId || _selectedName) fillExtraTotal(entry);
     }
     function removeEntry(i) {
       _entries.splice(i, 1);
@@ -671,23 +715,28 @@
       let seasonCounter = 0;
 
       _entries.forEach((entry, i) => {
-        const isOva = entry.type === "ova";
-        if (!isOva) {
+        const isExtra = entry.type !== "season";
+        if (!isExtra) {
           seasonCounter++;
           if (!entry.number) entry.number = seasonCounter;
         }
 
-        const rowCls = isOva ? "aam_season_row aam_ova_row" : "aam_season_row";
+        const rowCls = isExtra ? "aam_season_row aam_ova_row" : "aam_season_row";
         const row = el("div", { className: rowCls });
         row.dataset.idx = String(i);
 
-        const labelCls = isOva
+        const labelCls = isExtra
           ? "aam_season_label aam_ova_label"
           : "aam_season_label";
-        const labelText = isOva ? "OVA" : `Season ${entry.number}`;
+        const labelText =
+          entry.type === "special"
+            ? "Special"
+            : isExtra
+              ? "OVA"
+              : `Season ${entry.number}`;
         const labelEl = el("span", { className: labelCls, text: labelText });
 
-        if (!isOva) {
+        if (!isExtra) {
           labelEl.title = "Double-click to edit season number";
           labelEl.style.cursor = "pointer";
           labelEl.addEventListener("dblclick", () => {
@@ -756,20 +805,18 @@
             min: "0",
             value: String(entry.total),
             placeholder: "0",
-            title: isOva
-              ? ""
-              : "Click while empty to auto-fill from metadata",
+            title: "Click while empty to auto-fill from metadata",
           },
         });
         epCell.appendChild(totalInput);
 
         // Manual fill for rows the async path missed: clicking the empty
-        // total of a season row resolves it through the same lookup.
-        if (!isOva) {
-          totalInput.addEventListener("focus", () => {
-            if (entry.total === 0) fillSeasonTotal(entry);
-          });
-        }
+        // total resolves it through the same lookup.
+        totalInput.addEventListener("focus", () => {
+          if (entry.total !== 0) return;
+          if (entry.type === "season") fillSeasonTotal(entry);
+          else fillExtraTotal(entry);
+        });
 
         row.appendChild(epCell);
 
@@ -825,7 +872,8 @@
     }
 
     addSeasonBtn.addEventListener("click", addSeason);
-    addOvaBtn.addEventListener("click", addOva);
+    addOvaBtn.addEventListener("click", () => addExtra("ova"));
+    addSpecialBtn.addEventListener("click", () => addExtra("special"));
 
     function updateLangDropPos() {
       if (langDrop.style.display === "none") return;
@@ -982,14 +1030,17 @@
           });
         } else {
           ovaCount++;
-          // OVA: number = lastSeason + (ovaCount * 0.01) (e.g. 1.01 = OVA 1 after Season 1)
+          // Extras anchor to the preceding season: number = lastSeason +
+          // ovaCount * 0.01 (1.01 = first extra after S1). OVA and Special
+          // share the counter so their numbers never collide.
           const afterSeason = Math.max(lastSeasonNum, 1);
           if (e.watched > e.total) {
-            errorEl.textContent = `OVA: watched cannot exceed total`;
+            errorEl.textContent = `${e.type === "special" ? "Special" : "OVA"}: watched cannot exceed total`;
             return;
           }
           seasonEntries.push({
             number: Number((afterSeason + ovaCount * 0.01).toFixed(2)),
+            kind: e.type,
             total_episodes: e.total,
             watched_episodes: e.watched,
             comment: e.comment,

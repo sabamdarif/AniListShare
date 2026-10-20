@@ -533,6 +533,7 @@ class ShareCopyApiView(APIView):
                             Season(
                                 anime=t_ani,
                                 number=o_season.number,
+                                kind=o_season.kind,
                                 total_episodes=o_season.total_episodes,
                                 watched_episodes=o_season.watched_episodes,
                                 comment=o_season.comment,

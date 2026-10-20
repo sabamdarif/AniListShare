@@ -489,9 +489,11 @@ def map_anime_list(medias, *, rank_offset=None):
 def map_relations(media):
     """Jikan's ``relations``: related entries grouped by relation type.
 
-    ``format`` and ``episodes`` are local additions beyond Jikan's entry
-    shape, present so the frontend's season walk can weigh sequels without
-    an extra fetch per entry; both stay ``None`` for manga nodes.
+    ``format``, ``episodes`` and ``start_date`` are local additions beyond
+    Jikan's entry shape, present so the frontend's season/extra walks can
+    weigh relations without an extra fetch per entry; ``format`` and
+    ``episodes`` stay ``None`` for manga nodes, and ``start_date`` keeps
+    AniList's raw ``{year, month, day}`` parts.
     """
     grouped: dict[str, list] = {}
     for edge in (media.get("relations") or {}).get("edges") or []:
@@ -518,6 +520,7 @@ def map_relations(media):
                 "episodes": (
                     node.get("episodes") if entry_type == "anime" else None
                 ),
+                "start_date": node.get("startDate"),
             }
         )
     return [

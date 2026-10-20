@@ -46,6 +46,9 @@ class Anime(models.Model):
 class Season(models.Model):
     anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name="seasons")
     number = models.FloatField(default=1)
+    # season | ova | special; number stays the positional anchor (1.01 = first
+    # extra after S1), kind only decides the label and the auto-fill group.
+    kind = models.CharField(max_length=10, default="season")
     total_episodes = models.PositiveIntegerField(default=0)
     watched_episodes = models.PositiveIntegerField(default=0)
     comment = models.TextField(blank=True, default="")
@@ -56,13 +59,16 @@ class Season(models.Model):
 
     @property
     def is_ova(self):
-        return self.number % 1 != 0
+        # Legacy rows predate kind and encode OVAs as fractional numbers.
+        return self.kind == "ova" or (self.kind == "season" and self.number % 1 != 0)
 
     def __str__(self):
+        progress = f"({self.watched_episodes}/{self.total_episodes})"
+        if self.kind == "special":
+            return f"{self.anime.name} - Special(after S{int(self.number)}) {progress}"
         if self.is_ova:
-            after = int(self.number)
-            return f"{self.anime.name} - OVA(after S{after}) ({self.watched_episodes}/{self.total_episodes})"
-        return f"{self.anime.name} - S{int(self.number)} ({self.watched_episodes}/{self.total_episodes})"
+            return f"{self.anime.name} - OVA(after S{int(self.number)}) {progress}"
+        return f"{self.anime.name} - S{int(self.number)} {progress}"
 
     @property
     def is_completed(self):

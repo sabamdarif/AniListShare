@@ -5,10 +5,15 @@ from core.models import Anime, Category, Season
 
 
 class SeasonSerializer(serializers.ModelSerializer):
+    kind = serializers.ChoiceField(
+        choices=("season", "ova", "special"), default="season"
+    )
+
     class Meta:
         model = Season
         fields = (
             "number",
+            "kind",
             "total_episodes",
             "watched_episodes",
             "comment",

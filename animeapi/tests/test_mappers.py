@@ -318,6 +318,7 @@ def test_relations_are_grouped_and_named_as_mal_names_them():
                             "type": "ANIME",
                             "format": "TV",
                             "episodes": 500,
+                            "startDate": {"year": 2007, "month": 2, "day": 15},
                             "title": {"romaji": "NARUTO: Shippuuden"},
                         },
                     },
@@ -357,6 +358,7 @@ def test_relations_are_grouped_and_named_as_mal_names_them():
             "url": "https://myanimelist.net/manga/11",
             "format": None,
             "episodes": None,
+            "start_date": None,
         }
     ]
     assert by_relation["Sequel"][0] == {
@@ -366,9 +368,11 @@ def test_relations_are_grouped_and_named_as_mal_names_them():
         "url": "https://myanimelist.net/anime/1735",
         "format": "TV",
         "episodes": 500,
+        "start_date": {"year": 2007, "month": 2, "day": 15},
     }
     assert by_relation["Side story"][0]["format"] == "MOVIE"
     assert by_relation["Side story"][0]["episodes"] is None
+    assert by_relation["Side story"][0]["start_date"] is None
 
 
 def test_relation_entries_carry_format_and_episodes_for_the_season_walk():
@@ -407,6 +411,8 @@ def test_relation_entries_carry_format_and_episodes_for_the_season_walk():
     assert entries[0]["episodes"] == 12
     assert entries[1]["format"] is None
     assert entries[1]["episodes"] is None
+    assert entries[0]["start_date"] is None
+    assert entries[1]["start_date"] is None
 
 
 def test_external_links_become_name_url_pairs():

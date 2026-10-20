@@ -458,7 +458,8 @@
   margin-top: 4px;
 }
 
-.aam_add_ova_btn {
+.aam_add_ova_btn,
+.aam_add_special_btn {
   align-self: flex-start;
   background: none;
   border: 1px dashed var(--border);
@@ -470,7 +471,8 @@
   transition: background 0.12s;
 }
 
-.aam_add_ova_btn:hover {
+.aam_add_ova_btn:hover,
+.aam_add_special_btn:hover {
   background: var(--surface2);
 }
 
