@@ -39,6 +39,9 @@
         if (oldCatId != targetCatId) {
           if (typeof window.removeLocalAnime === "function") {
             window.removeLocalAnime(animeId);
+            if (typeof window.addLocalAnime === "function") {
+              window.addLocalAnime(optimisticData, targetCatId);
+            }
           } else if (typeof window.refreshCurrentCategory === "function") {
             window.refreshCurrentCategory();
           }

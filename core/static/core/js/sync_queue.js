@@ -67,7 +67,11 @@
       // So the next automatic flush, or `beforeunload`, will safely retry it!
       if (!syncTimer) syncTimer = setTimeout(flushQueue, SYNC_DELAY);
 
-      // Revert UI to match server
+      // Revert UI to match server: every cached category may hold optimistic
+      // state from this payload, not just the visible one.
+      if (typeof window.clearAnimeCache === "function") {
+        window.clearAnimeCache();
+      }
       if (typeof window.refreshCurrentCategory === "function") {
         window.refreshCurrentCategory();
       }

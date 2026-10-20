@@ -50,7 +50,7 @@
         ctx.close();
 
         if (typeof window.addLocalAnime === "function") {
-          window.addLocalAnime(optimisticData);
+          window.addLocalAnime(optimisticData, catId);
         } else if (typeof window.refreshCurrentCategory === "function") {
           window.refreshCurrentCategory();
         }

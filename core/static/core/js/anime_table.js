@@ -17,6 +17,7 @@
 
   var lastList = [];
   var _currentCategoryId = null;
+  var animeCache = new Map();
 
   function getTabs() {
     return tabsContainer ? tabsContainer.querySelectorAll(".category_tab") : [];
@@ -339,6 +340,7 @@
 
   function render(animeList) {
     lastList = animeList;
+    if (_currentCategoryId != null) animeCache.set(_currentCategoryId, lastList);
     var filtered = window.AnimeFilter
       ? window.AnimeFilter.applyFilters(animeList)
       : animeList;
@@ -482,21 +484,14 @@
     }
   });
 
-  async function loadCategory(categoryId) {
+  async function loadCategory(categoryId, force) {
     var catId = parseInt(categoryId, 10);
     if (isNaN(catId)) return;
 
     _currentCategoryId = catId;
 
-    if (
-      window.__INITIAL_CATEGORY_DATA__ &&
-      window.__INITIAL_CATEGORY_ID__ === catId
-    ) {
-      var data = window.__INITIAL_CATEGORY_DATA__;
-      window.__INITIAL_CATEGORY_DATA__ = null; // consume it
-      var serverList = Array.isArray(data) ? data : data.results || [];
-      var normalized = serverList.map(normalizeAnime);
-      render(normalized);
+    if (!force && animeCache.has(catId)) {
+      render(animeCache.get(catId));
       AR.restoreScroll(_currentCategoryId);
       return;
     }
@@ -543,11 +538,23 @@
   window.refreshCurrentCategory = function () {
     if (_currentCategoryId != null) {
       AR.saveScroll(_currentCategoryId);
-      loadCategory(_currentCategoryId);
+      animeCache.delete(_currentCategoryId);
+      loadCategory(_currentCategoryId, true);
     }
   };
 
-  window.addLocalAnime = function (anime) {
+  window.clearAnimeCache = function () {
+    animeCache.clear();
+  };
+
+  window.addLocalAnime = function (anime, catId) {
+    if (catId != null && Number(catId) !== _currentCategoryId) {
+      // Off-screen add: only a category already loaded this session has a
+      // cache entry to update; the rest fetch fresh when opened.
+      var cached = animeCache.get(Number(catId));
+      if (cached) cached.push(anime);
+      return;
+    }
     if (_currentCategoryId === null) return;
     lastList.push(anime);
     render(lastList);
@@ -577,13 +584,19 @@
 
   window.resolveAnimeIds = function (idMap) {
     var changed = false;
-    lastList.forEach(function (anime) {
-      if (anime.temp_id && idMap[anime.temp_id]) {
-        anime.id = idMap[anime.temp_id];
-        delete anime.temp_id;
-        changed = true;
-      }
-    });
+    // The flush can land after the user switched category, so a temp id may
+    // live in any cached list, not just the visible one.
+    new Set([lastList].concat(Array.from(animeCache.values()))).forEach(
+      function (list) {
+        list.forEach(function (anime) {
+          if (anime.temp_id && idMap[anime.temp_id]) {
+            anime.id = idMap[anime.temp_id];
+            delete anime.temp_id;
+            changed = true;
+          }
+        });
+      },
+    );
     if (changed) {
       render(lastList);
     }
@@ -674,7 +687,7 @@
       lastList = newList;
       render(lastList);
     } catch (_) {
-      if (_currentCategoryId) loadCategory(_currentCategoryId);
+      if (_currentCategoryId) loadCategory(_currentCategoryId, true);
     }
   }
 
@@ -1373,10 +1386,10 @@
             .forEach(function (el) {
               el.classList.remove("category_edit_visible");
             });
+          AR.saveScroll(_currentCategoryId);
           setActiveTab(btn);
           try {
             localStorage.setItem("active_category", btn.dataset.categoryId);
-            AR.clearScroll(btn.dataset.categoryId);
           } catch (_) {}
           loadCategory(btn.dataset.categoryId);
         });

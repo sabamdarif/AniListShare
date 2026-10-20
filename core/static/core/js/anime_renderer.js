@@ -491,10 +491,12 @@ window.AnimeRenderer = (function () {
   AnimeRenderer.renderStars = renderStars;
 
   // ── Scroll State Manager ──
+  // localStorage, not sessionStorage: positions are meant to survive restarts,
+  // and the key is kept after restore so every switch/unload re-saves onto it.
   AnimeRenderer.saveScroll = function (key) {
     if (key == null) return;
     try {
-      sessionStorage.setItem(
+      localStorage.setItem(
         "ar_scroll_" + key,
         window.scrollY || document.documentElement.scrollTop,
       );
@@ -504,18 +506,17 @@ window.AnimeRenderer = (function () {
   AnimeRenderer.clearScroll = function (key) {
     if (key == null) return;
     try {
-      sessionStorage.removeItem("ar_scroll_" + key);
+      localStorage.removeItem("ar_scroll_" + key);
     } catch (e) {}
   };
 
   AnimeRenderer.restoreScroll = function (key) {
     if (key == null) return;
     try {
-      var saved = sessionStorage.getItem("ar_scroll_" + key);
+      var saved = localStorage.getItem("ar_scroll_" + key);
       if (saved) {
         requestAnimationFrame(function () {
           window.scrollTo(0, parseInt(saved, 10));
-          sessionStorage.removeItem("ar_scroll_" + key);
         });
       }
     } catch (e) {}
