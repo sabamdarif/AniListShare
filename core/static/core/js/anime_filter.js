@@ -107,6 +107,49 @@
     updateUI();
   }
 
+  function getAnimeStatus(anime) {
+    if (!anime || !anime.seasons || anime.seasons.length === 0) {
+      return { watching: false, completed: false, hasData: false };
+    }
+
+    var hasData = false;
+    var isWatching = false;
+    var allCompleted = true;
+
+    for (var i = 0; i < anime.seasons.length; i++) {
+      var s = anime.seasons[i];
+      var total = Math.max(0, Number(s.total) || Number(s.total_episodes) || 0);
+      var watched = Math.max(0, Number(s.watched) || Number(s.watched_episodes) || 0);
+
+      if (total > 0 || watched > 0) {
+        hasData = true;
+      }
+
+      var isSeasonCompleted =
+        s.completed === true ||
+        s.is_completed === true ||
+        (total > 0 && watched >= total);
+
+      if (!isSeasonCompleted && watched >= 1 && (total === 0 || watched < total)) {
+        isWatching = true;
+      }
+
+      if ((total > 0 || watched > 0) && !isSeasonCompleted) {
+        allCompleted = false;
+      }
+    }
+
+    if (!hasData) {
+      return { watching: false, completed: false, hasData: false };
+    }
+
+    return {
+      watching: !allCompleted && isWatching,
+      completed: allCompleted,
+      hasData: true,
+    };
+  }
+
   function applyFilters(list) {
     if (!list) return [];
 
@@ -126,33 +169,10 @@
       currentFilters.status === "completed"
     ) {
       result = result.filter(function (a) {
-        if (!a.seasons || a.seasons.length === 0) {
-          return false; // No data, don't show in watching/completed
-        }
-
-        var isWatching = false;
-        var hasValidData = false;
-
-        for (var i = 0; i < a.seasons.length; i++) {
-          var s = a.seasons[i];
-          var total = Number(s.total) || Number(s.total_episodes) || 0;
-          var watched = Number(s.watched) || Number(s.watched_episodes) || 0;
-
-          if (total > 0 || watched > 0) {
-            hasValidData = true;
-          }
-
-          if (watched < total || (total === 0 && watched > 0)) {
-            isWatching = true;
-          }
-        }
-
-        if (!hasValidData) {
-          return false; // All seasons are 0/0, don't show in watching/completed
-        }
-
-        if (currentFilters.status === "watching") return isWatching;
-        if (currentFilters.status === "completed") return !isWatching;
+        var st = getAnimeStatus(a);
+        if (!st.hasData) return false;
+        if (currentFilters.status === "watching") return st.watching;
+        if (currentFilters.status === "completed") return st.completed;
         return true;
       });
     }
@@ -187,26 +207,12 @@
       result.sort(function (a, b) {
         // Grouping: Status First
         if (isWatchingFirst || isCompletedFirst) {
-          var getStatus = function (anime) {
-            if (!anime.seasons || anime.seasons.length === 0)
-              return { w: false, c: false };
-            var isW = false,
-              hasData = false;
-            for (var i = 0; i < anime.seasons.length; i++) {
-              var s = anime.seasons[i];
-              var tot = Number(s.total) || Number(s.total_episodes) || 0;
-              var wat = Number(s.watched) || Number(s.watched_episodes) || 0;
-              if (tot > 0 || wat > 0) hasData = true;
-              if (wat < tot || (tot === 0 && wat > 0)) isW = true;
-            }
-            return hasData ? { w: isW, c: !isW } : { w: false, c: false };
-          };
-          var stA = getStatus(a),
-            stB = getStatus(b);
+          var stA = getAnimeStatus(a);
+          var stB = getAnimeStatus(b);
           if (isWatchingFirst) {
-            if (stA.w !== stB.w) return stA.w ? -1 : 1;
+            if (stA.watching !== stB.watching) return stA.watching ? -1 : 1;
           } else if (isCompletedFirst) {
-            if (stA.c !== stB.c) return stA.c ? -1 : 1;
+            if (stA.completed !== stB.completed) return stA.completed ? -1 : 1;
           }
         }
 
@@ -328,5 +334,6 @@
   window.AnimeFilter = {
     init: init,
     applyFilters: applyFilters,
+    getAnimeStatus: getAnimeStatus,
   };
 })();
